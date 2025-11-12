@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 import { createClient } from '@/lib/supabase/client';
@@ -10,17 +9,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function SignUpPage() {
-  const router = useRouter();
   const supabase = createClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const signUpMutation = trpc.auth.signUp.useMutation({
-    onSuccess: () => {
-      router.push('/dashboard');
+    onSuccess: async () => {
+      // Check if user is logged in (no email confirmation required)
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        // User is logged in, redirect to dashboard with full page reload
+        window.location.href = '/dashboard';
+      } else {
+        // Email confirmation required
+        setSuccess('Account created! Please check your email to verify your account before logging in.');
+      }
     },
     onError: (err) => {
       setError(err.message);
@@ -30,6 +38,7 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
@@ -130,10 +139,16 @@ export default function SignUpPage() {
             </div>
           )}
 
+          {success && (
+            <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
+              {success}
+            </div>
+          )}
+
           <Button
             type="submit"
             className="w-full"
-            disabled={signUpMutation.isPending}
+            disabled={signUpMutation.isPending || !!success}
           >
             {signUpMutation.isPending ? 'Creating account...' : 'Sign up'}
           </Button>

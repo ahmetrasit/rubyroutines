@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 import { createClient } from '@/lib/supabase/client';
@@ -10,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function LoginPage() {
-  const router = useRouter();
   const supabase = createClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +17,8 @@ export default function LoginPage() {
 
   const signInMutation = trpc.auth.signIn.useMutation({
     onSuccess: () => {
-      router.push('/dashboard');
+      // Use window.location.href to force full page reload and pick up session cookies
+      window.location.href = '/dashboard';
     },
     onError: (err) => {
       setError(err.message);
