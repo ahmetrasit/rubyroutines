@@ -4,20 +4,23 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
+import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const signUpMutation = trpc.auth.signUp.useMutation({
     onSuccess: () => {
-      router.push('/verify?email=' + encodeURIComponent(email));
+      router.push('/dashboard');
     },
     onError: (err) => {
       setError(err.message);
@@ -27,7 +30,30 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
     signUpMutation.mutate({ name, email, password });
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setError('');
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      setIsGoogleLoading(false);
+    }
   };
 
   return (
@@ -37,8 +63,27 @@ export default function SignUpPage() {
         <p className="mt-2 text-gray-600">Get started with Ruby Routines</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-        <div className="space-y-4">
+      <div className="mt-8 space-y-6">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={handleGoogleSignIn}
+          disabled={isGoogleLoading}
+        >
+          {isGoogleLoading ? 'Connecting...' : 'Continue with Google'}
+        </Button>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-gray-50 px-2 text-gray-500">Or continue with email</span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Name</Label>
             <Input
@@ -73,26 +118,26 @@ export default function SignUpPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              minLength={8}
+              placeholder="At least 6 characters"
+              minLength={6}
               className="mt-1"
             />
           </div>
-        </div>
 
-        {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+              {error}
+            </div>
+          )}
 
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={signUpMutation.isPending}
-        >
-          {signUpMutation.isPending ? 'Creating account...' : 'Sign up'}
-        </Button>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={signUpMutation.isPending}
+          >
+            {signUpMutation.isPending ? 'Creating account...' : 'Sign up'}
+          </Button>
+        </form>
 
         <p className="text-center text-sm text-gray-600">
           Already have an account?{' '}
@@ -100,7 +145,7 @@ export default function SignUpPage() {
             Log in
           </Link>
         </p>
-      </form>
+      </div>
     </div>
   );
 }
