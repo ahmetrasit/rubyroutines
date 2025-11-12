@@ -258,7 +258,6 @@ model Task {
   // Relations
   routine         Routine           @relation(fields: [routineId], references: [id], onDelete: Cascade)
   completions     TaskCompletion[]
-  conditions      Condition[]       @relation("TaskConditions")
   targetConditions Condition[]      @relation("TargetTaskConditions")
   goalLinks       GoalTaskLink[]
 
