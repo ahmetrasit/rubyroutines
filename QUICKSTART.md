@@ -112,8 +112,10 @@ Combined with PROJECT-CONTEXT.md, Claude will know exactly where you left off an
 ## 🔑 Key Files for Reference
 
 - **⭐ Requirements & Context:** `/docs/PROJECT-CONTEXT.md` - **READ THIS FIRST**
-- **Data Model:** `/prisma/README.md` (see original conversation for full schema)
-- **RLS Policies:** Will be in `/supabase/policies.sql` (Stage 1)
+- **Complete Schema:** `/prisma/schema.prisma` (721 lines, all 70+ models)
+- **Schema Reference:** `/prisma/README.md` (documentation and examples)
+- **RLS Policies:** `/supabase/policies.sql` (949 lines, all tables)
+- **Environment Variables:** `/.env.example` (copy to .env.local)
 - **Tech Stack:** See `/docs/plan.md`
 - **Environment Setup:** `/docs/SETUP.md`
 - **Stage Guides:** `/docs/stages/STAGE-[1-6]-COMPLETE.md`
