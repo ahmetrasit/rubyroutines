@@ -5,7 +5,11 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const origin = requestUrl.origin;
+
+  // Get the host from the request headers (this will be the actual IP or localhost)
+  const host = request.headers.get('host');
+  const protocol = requestUrl.protocol;
+  const redirectBase = host ? `${protocol}//${host}` : requestUrl.origin;
 
   if (code) {
     const supabase = await createClient();
@@ -28,6 +32,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Redirect to dashboard using the same origin (IP or localhost)
-  return NextResponse.redirect(`${origin}/dashboard`);
+  // Redirect to dashboard using the actual host from request
+  return NextResponse.redirect(`${redirectBase}/dashboard`);
 }
