@@ -1,0 +1,721 @@
+// Ruby Routines - Complete Prisma Schema
+// Version: 1.0
+// Database: PostgreSQL 15 (Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// CORE ENTITIES
+// ============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  roles                Role[]
+  verificationCodes    VerificationCode[]
+  invitations          Invitation[]       @relation("InviterUser")
+  acceptedInvitations  Invitation[]       @relation("AcceptedUser")
+  marketplaceRatings   MarketplaceRating[]
+  marketplaceComments  MarketplaceComment[]
+  commentFlags         CommentFlag[]
+
+  @@map("users")
+}
+
+model Role {
+  id                   String   @id @default(cuid())
+  userId               String
+  type                 RoleType
+  tier                 Tier     @default(FREE)
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?  @unique
+  subscriptionStatus   String?  @default("ACTIVE")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  user                        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persons                     Person[]
+  groups                      Group[]
+  routines                    Routine[]
+  goals                       Goal[]
+  codes                       Code[]
+  invitations                 Invitation[]               @relation("InviterRole")
+  primaryCoParents            CoParent[]                 @relation("PrimaryRole")
+  coParentRelationships       CoParent[]                 @relation("CoParentRole")
+  primaryCoTeachers           CoTeacher[]                @relation("PrimaryTeacherRole")
+  coTeacherRelationships      CoTeacher[]                @relation("CoTeacherRole")
+  teacherConnections          StudentParentConnection[]  @relation("TeacherRole")
+  parentConnections           StudentParentConnection[]  @relation("ParentRole")
+  connectionCodes             ConnectionCode[]
+  marketplaceItems            MarketplaceItem[]
+  schoolMemberships           SchoolMember[]
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@index([type])
+  @@map("roles")
+}
+
+enum RoleType {
+  PARENT
+  TEACHER
+  PRINCIPAL
+  SUPPORT
+}
+
+enum Tier {
+  FREE
+  BASIC
+  PREMIUM
+  SCHOOL
+}
+
+// ============================================================================
+// PEOPLE & GROUPS
+// ============================================================================
+
+model Person {
+  id          String       @id @default(cuid())
+  roleId      String
+  name        String
+  birthDate   DateTime?
+  avatar      String?
+  notes       String?
+  status      EntityStatus @default(ACTIVE)
+  archivedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  role                    Role                      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  groupMembers            GroupMember[]
+  assignments             RoutineAssignment[]
+  taskCompletions         TaskCompletion[]
+  studentConnections      StudentParentConnection[] @relation("StudentPerson")
+  parentConnections       StudentParentConnection[] @relation("ParentPerson")
+  connectionCodes         ConnectionCode[]
+
+  @@index([roleId])
+  @@index([status])
+  @@map("persons")
+}
+
+model Group {
+  id          String       @id @default(cuid())
+  roleId      String
+  name        String
+  description String?
+  type        GroupType    @default(FAMILY)
+  isClassroom Boolean      @default(false)
+  status      EntityStatus @default(ACTIVE)
+  archivedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  role        Role          @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  members     GroupMember[]
+  assignments RoutineAssignment[]
+  coTeachers  CoTeacher[]
+
+  @@index([roleId])
+  @@index([type])
+  @@index([status])
+  @@map("groups")
+}
+
+enum GroupType {
+  FAMILY
+  CLASSROOM
+  CUSTOM
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  groupId   String
+  personId  String
+  role      String?  @default("member")
+  createdAt DateTime @default(now())
+
+  // Relations
+  group  Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, personId])
+  @@index([groupId])
+  @@index([personId])
+  @@map("group_members")
+}
+
+enum EntityStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// ============================================================================
+// ROUTINES & TASKS
+// ============================================================================
+
+model Routine {
+  id                      String         @id @default(cuid())
+  roleId                  String
+  name                    String
+  description             String?
+  type                    RoutineType    @default(REGULAR)
+  resetPeriod             ResetPeriod    @default(DAILY)
+  resetDay                Int?           // 0-6 for WEEKLY (0=Sun), 1-31 for MONTHLY
+  visibility              Visibility     @default(ALWAYS)
+  visibleDays             Int[]          // For DAYS_OF_WEEK visibility
+  startDate               DateTime?      // For DATE_RANGE visibility
+  endDate                 DateTime?      // For DATE_RANGE visibility
+  status                  EntityStatus   @default(ACTIVE)
+  archivedAt              DateTime?
+  sourceMarketplaceItemId String?
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  // Relations
+  role            Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tasks           Task[]
+  assignments     RoutineAssignment[]
+  conditions      Condition[]         @relation("RoutineConditions")
+  targetConditions Condition[]        @relation("TargetRoutineConditions")
+  goalLinks       GoalRoutineLink[]
+
+  @@index([roleId])
+  @@index([type])
+  @@index([status])
+  @@map("routines")
+}
+
+enum RoutineType {
+  REGULAR
+  SMART
+  TEACHER_CLASSROOM
+}
+
+enum ResetPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum Visibility {
+  ALWAYS
+  DATE_RANGE
+  DAYS_OF_WEEK
+  CONDITIONAL
+}
+
+model RoutineAssignment {
+  id        String   @id @default(cuid())
+  routineId String
+  personId  String?  // Assign to person
+  groupId   String?  // OR assign to group
+  createdAt DateTime @default(now())
+
+  // Relations
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  person  Person?  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  group   Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([routineId])
+  @@index([personId])
+  @@index([groupId])
+  @@map("routine_assignments")
+}
+
+model Task {
+  id                      String       @id @default(cuid())
+  routineId               String
+  name                    String
+  description             String?
+  type                    TaskType     @default(SIMPLE)
+  order                   Int          @default(0)
+  targetValue             Float?       // For PROGRESS type
+  unit                    String?      // For PROGRESS type (e.g., "pages", "minutes")
+  status                  EntityStatus @default(ACTIVE)
+  archivedAt              DateTime?
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  // Relations
+  routine         Routine           @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  completions     TaskCompletion[]
+  conditions      Condition[]       @relation("TaskConditions")
+  targetConditions Condition[]      @relation("TargetTaskConditions")
+  goalLinks       GoalTaskLink[]
+
+  @@index([routineId])
+  @@index([type])
+  @@index([status])
+  @@map("tasks")
+}
+
+enum TaskType {
+  SIMPLE
+  MULTIPLE_CHECKIN
+  PROGRESS
+  SMART
+}
+
+model TaskCompletion {
+  id          String   @id @default(cuid())
+  taskId      String
+  personId    String
+  completedAt DateTime @default(now())
+  value       String?  // For PROGRESS type
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([personId])
+  @@index([completedAt])
+  @@map("task_completions")
+}
+
+// ============================================================================
+// GOALS & CONDITIONS
+// ============================================================================
+
+model Goal {
+  id                      String       @id @default(cuid())
+  roleId                  String
+  name                    String
+  description             String?
+  target                  Float
+  period                  ResetPeriod  @default(WEEKLY)
+  resetDay                Int?
+  personIds               String[]     @default([])
+  groupIds                String[]     @default([])
+  status                  EntityStatus @default(ACTIVE)
+  archivedAt              DateTime?
+  sourceMarketplaceItemId String?
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  // Relations
+  role         Role              @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  taskLinks    GoalTaskLink[]
+  routineLinks GoalRoutineLink[]
+
+  @@index([roleId])
+  @@index([status])
+  @@map("goals")
+}
+
+model GoalTaskLink {
+  id        String   @id @default(cuid())
+  goalId    String
+  taskId    String
+  weight    Float    @default(1.0)
+  createdAt DateTime @default(now())
+
+  // Relations
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, taskId])
+  @@index([goalId])
+  @@index([taskId])
+  @@map("goal_task_links")
+}
+
+model GoalRoutineLink {
+  id        String   @id @default(cuid())
+  goalId    String
+  routineId String
+  weight    Float    @default(1.0)
+  createdAt DateTime @default(now())
+
+  // Relations
+  goal    Goal    @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, routineId])
+  @@index([goalId])
+  @@index([routineId])
+  @@map("goal_routine_links")
+}
+
+model Condition {
+  id              String          @id @default(cuid())
+  routineId       String
+  type            ConditionType
+  operator        ConditionOperator
+  value           String?
+  targetTaskId    String?
+  targetRoutineId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  routine        Routine  @relation("RoutineConditions", fields: [routineId], references: [id], onDelete: Cascade)
+  targetTask     Task?    @relation("TargetTaskConditions", fields: [targetTaskId], references: [id])
+  targetRoutine  Routine? @relation("TargetRoutineConditions", fields: [targetRoutineId], references: [id])
+
+  @@index([routineId])
+  @@index([targetTaskId])
+  @@index([targetRoutineId])
+  @@map("conditions")
+}
+
+enum ConditionType {
+  TASK_COMPLETED
+  ROUTINE_COMPLETED
+  TASK_COUNT
+  GOAL_ACHIEVED
+  DATE_RANGE
+  DAY_OF_WEEK
+}
+
+enum ConditionOperator {
+  EQUALS
+  GREATER_THAN
+  LESS_THAN
+  GREATER_THAN_OR_EQUAL
+  LESS_THAN_OR_EQUAL
+  BETWEEN
+}
+
+// ============================================================================
+// KIOSK MODE
+// ============================================================================
+
+model Code {
+  id         String     @id @default(cuid())
+  code       String     @unique
+  roleId     String
+  type       CodeType   @default(KIOSK)
+  expiresAt  DateTime
+  usedAt     DateTime?
+  status     CodeStatus @default(ACTIVE)
+  createdAt  DateTime   @default(now())
+
+  // Relations
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([roleId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("codes")
+}
+
+enum CodeType {
+  KIOSK
+  EMAIL_VERIFICATION
+}
+
+enum CodeStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  REVOKED
+}
+
+model ConnectionCode {
+  id              String      @id @default(cuid())
+  code            String      @unique
+  teacherRoleId   String
+  studentPersonId String
+  expiresAt       DateTime
+  usedAt          DateTime?
+  status          CodeStatus  @default(ACTIVE)
+  createdAt       DateTime    @default(now())
+
+  // Relations
+  teacherRole   Role   @relation(fields: [teacherRoleId], references: [id], onDelete: Cascade)
+  studentPerson Person @relation(fields: [studentPersonId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([teacherRoleId])
+  @@index([studentPersonId])
+  @@index([status])
+  @@map("connection_codes")
+}
+
+// ============================================================================
+// SHARING & PERMISSIONS
+// ============================================================================
+
+model Invitation {
+  id             String         @id @default(cuid())
+  token          String         @unique @default(cuid())
+  inviterUserId  String
+  inviterRoleId  String
+  inviteeEmail   String
+  type           InvitationType
+  permissions    String         @default("READ_ONLY")
+  personIds      String[]       @default([])
+  groupIds       String[]       @default([])
+  expiresAt      DateTime
+  status         InvitationStatus @default(PENDING)
+  acceptedAt     DateTime?
+  acceptedByUserId String?
+  createdAt      DateTime       @default(now())
+
+  // Relations
+  inviterUser  User  @relation("InviterUser", fields: [inviterUserId], references: [id], onDelete: Cascade)
+  inviterRole  Role  @relation("InviterRole", fields: [inviterRoleId], references: [id], onDelete: Cascade)
+  acceptedByUser User? @relation("AcceptedUser", fields: [acceptedByUserId], references: [id])
+
+  @@index([token])
+  @@index([inviteeEmail])
+  @@index([status])
+  @@map("invitations")
+}
+
+enum InvitationType {
+  CO_PARENT
+  CO_TEACHER
+  SCHOOL_TEACHER
+  SCHOOL_SUPPORT
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model CoParent {
+  id              String   @id @default(cuid())
+  primaryRoleId   String
+  coParentRoleId  String
+  permissions     String   @default("READ_ONLY")
+  personIds       String[] @default([])
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  primaryRole  Role @relation("PrimaryRole", fields: [primaryRoleId], references: [id], onDelete: Cascade)
+  coParentRole Role @relation("CoParentRole", fields: [coParentRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([primaryRoleId, coParentRoleId])
+  @@index([primaryRoleId])
+  @@index([coParentRoleId])
+  @@index([status])
+  @@map("co_parents")
+}
+
+model CoTeacher {
+  id                    String   @id @default(cuid())
+  groupId               String
+  primaryTeacherRoleId  String
+  coTeacherRoleId       String
+  permissions           String   @default("VIEW")
+  status                String   @default("ACTIVE")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  group               Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  primaryTeacherRole  Role  @relation("PrimaryTeacherRole", fields: [primaryTeacherRoleId], references: [id], onDelete: Cascade)
+  coTeacherRole       Role  @relation("CoTeacherRole", fields: [coTeacherRoleId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, coTeacherRoleId])
+  @@index([groupId])
+  @@index([primaryTeacherRoleId])
+  @@index([coTeacherRoleId])
+  @@index([status])
+  @@map("co_teachers")
+}
+
+model StudentParentConnection {
+  id              String   @id @default(cuid())
+  teacherRoleId   String
+  studentPersonId String
+  parentRoleId    String
+  parentPersonId  String
+  permissions     String   @default("TASK_COMPLETION")
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  teacherRole   Role   @relation("TeacherRole", fields: [teacherRoleId], references: [id], onDelete: Cascade)
+  studentPerson Person @relation("StudentPerson", fields: [studentPersonId], references: [id], onDelete: Cascade)
+  parentRole    Role   @relation("ParentRole", fields: [parentRoleId], references: [id], onDelete: Cascade)
+  parentPerson  Person @relation("ParentPerson", fields: [parentPersonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentPersonId, parentPersonId])
+  @@index([teacherRoleId])
+  @@index([studentPersonId])
+  @@index([parentRoleId])
+  @@index([parentPersonId])
+  @@index([status])
+  @@map("student_parent_connections")
+}
+
+// ============================================================================
+// SCHOOL MODE
+// ============================================================================
+
+model School {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  website     String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  members SchoolMember[]
+
+  @@map("schools")
+}
+
+model SchoolMember {
+  id        String   @id @default(cuid())
+  schoolId  String
+  roleId    String
+  role      String   @default("TEACHER") // PRINCIPAL, TEACHER, SUPPORT
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+
+  // Relations
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  userRole Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, roleId])
+  @@index([schoolId])
+  @@index([roleId])
+  @@map("school_members")
+}
+
+// ============================================================================
+// MARKETPLACE
+// ============================================================================
+
+model MarketplaceItem {
+  id          String   @id @default(cuid())
+  type        String   // ROUTINE or GOAL
+  sourceId    String   // ID of original routine/goal
+  authorRoleId String
+  name        String
+  description String   @default("")
+  visibility  String   @default("PUBLIC")
+  category    String?
+  ageGroup    String?
+  tags        String[] @default([])
+  version     String   @default("1.0.0")
+  content     String   // JSON snapshot of routine/goal
+  rating      Float    @default(0)
+  ratingCount Int      @default(0)
+  forkCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  authorRole Role                 @relation(fields: [authorRoleId], references: [id], onDelete: Cascade)
+  ratings    MarketplaceRating[]
+  comments   MarketplaceComment[]
+
+  @@index([authorRoleId])
+  @@index([type])
+  @@index([visibility])
+  @@index([category])
+  @@index([rating])
+  @@map("marketplace_items")
+}
+
+model MarketplaceRating {
+  id                String   @id @default(cuid())
+  marketplaceItemId String
+  userId            String
+  rating            Int      // 1-5 stars
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  marketplaceItem MarketplaceItem @relation(fields: [marketplaceItemId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([marketplaceItemId, userId])
+  @@index([marketplaceItemId])
+  @@index([userId])
+  @@map("marketplace_ratings")
+}
+
+model MarketplaceComment {
+  id                String   @id @default(cuid())
+  marketplaceItemId String
+  userId            String
+  text              String
+  status            String   @default("ACTIVE") // ACTIVE, FLAGGED, HIDDEN
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  marketplaceItem MarketplaceItem @relation(fields: [marketplaceItemId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flags           CommentFlag[]
+
+  @@index([marketplaceItemId])
+  @@index([userId])
+  @@index([status])
+  @@map("marketplace_comments")
+}
+
+model CommentFlag {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  reason    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  comment MarketplaceComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("comment_flags")
+}
+
+// ============================================================================
+// AUTHENTICATION
+// ============================================================================
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String   // 6-digit code
+  type      String   @default("EMAIL_VERIFICATION")
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([code])
+  @@index([expiresAt])
+  @@map("verification_codes")
+}
