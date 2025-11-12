@@ -6,19 +6,35 @@ If starting a new Claude Code session, use this guide to quickly resume developm
 
 ---
 
+## ⚠️ IMPORTANT: Read This First
+
+**Before starting any stage, read `/docs/PROJECT-CONTEXT.md`**
+
+This document contains:
+- ✅ Project philosophy and requirements
+- ✅ All business rules and edge cases
+- ✅ Gap analysis resolutions
+- ✅ Common pitfalls to avoid
+- ✅ Critical implementation decisions
+
+**Why this matters:** This context document ensures you understand ALL requirements before writing code. It prevents bugs, rework, and misunderstandings.
+
+---
+
 ## 📁 Project Structure
 
 ```
 /docs
-  /stages          # Stage 1-6 detailed guides with copy-paste prompts
-  plan.md          # Complete development plan
-  SETUP.md         # Local environment setup
-  
+  PROJECT-CONTEXT.md  # ⭐ READ THIS FIRST - Complete requirements & context
+  /stages             # Stage 1-6 detailed guides with copy-paste prompts
+  plan.md             # Complete development plan
+  SETUP.md            # Local environment setup
+
 /prisma
-  README.md        # Database schema reference
-  
-README.md          # Project overview
-QUICKSTART.md      # This file
+  README.md           # Database schema reference
+
+README.md             # Project overview
+QUICKSTART.md         # This file
 ```
 
 ---
@@ -39,7 +55,13 @@ Check completed stages in `/docs/plan.md`
 
 ## 🚀 Resume Development
 
-### Step 1: Check Current Stage
+### Step 1: Read Context Document
+
+**READ:** `/docs/PROJECT-CONTEXT.md` - Comprehensive requirements, business rules, and edge cases
+
+This is critical! It contains all resolved ambiguities and implementation decisions.
+
+### Step 2: Check Current Stage
 
 ```bash
 # See what's implemented
@@ -49,16 +71,16 @@ git log --oneline
 git branch
 ```
 
-### Step 2: Open Stage Guide
+### Step 3: Open Stage Guide
 
-Open `/docs/stages/stage-[X].md` for your current stage.
+Open `/docs/stages/STAGE-[X]-COMPLETE.md` for your current stage.
 
-### Step 3: Copy Session Prompt
+### Step 4: Copy Session Prompt
 
-Each stage file has a **SESSION PROMPT** section at the top.  
+Each stage file has a **SESSION PROMPT** section at the top.
 **Copy the entire prompt** and paste it into your new Claude Code session.
 
-### Step 4: Continue Coding
+### Step 5: Continue Coding
 
 The session prompt includes:
 - ✅ Context (what's completed)
@@ -67,7 +89,7 @@ The session prompt includes:
 - ✅ Coding rules
 - ✅ Testing requirements
 
-Claude will know exactly where you left off and what to build next.
+Combined with PROJECT-CONTEXT.md, Claude will know exactly where you left off and what to build next.
 
 ---
 
@@ -89,10 +111,14 @@ Claude will know exactly where you left off and what to build next.
 
 ## 🔑 Key Files for Reference
 
-- **Data Model:** `/prisma/README.md` (see original conversation for full schema)
-- **RLS Policies:** Will be in `/supabase/policies.sql` (Stage 1)
+- **⭐ Requirements & Context:** `/docs/PROJECT-CONTEXT.md` - **READ THIS FIRST**
+- **Complete Schema:** `/prisma/schema.prisma` (721 lines, all 70+ models)
+- **Schema Reference:** `/prisma/README.md` (documentation and examples)
+- **RLS Policies:** `/supabase/policies.sql` (949 lines, all tables)
+- **Environment Variables:** `/.env.example` (copy to .env.local)
 - **Tech Stack:** See `/docs/plan.md`
 - **Environment Setup:** `/docs/SETUP.md`
+- **Stage Guides:** `/docs/stages/STAGE-[1-6]-COMPLETE.md`
 
 ---
 
@@ -146,8 +172,29 @@ git push origin feature/your-feature
 
 ## ✅ Ready to Code
 
-**Start here:** `/docs/stages/stage-1.md`
+**Step 1:** Read `/docs/PROJECT-CONTEXT.md` (comprehensive requirements & business rules)
 
-Copy the SESSION PROMPT from the stage guide and paste it into your Claude Code session.
+**Step 2:** Open `/docs/stages/STAGE-1-COMPLETE.md`
+
+**Step 3:** Copy the SESSION PROMPT from the stage guide and paste it into your Claude Code session
+
+**Step 4:** Start coding!
+
+---
+
+**🎯 Recommended Session Start Message:**
+
+```
+I'm starting development on Ruby Routines Stage [X].
+
+I have read /docs/PROJECT-CONTEXT.md and understand:
+- Core philosophy (non-competitive approach)
+- Technical stack (Next.js 14 + Supabase + Prisma + tRPC)
+- Critical business rules (dual-role accounts, reset periods, tier limits, etc.)
+- All gap analysis resolutions
+
+Now proceeding with Stage [X]:
+[paste SESSION PROMPT from STAGE-X-COMPLETE.md here]
+```
 
 Happy coding! 🚀

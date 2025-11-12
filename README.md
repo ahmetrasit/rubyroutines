@@ -94,18 +94,25 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Documentation
 
+### ⭐ Start Here
+- **[Project Context & Requirements](docs/PROJECT-CONTEXT.md)** - **READ THIS FIRST** before coding
+  - Complete requirements and business rules
+  - Gap analysis resolutions (all edge cases)
+  - Common pitfalls to avoid
+  - Critical implementation decisions
+
+### Development Guides
 - [Complete Development Plan](docs/plan.md)
+- [Quick Start for New Sessions](QUICKSTART.md)
 - [Local Setup Guide](docs/SETUP.md)
-- [System Architecture](docs/ARCHITECTURE.md)
-- [Security & RLS Policies](docs/SECURITY.md)
-- [API Reference](docs/API.md)
-- **Stage Guides:**
-  - [Stage 1: Foundation & Setup](docs/stages/stage-1.md)
-  - [Stage 2: Core CRUD](docs/stages/stage-2.md)
-  - [Stage 3: Goals & Smart Routines](docs/stages/stage-3.md)
-  - [Stage 4: Kiosk Mode](docs/stages/stage-4.md)
-  - [Stage 5: Co-Parent/Teacher + School](docs/stages/stage-5.md)
-  - [Stage 6: Analytics + Marketplace](docs/stages/stage-6.md)
+
+### Stage Guides (Complete Implementation)
+- [Stage 1: Foundation & Setup](docs/stages/STAGE-1-COMPLETE.md)
+- [Stage 2: Core CRUD](docs/stages/STAGE-2-COMPLETE.md)
+- [Stage 3: Goals & Smart Routines](docs/stages/STAGE-3-COMPLETE.md)
+- [Stage 4: Kiosk Mode](docs/stages/STAGE-4-COMPLETE.md)
+- [Stage 5: Co-Parent/Teacher + School](docs/stages/STAGE-5-COMPLETE.md)
+- [Stage 6: Analytics + Marketplace](docs/stages/STAGE-6-COMPLETE.md)
 
 ## Development Stages
 
