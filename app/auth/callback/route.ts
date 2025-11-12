@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
+  const origin = requestUrl.origin;
 
   if (code) {
     const supabase = await createClient();
@@ -27,6 +28,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Redirect to dashboard
-  return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Redirect to dashboard using the same origin (IP or localhost)
+  return NextResponse.redirect(`${origin}/dashboard`);
 }
