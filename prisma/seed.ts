@@ -261,10 +261,8 @@ async function main() {
       routineId: morningRoutine.id,
       name: 'Brush Teeth',
       description: 'Brush for 2 minutes',
-      type: TaskType.CHECKBOX,
+      type: TaskType.SIMPLE,
       order: 1,
-      isRequired: true,
-      points: 5,
       status: EntityStatus.ACTIVE,
     },
   });
@@ -277,10 +275,8 @@ async function main() {
       routineId: morningRoutine.id,
       name: 'Get Dressed',
       description: 'Put on school clothes',
-      type: TaskType.CHECKBOX,
+      type: TaskType.SIMPLE,
       order: 2,
-      isRequired: true,
-      points: 5,
       status: EntityStatus.ACTIVE,
     },
   });
@@ -293,10 +289,8 @@ async function main() {
       routineId: morningRoutine.id,
       name: 'Eat Breakfast',
       description: 'Finish your meal',
-      type: TaskType.CHECKBOX,
+      type: TaskType.SIMPLE,
       order: 3,
-      isRequired: true,
-      points: 10,
       status: EntityStatus.ACTIVE,
     },
   });
@@ -309,10 +303,8 @@ async function main() {
       routineId: morningRoutine.id,
       name: 'Pack Backpack',
       description: 'Get ready for school',
-      type: TaskType.CHECKBOX,
+      type: TaskType.SIMPLE,
       order: 4,
-      isRequired: true,
-      points: 5,
       status: EntityStatus.ACTIVE,
     },
   });
@@ -356,10 +348,8 @@ async function main() {
       routineId: classroomRoutine.id,
       name: 'Get Reading Book',
       description: 'Pick your book from shelf',
-      type: TaskType.CHECKBOX,
+      type: TaskType.SIMPLE,
       order: 1,
-      isRequired: true,
-      points: 3,
       status: EntityStatus.ACTIVE,
     },
   });
@@ -372,10 +362,8 @@ async function main() {
       routineId: classroomRoutine.id,
       name: 'Sit in Reading Circle',
       description: 'Find your spot quietly',
-      type: TaskType.CHECKBOX,
+      type: TaskType.SIMPLE,
       order: 2,
-      isRequired: true,
-      points: 2,
       status: EntityStatus.ACTIVE,
     },
   });
@@ -389,11 +377,11 @@ async function main() {
     create: {
       id: 'test-goal-1',
       roleId: parentRole.id,
-      personId: child1.id,
+      personIds: [child1.id],
       name: 'Complete Morning Routine 7 Days',
       description: 'Finish all morning tasks for a full week',
-      targetPoints: 175, // 25 points per day * 7 days
-      currentPoints: 0,
+      target: 7, // 7 days
+      period: ResetPeriod.WEEKLY,
       status: EntityStatus.ACTIVE,
     },
   });
