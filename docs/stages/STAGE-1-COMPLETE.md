@@ -24,7 +24,7 @@ COMPLETED BEFORE THIS SESSION:
 CURRENT STAGE OBJECTIVES:
 1. Initialize Next.js project with TypeScript strict mode
 2. Set up Supabase connection
-3. Implement complete Prisma schema (all tables from plan.md)
+3. Implement complete Prisma schema (copy from /prisma/schema.prisma)
 4. Create RLS policies for all tables
 5. Implement auth system (email/password + Google OAuth)
 6. Create email verification flow (6-digit codes)
@@ -390,9 +390,9 @@ openssl rand -base64 32
 
 ### Step 3: Prisma Schema (2 hours)
 
-**CRITICAL:** Implement the COMPLETE schema from the gap analysis conversation.
+**CRITICAL:** Copy the COMPLETE schema from `/prisma/schema.prisma`.
 
-Due to length, the full schema is in the original conversation. Key structure:
+The full schema (721 lines) is available in `/prisma/schema.prisma` with all 70+ models. Key structure:
 
 ```prisma
 // prisma/schema.prisma
