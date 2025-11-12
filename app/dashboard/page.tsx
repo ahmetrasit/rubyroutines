@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,12 @@ export default function DashboardPage() {
     },
   });
 
+  useEffect(() => {
+    if (!isLoading && !session?.user) {
+      router.push('/login');
+    }
+  }, [isLoading, session, router]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -22,7 +29,6 @@ export default function DashboardPage() {
   }
 
   if (!session?.user) {
-    router.push('/login');
     return null;
   }
 
