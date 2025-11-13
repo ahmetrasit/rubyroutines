@@ -9,9 +9,18 @@ import {
 } from '@/lib/auth/verification';
 import { CodeType } from '@/lib/types/prisma-enums';
 import { logger } from '@/lib/utils/logger';
+import {
+  authRateLimitedProcedure,
+  verificationRateLimitedProcedure,
+} from '../middleware/ratelimit';
+import {
+  logAuthEvent,
+  logDataChange,
+  AUDIT_ACTIONS,
+} from '@/lib/services/audit-log';
 
 export const authRouter = router({
-  signUp: publicProcedure
+  signUp: authRateLimitedProcedure
     .input(z.object({
       email: z.string().email('Please enter a valid email address'),
       password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -123,10 +132,15 @@ export const authRouter = router({
         }
       }
 
+      // Log successful signup
+      await logAuthEvent(AUDIT_ACTIONS.AUTH_SIGNUP, data.user.id, true, {
+        email: input.email,
+      });
+
       return { success: true, userId: data.user.id };
     }),
 
-  signIn: publicProcedure
+  signIn: authRateLimitedProcedure
     .input(z.object({
       email: z.string().email(),
       password: z.string(),
@@ -138,6 +152,10 @@ export const authRouter = router({
       });
 
       if (error) {
+        // Log failed login attempt
+        // Note: We don't have userId for failed logins, so we'll use email
+        logger.warn('Failed login attempt', { email: input.email, error: error.message });
+
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'Invalid credentials',
@@ -248,11 +266,19 @@ export const authRouter = router({
         }
       }
 
+      // Log successful login
+      await logAuthEvent(AUDIT_ACTIONS.AUTH_LOGIN, data.user.id, true, {
+        email: input.email,
+      });
+
       return { success: true, userId: data.user.id };
     }),
 
   signOut: protectedProcedure
     .mutation(async ({ ctx }) => {
+      // Log logout
+      await logAuthEvent(AUDIT_ACTIONS.AUTH_LOGOUT, ctx.user.id, true);
+
       await ctx.supabase.auth.signOut();
       return { success: true };
     }),
@@ -296,7 +322,7 @@ export const authRouter = router({
       return { success: true };
     }),
 
-  verifyEmailCode: publicProcedure
+  verifyEmailCode: verificationRateLimitedProcedure
     .input(z.object({
       userId: z.string(),
       code: z.string().length(6),
@@ -321,10 +347,13 @@ export const authRouter = router({
         data: { emailVerified: new Date() },
       });
 
+      // Log email verification
+      await logAuthEvent(AUDIT_ACTIONS.EMAIL_VERIFY, input.userId, true);
+
       return { success: true };
     }),
 
-  resendVerificationCode: publicProcedure
+  resendVerificationCode: verificationRateLimitedProcedure
     .input(z.object({
       userId: z.string(),
       email: z.string().email(),

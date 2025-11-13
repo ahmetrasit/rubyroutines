@@ -9,6 +9,7 @@ import {
   validateKioskSession
 } from '@/lib/services/kiosk-code';
 import { TRPCError } from '@trpc/server';
+import { kioskRateLimitedProcedure } from '../middleware/ratelimit';
 
 export const kioskRouter = router({
   /**
@@ -90,7 +91,7 @@ export const kioskRouter = router({
   /**
    * Validate code and get role/persons data (public - no auth required)
    */
-  validateCode: publicProcedure
+  validateCode: kioskRateLimitedProcedure
     .input(z.object({
       code: z.string().min(1)
     }))

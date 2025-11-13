@@ -50,10 +50,10 @@ export default function LoginPage() {
 
   return (
     <div>
-      <div className="text-center">
+      <header className="text-center">
         <h1 className="text-3xl font-bold">Welcome back</h1>
         <p className="mt-2 text-gray-600">Log in to your account</p>
-      </div>
+      </header>
 
       <div className="mt-8 space-y-6">
         <Button
@@ -62,11 +62,12 @@ export default function LoginPage() {
           className="w-full"
           onClick={handleGoogleSignIn}
           disabled={isGoogleLoading}
+          aria-label="Sign in with Google"
         >
           {isGoogleLoading ? 'Connecting...' : 'Continue with Google'}
         </Button>
 
-        <div className="relative">
+        <div className="relative" role="separator" aria-label="Or">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
           </div>
@@ -75,7 +76,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" aria-label="Login form">
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
@@ -111,7 +112,11 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
+            <div
+              className="rounded-md bg-red-50 p-3 text-sm text-red-800"
+              role="alert"
+              aria-live="polite"
+            >
               {error}
             </div>
           )}
@@ -120,6 +125,7 @@ export default function LoginPage() {
             type="submit"
             className="w-full"
             disabled={signInMutation.isPending}
+            aria-label="Submit login form"
           >
             {signInMutation.isPending ? 'Logging in...' : 'Log in'}
           </Button>
