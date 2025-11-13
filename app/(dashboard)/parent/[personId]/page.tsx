@@ -51,7 +51,7 @@ export default function PersonDetailPage() {
   }
 
   const handleSelectRoutine = (routine: any) => {
-    router.push(`/parent/${personId}/routines/${routine.id}`);
+    router.push(`/parent/${personId}/${routine.id}`);
   };
 
   return (
