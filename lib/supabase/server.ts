@@ -14,16 +14,18 @@ export async function createClient() {
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value, ...options });
+            cookieStore.set(name, value, options);
           } catch (error) {
-            // Server component
+            // This can fail in Server Components, but works in Route Handlers
+            // The middleware will handle session refresh for Server Components
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value: '', ...options });
+            cookieStore.delete(name);
           } catch (error) {
-            // Server component
+            // This can fail in Server Components, but works in Route Handlers
+            // The middleware will handle session refresh for Server Components
           }
         },
       },
