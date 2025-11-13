@@ -87,16 +87,18 @@ export function PersonCard({ person, onSelect }: PersonCardProps) {
             >
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete();
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {person.name !== 'Me' && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

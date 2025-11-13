@@ -49,7 +49,7 @@ export const authRouter = router({
 
       // Create user in database
       try {
-        await ctx.prisma.user.create({
+        const newUser = await ctx.prisma.user.create({
           data: {
             id: data.user.id,
             email: input.email,
@@ -61,7 +61,26 @@ export const authRouter = router({
               },
             },
           },
+          include: {
+            roles: true,
+          },
         });
+
+        // Auto-create "Me" person for the parent role
+        if (newUser.roles.length > 0) {
+          const parentRole = newUser.roles[0];
+          await ctx.prisma.person.create({
+            data: {
+              roleId: parentRole.id,
+              name: 'Me',
+              avatar: JSON.stringify({
+                color: '#BAE1FF', // Light blue
+                emoji: '👤',
+              }),
+              status: 'ACTIVE',
+            },
+          });
+        }
       } catch (dbError) {
         // User already exists in DB, ensure they have a role
         console.error('User already exists in database:', dbError);
@@ -73,11 +92,24 @@ export const authRouter = router({
         });
 
         if (existingUser && existingUser.roles.length === 0) {
-          await ctx.prisma.role.create({
+          const newRole = await ctx.prisma.role.create({
             data: {
               userId: data.user.id,
               type: 'PARENT',
               tier: 'FREE',
+            },
+          });
+
+          // Auto-create "Me" person
+          await ctx.prisma.person.create({
+            data: {
+              roleId: newRole.id,
+              name: 'Me',
+              avatar: JSON.stringify({
+                color: '#BAE1FF',
+                emoji: '👤',
+              }),
+              status: 'ACTIVE',
             },
           });
         }
@@ -160,13 +192,52 @@ export const authRouter = router({
 
       // Auto-create PARENT role for first-time users
       if (user.roles.length === 0) {
-        await ctx.prisma.role.create({
+        const newRole = await ctx.prisma.role.create({
           data: {
             userId: user.id,
             type: 'PARENT',
             tier: 'FREE',
           },
         });
+
+        // Auto-create "Me" person for new role
+        await ctx.prisma.person.create({
+          data: {
+            roleId: newRole.id,
+            name: 'Me',
+            avatar: JSON.stringify({
+              color: '#BAE1FF',
+              emoji: '👤',
+            }),
+            status: 'ACTIVE',
+          },
+        });
+      } else {
+        // Check if "Me" person exists for this role
+        const parentRole = user.roles.find((role: any) => role.type === 'PARENT');
+        if (parentRole) {
+          const mePersonExists = await ctx.prisma.person.findFirst({
+            where: {
+              roleId: parentRole.id,
+              name: 'Me',
+            },
+          });
+
+          // Create "Me" person if it doesn't exist
+          if (!mePersonExists) {
+            await ctx.prisma.person.create({
+              data: {
+                roleId: parentRole.id,
+                name: 'Me',
+                avatar: JSON.stringify({
+                  color: '#BAE1FF',
+                  emoji: '👤',
+                }),
+                status: 'ACTIVE',
+              },
+            });
+          }
+        }
       }
 
       return { success: true, userId: data.user.id };

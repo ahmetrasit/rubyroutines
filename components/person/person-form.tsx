@@ -199,7 +199,7 @@ export function PersonForm({ person, roleId, onClose }: PersonFormProps) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{person ? 'Edit Person' : 'Add New Person'}</DialogTitle>
+          <DialogTitle>{person ? 'Edit Person' : 'Add New Child'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">

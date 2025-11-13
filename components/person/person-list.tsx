@@ -47,7 +47,7 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
           )}
           <Button size="sm" onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Person
+            Add Child
           </Button>
         </div>
       </div>
@@ -60,10 +60,10 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
         </div>
       ) : (
         <div className="text-center py-12 border-2 border-dashed rounded-lg">
-          <p className="text-gray-500 mb-4">No people yet</p>
+          <p className="text-gray-500 mb-4">No children yet</p>
           <Button onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Your First Person
+            Add Your First Child
           </Button>
         </div>
       )}

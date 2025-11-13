@@ -5,7 +5,7 @@ export const createPersonSchema = z.object({
   roleId: z.string().cuid(),
   name: z.string().min(1, 'Name is required').max(100),
   birthDate: z.coerce.date().optional(),
-  avatar: z.string().url().optional(),
+  avatar: z.string().optional(), // Can be URL or JSON string
   notes: z.string().max(500).optional(),
 });
 
@@ -13,7 +13,7 @@ export const updatePersonSchema = z.object({
   id: z.string().cuid(),
   name: z.string().min(1).max(100).optional(),
   birthDate: z.coerce.date().optional().nullable(),
-  avatar: z.string().url().optional().nullable(),
+  avatar: z.string().optional().nullable(), // Can be URL or JSON string
   notes: z.string().max(500).optional().nullable(),
 });
 
