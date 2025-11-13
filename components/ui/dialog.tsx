@@ -18,12 +18,35 @@ export function Dialog({ open: controlledOpen, onOpenChange, children }: DialogP
   const open = controlledOpen ?? uncontrolledOpen
   const setOpen = onOpenChange ?? setUncontrolledOpen
 
+  // Prevent body scroll when modal is open
+  React.useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [open])
+
+  // Handle escape key
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [open, setOpen])
+
   return (
     <DialogContext.Provider value={{ open, onOpenChange: setOpen }}>
       {children}
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-black/50"
+          className="fixed inset-0 z-50 bg-black bg-opacity-50"
           onClick={() => setOpen(false)}
         />
       )}
@@ -60,7 +83,7 @@ export function DialogContent({ children, className = "" }: DialogContentProps) 
 
   return (
     <div
-      className={`fixed left-1/2 top-1/2 z-[60] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-lg ${className}`}
+      className={`fixed left-1/2 top-1/2 z-[60] w-full max-w-lg max-h-[90vh] overflow-y-auto -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-lg ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {children}

@@ -228,11 +228,12 @@ export function PersonForm({ person, roleId, onClose }: PersonFormProps) {
                   onClick={() => setSelectedColor(color)}
                   className={`w-10 h-10 rounded-full transition-all ${
                     selectedColor === color
-                      ? 'ring-4 ring-blue-500 ring-offset-2 scale-110'
-                      : 'hover:scale-105'
+                      ? 'ring-4 ring-offset-2 ring-gray-400 scale-105'
+                      : 'hover:scale-105 hover:ring-2 hover:ring-gray-300'
                   }`}
                   style={{ backgroundColor: color }}
                   aria-label={`Select color ${color}`}
+                  title={color}
                 />
               ))}
             </div>
@@ -261,10 +262,10 @@ export function PersonForm({ person, roleId, onClose }: PersonFormProps) {
                   key={item.emoji}
                   type="button"
                   onClick={() => setSelectedEmoji(item.emoji)}
-                  className={`text-3xl p-2 rounded-lg transition-all hover:bg-gray-100 ${
+                  className={`text-3xl p-2 rounded-lg transition-all ${
                     selectedEmoji === item.emoji
-                      ? 'bg-blue-100 ring-2 ring-blue-500 scale-110'
-                      : ''
+                      ? 'bg-primary-100 ring-2 ring-primary-500 scale-110'
+                      : 'hover:bg-gray-100'
                   }`}
                   title={item.name}
                 >
@@ -282,11 +283,11 @@ export function PersonForm({ person, roleId, onClose }: PersonFormProps) {
           {/* Preview Section */}
           <div className="border-t pt-4">
             <Label className="mb-3 block">Preview</Label>
-            <div className="bg-gray-50 rounded-lg p-6">
+            <div className="bg-gray-50 rounded-xl p-6">
               <div className="flex items-center gap-4">
                 <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-md"
-                  style={{ backgroundColor: selectedColor }}
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
+                  style={{ backgroundColor: selectedColor + '20' }}
                 >
                   {selectedEmoji}
                 </div>

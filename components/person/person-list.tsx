@@ -53,14 +53,14 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
       </div>
 
       {persons && persons.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {persons.map((person: any) => (
             <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 border-2 border-dashed rounded-lg">
-          <p className="text-gray-500 mb-4">No children yet</p>
+        <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
+          <p className="text-gray-600 mb-4 text-lg">No children yet</p>
           <Button onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Your First Child

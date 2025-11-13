@@ -59,47 +59,50 @@ export function PersonCard({ person, onSelect }: PersonCardProps) {
   return (
     <>
       <div
-        className="group relative rounded-lg border bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        className="group relative rounded-xl bg-white p-6 shadow-md hover:shadow-lg transition-all cursor-pointer border-t-4"
+        style={{ borderTopColor: avatarColor }}
         onClick={() => onSelect?.(person)}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mb-4">
           <div className="flex-shrink-0">
             <div
-              className="h-14 w-14 rounded-full flex items-center justify-center text-2xl shadow-sm"
-              style={{ backgroundColor: avatarColor }}
+              className="h-16 w-16 rounded-full flex items-center justify-center text-3xl"
+              style={{ backgroundColor: avatarColor + '20' }}
             >
               {avatarEmoji}
             </div>
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg truncate">{person.name}</h3>
+            <h3 className="font-bold text-xl text-gray-900 truncate">{person.name}</h3>
           </div>
+        </div>
 
-          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowEdit(true);
+            }}
+            className="flex-1"
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          {person.name !== 'Me' && (
             <Button
               size="sm"
               variant="ghost"
               onClick={(e) => {
                 e.stopPropagation();
-                setShowEdit(true);
+                handleDelete();
               }}
             >
-              <Pencil className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </Button>
-            {person.name !== 'Me' && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete();
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
