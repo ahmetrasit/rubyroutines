@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from '../init';
+import { router, authorizedProcedure, verifiedProcedure, verifyRoleOwnership } from '../init';
 import { z } from 'zod';
 import {
   publishToMarketplace,
@@ -13,8 +13,9 @@ import {
 export const marketplaceRouter = router({
   /**
    * Publish a routine or goal to the marketplace
+   * Requires email verification
    */
-  publish: protectedProcedure
+  publish: verifiedProcedure
     .input(
       z.object({
         type: z.enum(['ROUTINE', 'GOAL']),
@@ -36,7 +37,7 @@ export const marketplaceRouter = router({
   /**
    * Update an existing marketplace item
    */
-  update: protectedProcedure
+  update: authorizedProcedure
     .input(
       z.object({
         itemId: z.string().cuid(),
@@ -55,7 +56,7 @@ export const marketplaceRouter = router({
   /**
    * Fork (import & customize) a marketplace item
    */
-  fork: protectedProcedure
+  fork: authorizedProcedure
     .input(
       z.object({
         itemId: z.string().cuid(),
@@ -70,7 +71,7 @@ export const marketplaceRouter = router({
   /**
    * Search marketplace items
    */
-  search: protectedProcedure
+  search: authorizedProcedure
     .input(
       z.object({
         keyword: z.string().optional(),
@@ -91,7 +92,7 @@ export const marketplaceRouter = router({
   /**
    * Rate a marketplace item (1-5 stars)
    */
-  rate: protectedProcedure
+  rate: authorizedProcedure
     .input(
       z.object({
         itemId: z.string().cuid(),
@@ -115,7 +116,7 @@ export const marketplaceRouter = router({
   /**
    * Add a comment to a marketplace item
    */
-  comment: protectedProcedure
+  comment: authorizedProcedure
     .input(
       z.object({
         itemId: z.string().cuid(),
@@ -139,7 +140,7 @@ export const marketplaceRouter = router({
   /**
    * Flag a comment for review
    */
-  flag: protectedProcedure
+  flag: authorizedProcedure
     .input(
       z.object({
         commentId: z.string().cuid(),
@@ -163,7 +164,7 @@ export const marketplaceRouter = router({
   /**
    * Get marketplace item by ID
    */
-  getById: protectedProcedure
+  getById: authorizedProcedure
     .input(z.object({ itemId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
       const item = await ctx.prisma.marketplaceItem.findUnique({
@@ -210,7 +211,7 @@ export const marketplaceRouter = router({
   /**
    * Get comments for a marketplace item
    */
-  getComments: protectedProcedure
+  getComments: authorizedProcedure
     .input(
       z.object({
         itemId: z.string().cuid(),

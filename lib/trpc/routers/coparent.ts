@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../init';
+import { router, authorizedProcedure, verifiedProcedure } from '../init';
 import {
   sendInvitation,
   InvitationType,
@@ -9,7 +9,8 @@ import { prisma } from '@/lib/prisma';
 
 export const coParentRouter = router({
   // Send co-parent invitation
-  invite: protectedProcedure
+  // Requires email verification
+  invite: verifiedProcedure
     .input(
       z.object({
         roleId: z.string().cuid(),
@@ -32,7 +33,7 @@ export const coParentRouter = router({
     }),
 
   // List co-parents
-  list: protectedProcedure
+  list: authorizedProcedure
     .input(
       z.object({
         roleId: z.string().cuid()
@@ -51,7 +52,7 @@ export const coParentRouter = router({
         }
       });
 
-      return coParents.map((cp) => ({
+      return coParents.map((cp: any) => ({
         id: cp.id,
         coParentUser: cp.coParentRole.user,
         permissions: cp.permissions,
@@ -61,7 +62,7 @@ export const coParentRouter = router({
     }),
 
   // Update co-parent permissions
-  updatePermissions: protectedProcedure
+  updatePermissions: authorizedProcedure
     .input(
       z.object({
         coParentId: z.string().cuid(),
@@ -91,7 +92,7 @@ export const coParentRouter = router({
     }),
 
   // Revoke co-parent access
-  revoke: protectedProcedure
+  revoke: authorizedProcedure
     .input(
       z.object({
         coParentId: z.string().cuid()

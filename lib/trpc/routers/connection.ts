@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../init';
+import { router, authorizedProcedure, verifiedProcedure } from '../init';
 import {
   generateConnectionCode,
   connectParentToStudent,
@@ -9,7 +9,8 @@ import {
 
 export const connectionRouter = router({
   // Teacher generates code for student
-  generateCode: protectedProcedure
+  // Requires email verification
+  generateCode: verifiedProcedure
     .input(
       z.object({
         roleId: z.string().cuid(),
@@ -25,7 +26,7 @@ export const connectionRouter = router({
     }),
 
   // Parent connects to student using code
-  connect: protectedProcedure
+  connect: authorizedProcedure
     .input(
       z.object({
         code: z.string().length(6),
@@ -43,7 +44,7 @@ export const connectionRouter = router({
     }),
 
   // Get parent's connected students
-  listConnections: protectedProcedure
+  listConnections: authorizedProcedure
     .input(
       z.object({
         parentRoleId: z.string().cuid()
@@ -55,7 +56,7 @@ export const connectionRouter = router({
     }),
 
   // Disconnect parent from student
-  disconnect: protectedProcedure
+  disconnect: authorizedProcedure
     .input(
       z.object({
         connectionId: z.string().cuid()

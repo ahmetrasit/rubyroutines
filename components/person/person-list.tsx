@@ -7,11 +7,11 @@ import { Plus, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { PersonForm } from './person-form';
 import { RestorePersonDialog } from './restore-person-dialog';
-
+import type { Person } from '@/lib/types/database';
 
 interface PersonListProps {
   roleId: string;
-  onSelectPerson?: (person: any) => void;
+  onSelectPerson?: (person: Person) => void;
 }
 
 export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
@@ -54,7 +54,7 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
 
       {persons && persons.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {persons.map((person: any) => (
+          {persons.map((person) => (
             <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
           ))}
         </div>

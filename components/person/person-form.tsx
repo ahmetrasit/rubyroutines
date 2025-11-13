@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { trpc } from '@/lib/trpc/client';
-import { useToast } from '@/components/ui/toast';
 import {
   Dialog,
   DialogContent,
@@ -13,112 +12,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Search } from 'lucide-react';
+import { PASTEL_COLORS, COMMON_EMOJIS, parseAvatar, serializeAvatar } from '@/lib/utils/avatar';
+import { useCreateMutation, useUpdateMutation } from '@/lib/hooks';
+import type { Person } from '@/lib/types/database';
 
 interface PersonFormProps {
-  person?: any;
+  person?: Person;
   roleId?: string;
   onClose: () => void;
 }
 
-const PASTEL_COLORS = [
-  '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF',
-  '#E0BBE4', '#FFDFD3', '#FEC8D8', '#D4F1F4', '#C9E4DE',
-  '#F7D9C4', '#FAACA8', '#DFE7FD', '#B4F8C8', '#FBE7C6',
-  '#A0E7E5', '#FFAEBC', '#FBE4D8', '#D5AAFF', '#85E3FF',
-  '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#FFDFD3',
-  '#E6E6FA', '#FFE5B4', '#F0E68C', '#D8BFD8', '#FFE4E1',
-  '#E0FFFF', '#F5DEB3'
-];
-
-const COMMON_EMOJIS = [
-  { emoji: '😀', name: 'smile', keywords: 'happy smile face' },
-  { emoji: '😊', name: 'blush', keywords: 'happy blush smile' },
-  { emoji: '😎', name: 'cool', keywords: 'cool sunglasses' },
-  { emoji: '🤓', name: 'nerd', keywords: 'nerd glasses smart' },
-  { emoji: '🥳', name: 'party', keywords: 'party celebrate happy' },
-  { emoji: '😇', name: 'angel', keywords: 'angel halo good' },
-  { emoji: '🤗', name: 'hug', keywords: 'hug friendly warm' },
-  { emoji: '🤩', name: 'star', keywords: 'star eyes excited' },
-  { emoji: '😺', name: 'cat', keywords: 'cat happy smile' },
-  { emoji: '🐶', name: 'dog', keywords: 'dog puppy pet' },
-  { emoji: '🐱', name: 'kitty', keywords: 'cat kitty pet' },
-  { emoji: '🐭', name: 'mouse', keywords: 'mouse small cute' },
-  { emoji: '🐹', name: 'hamster', keywords: 'hamster pet cute' },
-  { emoji: '🐰', name: 'rabbit', keywords: 'rabbit bunny cute' },
-  { emoji: '🦊', name: 'fox', keywords: 'fox animal orange' },
-  { emoji: '🐻', name: 'bear', keywords: 'bear animal cute' },
-  { emoji: '🐼', name: 'panda', keywords: 'panda bear cute' },
-  { emoji: '🐨', name: 'koala', keywords: 'koala bear cute' },
-  { emoji: '🐯', name: 'tiger', keywords: 'tiger animal' },
-  { emoji: '🦁', name: 'lion', keywords: 'lion animal' },
-  { emoji: '🐮', name: 'cow', keywords: 'cow animal farm' },
-  { emoji: '🐷', name: 'pig', keywords: 'pig animal farm' },
-  { emoji: '🐸', name: 'frog', keywords: 'frog animal green' },
-  { emoji: '🐵', name: 'monkey', keywords: 'monkey animal' },
-  { emoji: '🦄', name: 'unicorn', keywords: 'unicorn magic rainbow' },
-  { emoji: '🐝', name: 'bee', keywords: 'bee insect honey' },
-  { emoji: '🦋', name: 'butterfly', keywords: 'butterfly insect pretty' },
-  { emoji: '🐙', name: 'octopus', keywords: 'octopus sea animal' },
-  { emoji: '🌟', name: 'star', keywords: 'star shine bright' },
-  { emoji: '⭐', name: 'gold star', keywords: 'star gold bright' },
-  { emoji: '💫', name: 'dizzy', keywords: 'dizzy star sparkle' },
-  { emoji: '🌈', name: 'rainbow', keywords: 'rainbow color bright' },
-  { emoji: '🎈', name: 'balloon', keywords: 'balloon party celebrate' },
-  { emoji: '🎨', name: 'art', keywords: 'art paint color' },
-  { emoji: '🎭', name: 'theater', keywords: 'theater drama art' },
-  { emoji: '🎪', name: 'circus', keywords: 'circus tent fun' },
-  { emoji: '🎡', name: 'wheel', keywords: 'ferris wheel fun' },
-  { emoji: '🎢', name: 'coaster', keywords: 'roller coaster fun' },
-  { emoji: '🎸', name: 'guitar', keywords: 'guitar music rock' },
-  { emoji: '🎹', name: 'piano', keywords: 'piano music keys' },
-  { emoji: '🎺', name: 'trumpet', keywords: 'trumpet music brass' },
-  { emoji: '🎻', name: 'violin', keywords: 'violin music string' },
-  { emoji: '🥁', name: 'drum', keywords: 'drum music beat' },
-  { emoji: '🎮', name: 'game', keywords: 'game video controller' },
-  { emoji: '🧸', name: 'teddy', keywords: 'teddy bear toy' },
-  { emoji: '🚀', name: 'rocket', keywords: 'rocket space ship' },
-  { emoji: '🛸', name: 'ufo', keywords: 'ufo alien space' },
-  { emoji: '🎯', name: 'target', keywords: 'target bullseye goal' },
-  { emoji: '⚽', name: 'soccer', keywords: 'soccer ball sport' },
-  { emoji: '🏀', name: 'basketball', keywords: 'basketball ball sport' },
-  { emoji: '⚾', name: 'baseball', keywords: 'baseball ball sport' },
-  { emoji: '🎾', name: 'tennis', keywords: 'tennis ball sport' },
-  { emoji: '🏐', name: 'volleyball', keywords: 'volleyball ball sport' },
-  { emoji: '🏈', name: 'football', keywords: 'football ball sport' },
-  { emoji: '🥊', name: 'boxing', keywords: 'boxing glove sport' },
-  { emoji: '🎓', name: 'graduate', keywords: 'graduate school education' },
-  { emoji: '📚', name: 'books', keywords: 'books read study' },
-  { emoji: '✏️', name: 'pencil', keywords: 'pencil write draw' },
-  { emoji: '🖍️', name: 'crayon', keywords: 'crayon color draw' },
-  { emoji: '🎒', name: 'backpack', keywords: 'backpack school bag' },
-  { emoji: '👑', name: 'crown', keywords: 'crown king queen royal' },
-  { emoji: '💎', name: 'gem', keywords: 'gem diamond jewel' },
-  { emoji: '🌸', name: 'flower', keywords: 'flower blossom pink' },
-  { emoji: '🌺', name: 'hibiscus', keywords: 'hibiscus flower tropical' },
-  { emoji: '🌻', name: 'sunflower', keywords: 'sunflower flower yellow' },
-];
-
 export function PersonForm({ person, roleId, onClose }: PersonFormProps) {
   // Parse existing avatar data if editing
-  let initialColor = PASTEL_COLORS[0];
-  let initialEmoji = '😀';
-
-  if (person?.avatar) {
-    try {
-      const parsed = JSON.parse(person.avatar);
-      initialColor = parsed.color || PASTEL_COLORS[0];
-      initialEmoji = parsed.emoji || '😀';
-    } catch {
-      // If not JSON, ignore
-    }
-  }
+  const initialAvatar = parseAvatar(person?.avatar, person?.name);
+  const initialColor = initialAvatar.color;
+  const initialEmoji = initialAvatar.emoji;
 
   const [name, setName] = useState(person?.name || '');
   const [selectedColor, setSelectedColor] = useState(initialColor);
   const [selectedEmoji, setSelectedEmoji] = useState(initialEmoji);
   const [emojiSearch, setEmojiSearch] = useState('');
 
-  const { toast } = useToast();
   const utils = trpc.useUtils();
 
   const filteredEmojis = useMemo(() => {
@@ -132,60 +46,42 @@ export function PersonForm({ person, roleId, onClose }: PersonFormProps) {
     );
   }, [emojiSearch]);
 
-  const createMutation = trpc.person.create.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Person created successfully',
-        variant: 'success',
-      });
-      utils.person.list.invalidate();
-      onClose();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
+  const createMutationBase = trpc.person.create.useMutation();
+  const { mutate: createPerson, isLoading: isCreating } = useCreateMutation(
+    createMutationBase,
+    {
+      entityName: 'Person',
+      invalidateQueries: [() => utils.person.list.invalidate()],
+      closeDialog: onClose,
+    }
+  );
 
-  const updateMutation = trpc.person.update.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Person updated successfully',
-        variant: 'success',
-      });
-      utils.person.list.invalidate();
-      onClose();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
+  const updateMutationBase = trpc.person.update.useMutation();
+  const { mutate: updatePerson, isLoading: isUpdating } = useUpdateMutation(
+    updateMutationBase,
+    {
+      entityName: 'Person',
+      invalidateQueries: [() => utils.person.list.invalidate()],
+      closeDialog: onClose,
+    }
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const avatarData = JSON.stringify({
+    const avatarData = serializeAvatar({
       color: selectedColor,
       emoji: selectedEmoji,
     });
 
     if (person) {
-      updateMutation.mutate({
+      updatePerson({
         id: person.id,
         name: name || undefined,
         avatar: avatarData,
       });
     } else if (roleId) {
-      createMutation.mutate({
+      createPerson({
         roleId,
         name,
         avatar: avatarData,
@@ -193,7 +89,7 @@ export function PersonForm({ person, roleId, onClose }: PersonFormProps) {
     }
   };
 
-  const isLoading = createMutation.isPending || updateMutation.isPending;
+  const isLoading = isCreating || isUpdating;
 
   return (
     <Dialog open onOpenChange={onClose}>

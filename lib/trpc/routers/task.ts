@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from '../init';
+import { router, authorizedProcedure, verifyRoutineOwnership, verifyTaskOwnership } from '../init';
 import { TRPCError } from '@trpc/server';
 import { EntityStatus, TaskType } from '@/lib/types/prisma-enums';
 import {
@@ -19,9 +19,11 @@ import { calculateNextReset } from '@/lib/services/reset-period';
 
 export const taskRouter = router({
   // List tasks for a routine
-  list: protectedProcedure
+  list: authorizedProcedure
     .input(listTasksSchema)
     .query(async ({ ctx, input }) => {
+      // Verify routine ownership
+      await verifyRoutineOwnership(ctx.user.id, input.routineId, ctx.prisma);
       const whereClause = {
         routineId: input.routineId,
         ...(input.includeInactive ? {} : { status: EntityStatus.ACTIVE }),
@@ -61,9 +63,11 @@ export const taskRouter = router({
     }),
 
   // Get task by ID with completions
-  getById: protectedProcedure
+  getById: authorizedProcedure
     .input(getTaskByIdSchema)
     .query(async ({ ctx, input }) => {
+      // Verify task ownership
+      await verifyTaskOwnership(ctx.user.id, input.id, ctx.prisma);
       const task = await ctx.prisma.task.findUnique({
         where: { id: input.id },
         include: {
@@ -101,9 +105,11 @@ export const taskRouter = router({
     }),
 
   // Create new task
-  create: protectedProcedure
+  create: authorizedProcedure
     .input(createTaskSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify routine ownership
+      await verifyRoutineOwnership(ctx.user.id, input.routineId, ctx.prisma);
       // Get routine with role to check tier limits
       const routine = await ctx.prisma.routine.findUnique({
         where: { id: input.routineId },
@@ -137,10 +143,13 @@ export const taskRouter = router({
     }),
 
   // Update task
-  update: protectedProcedure
+  update: authorizedProcedure
     .input(updateTaskSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...updateData } = input;
+
+      // Verify task ownership
+      await verifyTaskOwnership(ctx.user.id, id, ctx.prisma);
 
       const task = await ctx.prisma.task.findUnique({
         where: { id },
@@ -175,9 +184,11 @@ export const taskRouter = router({
     }),
 
   // Delete task (soft delete)
-  delete: protectedProcedure
+  delete: authorizedProcedure
     .input(deleteTaskSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify task ownership
+      await verifyTaskOwnership(ctx.user.id, input.id, ctx.prisma);
       const task = await ctx.prisma.task.findUnique({
         where: { id: input.id },
       });
@@ -201,9 +212,11 @@ export const taskRouter = router({
     }),
 
   // Restore archived task
-  restore: protectedProcedure
+  restore: authorizedProcedure
     .input(restoreTaskSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify task ownership
+      await verifyTaskOwnership(ctx.user.id, input.id, ctx.prisma);
       const task = await ctx.prisma.task.findUnique({
         where: { id: input.id },
       });
@@ -227,9 +240,15 @@ export const taskRouter = router({
     }),
 
   // Reorder tasks
-  reorder: protectedProcedure
+  reorder: authorizedProcedure
     .input(reorderTasksSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify ownership of first task (all tasks should be in same routine)
+      const firstTaskId = input.taskIds[0];
+      if (firstTaskId) {
+        await verifyTaskOwnership(ctx.user.id, firstTaskId, ctx.prisma);
+      }
+
       // Update order for each task
       await Promise.all(
         input.taskIds.map((taskId, index) =>
@@ -244,9 +263,11 @@ export const taskRouter = router({
     }),
 
   // Complete a task
-  complete: protectedProcedure
+  complete: authorizedProcedure
     .input(completeTaskSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify task ownership
+      await verifyTaskOwnership(ctx.user.id, input.taskId, ctx.prisma);
       const task = await ctx.prisma.task.findUnique({
         where: { id: input.taskId },
       });
@@ -289,7 +310,7 @@ export const taskRouter = router({
     }),
 
   // Undo task completion
-  undoCompletion: protectedProcedure
+  undoCompletion: authorizedProcedure
     .input(undoCompletionSchema)
     .mutation(async ({ ctx, input }) => {
       const completion = await ctx.prisma.taskCompletion.findUnique({
@@ -305,6 +326,9 @@ export const taskRouter = router({
           message: 'Completion not found',
         });
       }
+
+      // Verify task ownership
+      await verifyTaskOwnership(ctx.user.id, completion.taskId, ctx.prisma);
 
       // Check if undo is allowed
       if (!canUndoCompletion(completion.completedAt, completion.task.type)) {
@@ -322,9 +346,11 @@ export const taskRouter = router({
     }),
 
   // Get completions for a task
-  getCompletions: protectedProcedure
+  getCompletions: authorizedProcedure
     .input(getTaskCompletionsSchema)
     .query(async ({ ctx, input }) => {
+      // Verify task ownership
+      await verifyTaskOwnership(ctx.user.id, input.taskId, ctx.prisma);
       const whereClause: any = {
         taskId: input.taskId,
       };

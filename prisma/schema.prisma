@@ -164,6 +164,7 @@ model GroupMember {
 
 enum EntityStatus {
   ACTIVE
+  INACTIVE
   ARCHIVED
 }
 
@@ -190,12 +191,13 @@ model Routine {
   updatedAt               DateTime       @updatedAt
 
   // Relations
-  role            Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  tasks           Task[]
-  assignments     RoutineAssignment[]
-  conditions      Condition[]         @relation("RoutineConditions")
-  targetConditions Condition[]        @relation("TargetRoutineConditions")
-  goalLinks       GoalRoutineLink[]
+  role                 Role                   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tasks                Task[]
+  assignments          RoutineAssignment[]
+  conditions           Condition[]            @relation("RoutineConditions")
+  targetConditions     Condition[]            @relation("TargetRoutineConditions")
+  goalLinks            GoalRoutineLink[]
+  visibilityOverrides  VisibilityOverride[]
 
   @@index([roleId])
   @@index([type])
@@ -395,6 +397,24 @@ enum ConditionOperator {
   GREATER_THAN_OR_EQUAL
   LESS_THAN_OR_EQUAL
   BETWEEN
+}
+
+// ============================================================================
+// VISIBILITY OVERRIDES
+// ============================================================================
+
+model VisibilityOverride {
+  id        String   @id @default(cuid())
+  routineId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@index([routineId])
+  @@index([expiresAt])
+  @@map("visibility_overrides")
 }
 
 // ============================================================================

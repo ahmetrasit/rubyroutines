@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from '../init';
+import { router, authorizedProcedure, verifiedProcedure } from '../init';
 import { z } from 'zod';
 import { Tier } from '@/lib/types/prisma-enums';
 import {
@@ -11,8 +11,9 @@ import {
 export const billingRouter = router({
   /**
    * Create a Stripe checkout session for tier upgrade
+   * Requires email verification
    */
-  createCheckout: protectedProcedure
+  createCheckout: verifiedProcedure
     .input(
       z.object({
         roleId: z.string().cuid(),
@@ -28,8 +29,9 @@ export const billingRouter = router({
 
   /**
    * Create a Stripe billing portal session
+   * Requires email verification
    */
-  createPortal: protectedProcedure
+  createPortal: verifiedProcedure
     .input(
       z.object({
         roleId: z.string().cuid(),
@@ -44,7 +46,7 @@ export const billingRouter = router({
   /**
    * Get current tier for a role
    */
-  getCurrentTier: protectedProcedure
+  getCurrentTier: authorizedProcedure
     .input(z.object({ roleId: z.string().cuid() }))
     .query(async ({ input }) => {
       const result = await getCurrentTier(input.roleId);
@@ -54,7 +56,7 @@ export const billingRouter = router({
   /**
    * Get tier pricing information
    */
-  getTierPricing: protectedProcedure.query(async () => {
+  getTierPricing: authorizedProcedure.query(async () => {
     return {
       prices: {
         [Tier.FREE]: 0,
@@ -68,7 +70,7 @@ export const billingRouter = router({
   /**
    * Get subscription status for a role
    */
-  getSubscriptionStatus: protectedProcedure
+  getSubscriptionStatus: authorizedProcedure
     .input(z.object({ roleId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
       const role = await ctx.prisma.role.findUnique({

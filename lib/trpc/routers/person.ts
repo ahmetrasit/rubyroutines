@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from '../init';
+import { router, authorizedProcedure, verifyPersonOwnership } from '../init';
 import { TRPCError } from '@trpc/server';
 import { EntityStatus } from '@/lib/types/prisma-enums';
 import { checkTierLimit } from '@/lib/services/tier-limits';
@@ -12,7 +12,7 @@ import {
 } from '@/lib/validation/person';
 
 export const personRouter = router({
-  list: protectedProcedure
+  list: authorizedProcedure
     .input(listPersonsSchema)
     .query(async ({ ctx, input }) => {
       const persons = await ctx.prisma.person.findMany({
@@ -26,9 +26,12 @@ export const personRouter = router({
       return persons;
     }),
 
-  getById: protectedProcedure
+  getById: authorizedProcedure
     .input(getPersonSchema)
     .query(async ({ ctx, input }) => {
+      // Verify person ownership
+      await verifyPersonOwnership(ctx.user.id, input.id, ctx.prisma);
+
       const person = await ctx.prisma.person.findUnique({
         where: { id: input.id },
         include: {
@@ -60,7 +63,7 @@ export const personRouter = router({
       return person;
     }),
 
-  create: protectedProcedure
+  create: authorizedProcedure
     .input(createPersonSchema)
     .mutation(async ({ ctx, input }) => {
       // Get role to check tier and type
@@ -122,10 +125,13 @@ export const personRouter = router({
       return person;
     }),
 
-  update: protectedProcedure
+  update: authorizedProcedure
     .input(updatePersonSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
+
+      // Verify person ownership
+      await verifyPersonOwnership(ctx.user.id, id, ctx.prisma);
 
       const person = await ctx.prisma.person.update({
         where: { id },
@@ -135,9 +141,12 @@ export const personRouter = router({
       return person;
     }),
 
-  delete: protectedProcedure
+  delete: authorizedProcedure
     .input(deletePersonSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify person ownership
+      await verifyPersonOwnership(ctx.user.id, input.id, ctx.prisma);
+
       // Soft delete by setting status to INACTIVE
       const person = await ctx.prisma.person.update({
         where: { id: input.id },
@@ -150,9 +159,11 @@ export const personRouter = router({
       return person;
     }),
 
-  restore: protectedProcedure
+  restore: authorizedProcedure
     .input(restorePersonSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify person ownership
+      await verifyPersonOwnership(ctx.user.id, input.id, ctx.prisma);
       const person = await ctx.prisma.person.update({
         where: { id: input.id },
         data: {

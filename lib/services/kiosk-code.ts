@@ -216,3 +216,51 @@ export async function cleanupExpiredCodes(): Promise<number> {
 
   return result.count;
 }
+
+/**
+ * Validate kiosk session - verify kiosk code is active and person belongs to the role
+ */
+export async function validateKioskSession(
+  kioskCodeId: string,
+  personId: string
+): Promise<{ valid: boolean; error?: string }> {
+  // Get kiosk code with role
+  const kioskCode = await prisma.code.findUnique({
+    where: { id: kioskCodeId },
+    include: {
+      role: {
+        include: {
+          persons: {
+            where: { status: 'ACTIVE' }
+          }
+        }
+      }
+    }
+  });
+
+  if (!kioskCode) {
+    return { valid: false, error: 'Invalid kiosk session' };
+  }
+
+  // Check if code is still active
+  if (kioskCode.status !== 'ACTIVE' && kioskCode.status !== 'USED') {
+    return { valid: false, error: 'Kiosk session expired or revoked' };
+  }
+
+  // Check if code is expired
+  if (kioskCode.expiresAt < new Date()) {
+    await prisma.code.update({
+      where: { id: kioskCodeId },
+      data: { status: 'EXPIRED' }
+    });
+    return { valid: false, error: 'Kiosk session expired' };
+  }
+
+  // Check if person belongs to this role
+  const personBelongsToRole = kioskCode.role.persons.some((p: any) => p.id === personId);
+  if (!personBelongsToRole) {
+    return { valid: false, error: 'Person does not belong to this kiosk session' };
+  }
+
+  return { valid: true };
+}

@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from '../init';
+import { router, authorizedProcedure } from '../init';
 import { z } from 'zod';
 import {
   getCompletionTrend,
@@ -12,7 +12,7 @@ export const analyticsRouter = router({
   /**
    * Get completion trend for a date range
    */
-  completionTrend: protectedProcedure
+  completionTrend: authorizedProcedure
     .input(
       z.object({
         roleId: z.string().cuid(),
@@ -39,7 +39,7 @@ export const analyticsRouter = router({
   /**
    * Get goal progress for all active goals
    */
-  goalProgress: protectedProcedure
+  goalProgress: authorizedProcedure
     .input(
       z.object({
         roleId: z.string().cuid(),
@@ -55,7 +55,7 @@ export const analyticsRouter = router({
   /**
    * Get task heatmap (completion frequency by task)
    */
-  taskHeatmap: protectedProcedure
+  taskHeatmap: authorizedProcedure
     .input(
       z.object({
         roleId: z.string().cuid(),
@@ -82,7 +82,7 @@ export const analyticsRouter = router({
   /**
    * Export analytics data as CSV
    */
-  exportCSV: protectedProcedure
+  exportCSV: authorizedProcedure
     .input(
       z.object({
         roleId: z.string().cuid(),

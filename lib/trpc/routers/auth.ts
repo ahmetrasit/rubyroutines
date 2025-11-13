@@ -8,6 +8,7 @@ import {
   incrementResendCount
 } from '@/lib/auth/verification';
 import { CodeType } from '@/lib/types/prisma-enums';
+import { logger } from '@/lib/utils/logger';
 
 export const authRouter = router({
   signUp: publicProcedure
@@ -90,7 +91,7 @@ export const authRouter = router({
         }
       } catch (dbError) {
         // User already exists in DB, ensure they have a role
-        console.error('User already exists in database:', dbError);
+        logger.debug('User already exists in database', { userId: data.user.id, error: dbError });
 
         // Check if user has any roles, create PARENT role if not
         const existingUser = await ctx.prisma.user.findUnique({
@@ -287,8 +288,10 @@ export const authRouter = router({
       );
 
       // TODO: Send email with code using Resend
-      // For development, log the code
-      console.log(`Verification code for ${input.email}: ${code}`);
+      // For development only - DO NOT log codes in production
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('Verification code generated', { email: input.email, code });
+      }
 
       return { success: true };
     }),
@@ -348,7 +351,10 @@ export const authRouter = router({
       );
 
       // TODO: Send email with code using Resend
-      console.log(`Resent verification code for ${input.email}: ${code}`);
+      // For development only - DO NOT log codes in production
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug('Verification code resent', { email: input.email, code });
+      }
 
       return { success: true };
     }),

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../init';
+import { router, authorizedProcedure, verifiedProcedure } from '../init';
 import {
   sendInvitation,
   InvitationType,
@@ -9,7 +9,8 @@ import { prisma } from '@/lib/prisma';
 
 export const coTeacherRouter = router({
   // Share classroom with co-teacher
-  share: protectedProcedure
+  // Requires email verification
+  share: verifiedProcedure
     .input(
       z.object({
         roleId: z.string().cuid(),
@@ -32,7 +33,7 @@ export const coTeacherRouter = router({
     }),
 
   // List co-teachers for group
-  list: protectedProcedure
+  list: authorizedProcedure
     .input(
       z.object({
         groupId: z.string().cuid()
@@ -55,7 +56,7 @@ export const coTeacherRouter = router({
     }),
 
   // Update co-teacher permissions
-  updatePermissions: protectedProcedure
+  updatePermissions: authorizedProcedure
     .input(
       z.object({
         coTeacherId: z.string().cuid(),
@@ -83,7 +84,7 @@ export const coTeacherRouter = router({
     }),
 
   // Revoke co-teacher access
-  revoke: protectedProcedure
+  revoke: authorizedProcedure
     .input(
       z.object({
         coTeacherId: z.string().cuid()
