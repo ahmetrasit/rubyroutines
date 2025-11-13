@@ -101,23 +101,59 @@ export const authRouter = router({
         });
       }
 
-      // Ensure user exists in database (upsert for existing Supabase users)
-      const user = await ctx.prisma.user.upsert({
-        where: { id: data.user.id },
-        update: {
-          email: data.user.email!,
-          emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
-        },
-        create: {
-          id: data.user.id,
-          email: data.user.email!,
-          name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
-          emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
-        },
-        include: {
-          roles: true,
-        },
+      // Check if user exists by email with different ID (seed data scenario)
+      const existingUserByEmail = await ctx.prisma.user.findUnique({
+        where: { email: data.user.email! },
+        include: { roles: true },
       });
+
+      let user;
+
+      if (existingUserByEmail && existingUserByEmail.id !== data.user.id) {
+        // User exists from seed data with different ID
+        // Migrate roles to new Supabase Auth ID
+        const existingRoles = existingUserByEmail.roles;
+
+        // Delete old user (cascade will delete associated records)
+        await ctx.prisma.user.delete({
+          where: { id: existingUserByEmail.id },
+        });
+
+        // Create new user with Supabase Auth ID, preserving data and roles
+        user = await ctx.prisma.user.create({
+          data: {
+            id: data.user.id,
+            email: data.user.email!,
+            name: existingUserByEmail.name,
+            emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
+            roles: {
+              create: existingRoles.map((role) => ({
+                type: role.type,
+                tier: role.tier,
+              })),
+            },
+          },
+          include: { roles: true },
+        });
+      } else {
+        // Normal upsert - user doesn't exist or has matching ID
+        user = await ctx.prisma.user.upsert({
+          where: { id: data.user.id },
+          update: {
+            email: data.user.email!,
+            emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
+          },
+          create: {
+            id: data.user.id,
+            email: data.user.email!,
+            name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+            emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
+          },
+          include: {
+            roles: true,
+          },
+        });
+      }
 
       // Auto-create PARENT role for first-time users
       if (user.roles.length === 0) {
