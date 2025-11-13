@@ -45,7 +45,7 @@ export const taskRouter = router({
       });
 
       // Add aggregation data for each task
-      return tasks.map((task) => {
+      return tasks.map((task: any) => {
         const resetDate = calculateNextReset(
           task.routine.resetPeriod,
           task.routine.resetDay

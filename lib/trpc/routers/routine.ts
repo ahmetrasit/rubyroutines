@@ -216,7 +216,7 @@ export const routineRouter = router({
               create: { personId },
             },
             tasks: {
-              create: source.tasks.map((task) => ({
+              create: source.tasks.map((task: any) => ({
                 name: task.name,
                 description: task.description,
                 type: task.type,

@@ -7,7 +7,7 @@ import {
   canResendCode,
   incrementResendCount
 } from '@/lib/auth/verification';
-import { CodeType } from '@prisma/client';
+import { CodeType } from '@/lib/types/prisma-enums';
 
 export const authRouter = router({
   signUp: publicProcedure
@@ -169,7 +169,7 @@ export const authRouter = router({
             name: existingUserByEmail.name,
             emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
             roles: {
-              create: existingRoles.map((role) => ({
+              create: existingRoles.map((role: any) => ({
                 type: role.type,
                 tier: role.tier,
               })),

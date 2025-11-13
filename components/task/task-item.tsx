@@ -34,7 +34,7 @@ export function TaskItem({ task, personId }: TaskItemProps) {
   const utils = trpc.useUtils();
 
   // Get most recent completion for this person
-  const recentCompletion = task.completions.find((c) => c.personId === personId);
+  const recentCompletion = task.completions.find((c: TaskCompletion & { person: Pick<Person, 'id' | 'name' | 'avatar'> }) => c.personId === personId);
 
   // Update undo timer for simple tasks
   useEffect(() => {
@@ -53,6 +53,7 @@ export function TaskItem({ task, personId }: TaskItemProps) {
 
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [recentCompletion, task.type]);
 
   const deleteMutation = trpc.task.delete.useMutation({

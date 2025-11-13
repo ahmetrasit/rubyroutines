@@ -6,7 +6,9 @@ export function calculateNextReset(
   resetTime: string = '23:55'
 ): Date {
   const now = new Date();
-  const [hours, minutes] = resetTime.split(':').map(Number);
+  const [hoursStr, minutesStr] = resetTime.split(':');
+  const hours = parseInt(hoursStr || '23', 10);
+  const minutes = parseInt(minutesStr || '55', 10);
   const next = new Date(now);
 
   next.setHours(hours, minutes, 0, 0);
@@ -97,5 +99,90 @@ export function getResetDescription(period: ResetPeriod, resetDay?: number | nul
 
     default:
       return 'Unknown';
+  }
+}
+
+/**
+ * Get the start date of the current reset period
+ * Used for filtering completions within the current period
+ */
+export function getResetPeriodStart(
+  period: ResetPeriod,
+  resetDay?: number | null,
+  resetTime: string = '23:55'
+): Date {
+  const now = new Date();
+  const [hoursStr, minutesStr] = resetTime.split(':');
+  const hours = parseInt(hoursStr || '23', 10);
+  const minutes = parseInt(minutesStr || '55', 10);
+
+  switch (period) {
+    case ResetPeriod.DAILY: {
+      const startOfToday = new Date(now);
+      startOfToday.setHours(hours, minutes, 0, 0);
+
+      // If current time is before reset time, period started yesterday
+      if (now < startOfToday) {
+        startOfToday.setDate(startOfToday.getDate() - 1);
+      }
+
+      return startOfToday;
+    }
+
+    case ResetPeriod.WEEKLY: {
+      if (resetDay === null || resetDay === undefined) {
+        resetDay = 0; // Default to Sunday
+      }
+
+      const currentDay = now.getDay();
+      const daysAgo = (7 + currentDay - resetDay) % 7;
+
+      const periodStart = new Date(now);
+      periodStart.setDate(periodStart.getDate() - daysAgo);
+      periodStart.setHours(hours, minutes, 0, 0);
+
+      // If we haven't passed the reset time this week yet, go back one week
+      if (periodStart > now) {
+        periodStart.setDate(periodStart.getDate() - 7);
+      }
+
+      return periodStart;
+    }
+
+    case ResetPeriod.MONTHLY: {
+      if (resetDay === null || resetDay === undefined) {
+        resetDay = 1; // Default to 1st of month
+      }
+
+      const periodStart = new Date(now);
+      periodStart.setHours(hours, minutes, 0, 0);
+
+      if (resetDay === 99) {
+        // Last day of month
+        periodStart.setMonth(periodStart.getMonth(), 0); // Set to last day of previous month
+
+        // If we haven't reached it this month yet, use last month's last day
+        if (periodStart > now) {
+          periodStart.setMonth(periodStart.getMonth() - 1, 0);
+        }
+      } else {
+        // Specific day
+        periodStart.setDate(resetDay);
+
+        // If we haven't reached it this month yet, use last month
+        if (periodStart > now) {
+          periodStart.setMonth(periodStart.getMonth() - 1);
+        }
+      }
+
+      return periodStart;
+    }
+
+    case ResetPeriod.CUSTOM:
+      // For custom, return beginning of time (never resets)
+      return new Date(0);
+
+    default:
+      return new Date(0);
   }
 }

@@ -4,7 +4,8 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { PrismaClient, RoleType, Tier } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { RoleType, Tier } from '../lib/types/prisma-enums';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -77,7 +78,7 @@ async function createTestUsers() {
               emailVerified: new Date(),
             },
             create: {
-              id: authData?.user?.id || testUser.id,
+              id: (authData as any)?.user?.id || (testUser as any).id,
               email: testUser.email,
               name: testUser.name,
               emailVerified: new Date(),
