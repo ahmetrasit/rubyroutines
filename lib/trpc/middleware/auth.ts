@@ -190,3 +190,43 @@ export const authorizedProcedure = protectedProcedure.use(async (opts) => {
     },
   });
 });
+
+/**
+ * Verify that the user is an admin
+ */
+export async function verifyAdminStatus(
+  userId: string,
+  prisma: any
+): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isAdmin: true },
+  });
+
+  if (!user || !user.isAdmin) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Admin access required',
+    });
+  }
+
+  return true;
+}
+
+/**
+ * Admin-only procedure
+ * Only allows requests from users with isAdmin = true
+ */
+export const adminProcedure = protectedProcedure.use(async (opts) => {
+  const { ctx } = opts;
+
+  await verifyAdminStatus(ctx.user.id, ctx.prisma);
+
+  return opts.next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+      isAdmin: true,
+    },
+  });
+});
