@@ -23,6 +23,10 @@ export const AUDIT_ACTIONS = {
   AUTH_SIGNUP: 'auth.signup',
   AUTH_FAILED_LOGIN: 'auth.failed_login',
   AUTH_PASSWORD_RESET: 'auth.password_reset',
+  AUTH_2FA_ENABLED: 'auth.2fa_enabled',
+  AUTH_2FA_DISABLED: 'auth.2fa_disabled',
+  AUTH_2FA_VERIFIED: 'auth.2fa_verified',
+  AUTH_2FA_VERIFY_FAILED: 'auth.2fa_verify_failed',
 
   // Email verification
   EMAIL_VERIFY: 'email.verify',
@@ -96,6 +100,7 @@ export const AUDIT_ACTIONS = {
   SECURITY_UNAUTHORIZED_ACCESS: 'security.unauthorized_access',
   SECURITY_RATE_LIMIT: 'security.rate_limit',
   SECURITY_SUSPICIOUS_ACTIVITY: 'security.suspicious_activity',
+  SECURITY_2FA_CODES_REGENERATED: 'security.2fa_codes_regenerated',
 
   // Data export/deletion (GDPR)
   DATA_EXPORT: 'data.export',

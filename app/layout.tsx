@@ -4,6 +4,7 @@ import { ToasterProvider } from "@/components/ui/toast";
 import { PageErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
+import { SkipNavigation } from "@/components/skip-navigation";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <SkipNavigation />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

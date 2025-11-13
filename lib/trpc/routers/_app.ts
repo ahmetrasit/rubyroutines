@@ -20,9 +20,11 @@ import { adminTiersRouter } from './admin-tiers';
 import { adminAuditRouter } from './admin-audit';
 import { gdprRouter } from './gdpr';
 import { streakRouter } from './streak';
+import { twoFactorRouter } from './two-factor';
 
 export const appRouter = router({
   auth: authRouter,
+  twoFactor: twoFactorRouter,
   person: personRouter,
   group: groupRouter,
   routine: routineRouter,

@@ -25,6 +25,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Two-Factor Authentication
+  twoFactorEnabled     Boolean  @default(false)
+  twoFactorSecret      String?
+  twoFactorBackupCodes String[]
+
   // Relations
   roles                Role[]
   verificationCodes    VerificationCode[]
