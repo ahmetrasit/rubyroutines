@@ -1,6 +1,6 @@
 # Ruby Routines - Manual Testing Checklist
 
-**Version:** 1.0
+**Version:** 1.1
 **Last Updated:** 2025-11-13
 **Status:** Ready for Testing
 
@@ -943,6 +943,228 @@ This comprehensive manual testing checklist ensures all features work correctly 
 
 ---
 
+## 1️⃣7️⃣ **Admin Panel**
+
+### Pre-requisites
+- [ ] Create admin user using script: `npx tsx scripts/create-admin-user.ts admin@example.com`
+- [ ] Verify user has `isAdmin = true` in database
+- [ ] Run database migration for admin tables: `prisma/migrations/add_admin_panel/migration.sql`
+
+### Admin Authentication & Authorization
+- [ ] Log in as non-admin user
+- [ ] Navigate to `/admin`
+- [ ] **Expected:** Access denied page shown with error message
+- [ ] **Expected:** Cannot access any admin pages
+- [ ] Log out and log in as admin user
+- [ ] Navigate to `/admin`
+- [ ] **Expected:** Admin dashboard loads successfully
+- [ ] **Expected:** Statistics displayed (total users, verified users, admins, roles)
+
+### Admin Dashboard
+- [ ] View system statistics cards
+- [ ] **Expected:** Accurate counts for users, verified users, admins, roles
+- [ ] View tier distribution chart
+- [ ] **Expected:** Breakdown shows correct counts per tier (FREE, BASIC, PREMIUM, SCHOOL)
+- [ ] View recent admin activity feed
+- [ ] **Expected:** Last 10 administrative actions displayed with timestamps
+- [ ] Check admin activity metrics (last 30 days)
+- [ ] **Expected:** Total actions and unique admins shown
+- [ ] Test quick navigation links
+- [ ] **Expected:** All navigation buttons work (Users, Tiers, Settings, Audit)
+
+### User Management (/admin/users)
+- [ ] Navigate to `/admin/users`
+- [ ] View users list
+- [ ] **Expected:** All users displayed with email, roles, join date
+- [ ] **Expected:** Admin users have red "Admin" badge
+- [ ] **Expected:** Unverified users have "Unverified" badge
+- [ ] Test email search filter
+- [ ] **Expected:** Users filtered by email substring (case-insensitive)
+- [ ] Test tier filter
+- [ ] **Expected:** Only users with selected tier shown
+- [ ] Click "Manage" on a non-admin user
+- [ ] **Expected:** User management dialog opens
+- [ ] Click "Grant Admin Access"
+- [ ] **Expected:** User promoted to admin, toast notification shown
+- [ ] **Expected:** Audit log entry created
+- [ ] Verify user now has admin badge in list
+- [ ] Check database: `isAdmin = true` for user
+- [ ] Click "Revoke Admin" on a different admin user
+- [ ] **Expected:** Admin access revoked, toast notification shown
+- [ ] **Expected:** Cannot revoke own admin access (button disabled or error)
+- [ ] Try to delete admin user
+- [ ] **Expected:** Error message "Cannot delete admin users"
+- [ ] Revoke admin access first, then delete
+- [ ] **Expected:** User deletion successful
+- [ ] Confirm deletion dialog shown
+- [ ] **Expected:** User deleted from database
+
+### Tier Management (/admin/tiers)
+- [ ] Navigate to `/admin/tiers`
+- [ ] View system tier limits
+- [ ] **Expected:** All 4 tiers shown (FREE, BASIC, PREMIUM, SCHOOL)
+- [ ] **Expected:** Each tier shows 6 limits (persons, groups, routines, tasksPerRoutine, goals, kioskCodes)
+- [ ] Modify FREE tier limits
+  - [ ] Change persons from 3 to 5
+  - [ ] Change routines from 10 to 15
+- [ ] Click "Save Changes"
+- [ ] **Expected:** Success toast shown
+- [ ] **Expected:** Changes persisted in database
+- [ ] **Expected:** Audit log entry created with before/after values
+- [ ] Refresh page
+- [ ] **Expected:** Modified values still showing (persistence verified)
+- [ ] View tier prices section
+- [ ] **Expected:** BASIC, PREMIUM, SCHOOL prices shown (in cents)
+- [ ] **Expected:** Dollar amount calculated correctly ($5.00 = 500 cents)
+- [ ] Modify BASIC price from 500 to 600
+- [ ] Click "Save Prices"
+- [ ] **Expected:** Success toast shown
+- [ ] **Expected:** Price updated in database
+- [ ] **Expected:** Audit log entry created
+
+### User Tier Override (Custom Limits)
+- [ ] Navigate to `/admin/users`
+- [ ] Find user with a role
+- [ ] Click "Manage" → Select a role → Click "Manage Tier"
+- [ ] In tier override dialog, enter custom limits:
+  - [ ] persons: 100
+  - [ ] routines: 500
+- [ ] Click "Save Tier Override"
+- [ ] **Expected:** Success toast shown
+- [ ] **Expected:** Custom limits stored in role.tierOverride (JSONB)
+- [ ] **Expected:** Audit log entry created
+- [ ] Check database: `tierOverride` field has custom values
+- [ ] Test effective tier limits API
+- [ ] **Expected:** User gets custom limits instead of system tier limits
+- [ ] Remove tier override
+- [ ] **Expected:** User reverts to system tier limits
+
+### System Settings (/admin/settings)
+- [ ] Navigate to `/admin/settings`
+- [ ] View all settings grouped by category
+- [ ] **Expected:** Categories shown: general, tiers, features, security, billing, marketplace
+- [ ] Expand general category
+- [ ] **Expected:** Settings like maintenance_mode, registration_enabled displayed
+- [ ] View tier_limits setting
+- [ ] **Expected:** Shows current system tier configuration
+- [ ] View tier_prices setting
+- [ ] **Expected:** Shows current pricing
+- [ ] Check security settings
+- [ ] **Expected:** max_login_attempts, session_timeout visible
+
+### Audit Log (/admin/audit)
+- [ ] Navigate to `/admin/audit`
+- [ ] View audit logs list
+- [ ] **Expected:** All admin actions listed with timestamps
+- [ ] **Expected:** Each entry shows:
+  - [ ] Action type (USER_ADMIN_GRANTED, TIER_CHANGED, etc.)
+  - [ ] Admin user who performed action
+  - [ ] Entity type and ID
+  - [ ] Before/after changes (JSON)
+  - [ ] Timestamp
+- [ ] Test action filter
+- [ ] **Expected:** Only selected action types shown
+- [ ] Test entity type filter
+- [ ] **Expected:** Only selected entity types shown
+- [ ] Click on audit log entry
+- [ ] **Expected:** Full details shown including changes JSON
+- [ ] Verify IP address logged (if available)
+- [ ] Test "Recent Activity" on dashboard matches audit logs
+
+### Admin Security Testing
+- [ ] Create test user (non-admin)
+- [ ] Get admin API endpoint (e.g., /api/trpc/adminUsers.statistics)
+- [ ] Try to call endpoint as non-admin user
+- [ ] **Expected:** 403 FORBIDDEN error
+- [ ] **Expected:** Error message "Admin access required"
+- [ ] Try to manipulate request (change headers, cookies)
+- [ ] **Expected:** Still forbidden, cannot bypass
+- [ ] As admin, try to revoke own admin access
+- [ ] **Expected:** Error "Cannot revoke your own admin access"
+- [ ] As admin, try to delete own account
+- [ ] **Expected:** Error "Cannot delete your own account"
+- [ ] Grant admin to User A, log in as User A
+- [ ] Try to grant admin to User B
+- [ ] **Expected:** Successfully grants (admin can promote others)
+- [ ] Try to delete User B who is admin
+- [ ] **Expected:** Error "Cannot delete admin users"
+
+### Admin Audit Trail Verification
+- [ ] Perform admin action: Grant admin to user
+- [ ] Check audit log immediately
+- [ ] **Expected:** Log entry created with:
+  - [ ] Correct action type (USER_ADMIN_GRANTED)
+  - [ ] Correct admin user ID
+  - [ ] Correct target user ID
+  - [ ] Before/after changes showing isAdmin: false → true
+  - [ ] Timestamp accurate
+- [ ] Change user tier
+- [ ] **Expected:** TIER_CHANGED log created with tier before/after
+- [ ] Set tier override
+- [ ] **Expected:** TIER_OVERRIDE_SET log created with limits
+- [ ] Update system tier limits
+- [ ] **Expected:** SYSTEM_TIER_LIMITS_UPDATED log created with full changes
+- [ ] Delete user
+- [ ] **Expected:** USER_DELETED log created with user email
+
+### Admin Panel Integration Testing
+- [ ] Complete admin user journey:
+  1. [ ] Log in as admin
+  2. [ ] View dashboard statistics
+  3. [ ] Search for user by email
+  4. [ ] Grant admin access to user
+  5. [ ] View audit log to confirm action
+  6. [ ] Navigate to tier management
+  7. [ ] Update system tier limits
+  8. [ ] Set custom tier override for specific user
+  9. [ ] View settings page
+  10. [ ] Navigate to audit log
+  11. [ ] Filter by action type
+  12. [ ] Verify all actions logged
+  13. [ ] Revoke admin from user
+  14. [ ] Delete user account
+  15. [ ] **Expected:** Entire flow seamless, all actions logged
+
+### Admin Panel Performance Testing
+- [ ] Load admin dashboard with 1000+ users
+- [ ] **Expected:** Page loads in <3 seconds
+- [ ] Pagination works properly
+- [ ] Search users with 1000+ results
+- [ ] **Expected:** Instant search results
+- [ ] Load audit log with 10,000+ entries
+- [ ] **Expected:** Paginated results load quickly
+- [ ] Apply multiple filters to audit log
+- [ ] **Expected:** Filters apply instantly
+
+### Admin Panel Edge Cases
+- [ ] Try to access admin pages without logging in
+- [ ] **Expected:** Redirected to login page
+- [ ] Grant admin to user who is already admin
+- [ ] **Expected:** Error "User is already an admin"
+- [ ] Set tier override with negative values
+- [ ] **Expected:** Validation error (Zod schema prevents)
+- [ ] Set tier override with non-integer values
+- [ ] **Expected:** Validation error
+- [ ] Update tier prices with 0 or negative values
+- [ ] **Expected:** Validation error (minimum 0)
+- [ ] Delete non-existent user
+- [ ] **Expected:** Error "User not found"
+- [ ] View audit log with no entries
+- [ ] **Expected:** "No audit logs found" message
+
+### Admin Panel Regression Testing
+- [ ] Verify non-admin features still work:
+  - [ ] Regular user can sign up
+  - [ ] Regular user can create persons
+  - [ ] Regular user can create routines
+  - [ ] Regular user cannot access `/admin`
+- [ ] Verify tier enforcement still works:
+  - [ ] FREE tier users limited to 3 persons
+  - [ ] Tier upgrade changes limits
+  - [ ] Custom tier overrides take precedence
+
+---
+
 ## 📋 **Testing Sign-Off**
 
 ### Critical Features (Must Pass)
@@ -957,6 +1179,10 @@ This comprehensive manual testing checklist ensures all features work correctly 
 - [ ] Analytics display correct data
 - [ ] Marketplace publishing and forking work
 - [ ] Stripe integration processes payments
+- [ ] Admin panel authentication works
+- [ ] Admin user management functions correctly
+- [ ] Admin tier management works
+- [ ] Admin audit logging captures all actions
 
 ### Security Requirements (Must Pass)
 - [ ] No horizontal privilege escalation possible
@@ -965,6 +1191,10 @@ This comprehensive manual testing checklist ensures all features work correctly 
 - [ ] Verification codes properly hashed
 - [ ] No sensitive data in logs or URLs
 - [ ] All authorization checks functioning
+- [ ] Admin panel access restricted to admin users only
+- [ ] Admin cannot revoke own admin access
+- [ ] Admin cannot delete admin users
+- [ ] All admin actions logged in audit trail
 
 ### Performance Checks
 - [ ] Page load times acceptable (<3 seconds)
@@ -1020,5 +1250,6 @@ After any bug fixes or changes, re-run:
 ---
 
 **Version History:**
+- v1.1 (2025-11-13): Added comprehensive admin panel testing section (Section 17)
 - v1.0 (2025-11-13): Initial comprehensive testing checklist
 
