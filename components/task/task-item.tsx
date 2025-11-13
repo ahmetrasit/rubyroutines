@@ -11,6 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Pencil, Trash2, Check, Plus, Undo2 } from 'lucide-react';
 import { TaskForm } from './task-form';
+import { TaskDeletionWarning } from './task-deletion-warning';
+import { LinkToGoalButton } from '@/components/goal/link-to-goal-button';
+import { SmartTaskIndicator } from '@/components/smart-routine/smart-task-indicator';
 import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
 
 type TaskWithAggregation = Task & {
@@ -28,6 +31,7 @@ interface TaskItemProps {
 
 export function TaskItem({ task, personId }: TaskItemProps) {
   const [showEdit, setShowEdit] = useState(false);
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [progressValue, setProgressValue] = useState('');
   const [undoTimer, setUndoTimer] = useState(0);
   const { toast } = useToast();
@@ -55,24 +59,6 @@ export function TaskItem({ task, personId }: TaskItemProps) {
     }
     return undefined;
   }, [recentCompletion, task.type]);
-
-  const deleteMutation = trpc.task.delete.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Task archived',
-        variant: 'success',
-      });
-      utils.task.list.invalidate();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
 
   const completeMutation = trpc.task.complete.useMutation({
     onSuccess: () => {
@@ -107,9 +93,7 @@ export function TaskItem({ task, personId }: TaskItemProps) {
   });
 
   const handleDelete = () => {
-    if (confirm(`Are you sure you want to archive "${task.name}"?`)) {
-      deleteMutation.mutate({ id: task.id });
-    }
+    setShowDeleteWarning(true);
   };
 
   const handleComplete = () => {
@@ -250,11 +234,20 @@ export function TaskItem({ task, personId }: TaskItemProps) {
                 Progress Tracking
               </span>
             )}
+            <SmartTaskIndicator isSmart={task.type === TaskType.SMART} />
           </div>
 
           {task.description && (
             <p className="text-sm text-gray-500 mt-2 line-clamp-2">{task.description}</p>
           )}
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <LinkToGoalButton
+              entityType="task"
+              entityId={task.id}
+              entityName={task.name}
+            />
+          </div>
 
           <div className="mt-4">{renderCompletionUI()}</div>
         </div>
@@ -280,6 +273,14 @@ export function TaskItem({ task, personId }: TaskItemProps) {
       </div>
 
       {showEdit && <TaskForm task={task} onClose={() => setShowEdit(false)} />}
+
+      <TaskDeletionWarning
+        isOpen={showDeleteWarning}
+        onClose={() => setShowDeleteWarning(false)}
+        taskId={task.id}
+        taskName={task.name}
+        onDeleted={() => setShowDeleteWarning(false)}
+      />
     </>
   );
 }

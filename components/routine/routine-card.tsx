@@ -6,6 +6,9 @@ import { useState } from 'react';
 import { RoutineForm } from './routine-form';
 import { VisibilityOverrideDialog } from './visibility-override-dialog';
 import { VisibilityOverrideBadge } from './visibility-override-badge';
+import { UpgradeToSmartButton } from '@/components/smart-routine/upgrade-to-smart-button';
+import { LinkToGoalButton } from '@/components/goal/link-to-goal-button';
+import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { isRoutineVisible, formatVisibilityDescription } from '@/lib/services/visibility-rules';
@@ -15,6 +18,7 @@ type RoutineWithRelations = {
   id: string;
   name: string;
   description?: string;
+  type: any;
   resetPeriod: any;
   resetDay?: number;
   visibility: any;
@@ -96,6 +100,22 @@ export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
                 {formatVisibilityDescription(routine)}
               </span>
               <VisibilityOverrideBadge routineId={routine.id} />
+              {routine.type === 'SMART' && (
+                <Badge variant="default">Smart Routine</Badge>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              <UpgradeToSmartButton
+                routineId={routine.id}
+                routineName={routine.name}
+                currentType={routine.type}
+              />
+              <LinkToGoalButton
+                entityType="routine"
+                entityId={routine.id}
+                entityName={routine.name}
+              />
             </div>
 
             {routine.assignments.length > 0 && (

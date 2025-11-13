@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { RoutineList } from '@/components/routine/routine-list';
+import { GoalList } from '@/components/goal/goal-list';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -107,11 +108,18 @@ export default function StudentDetailPage() {
           )}
         </div>
 
-        <RoutineList
-          roleId={teacherRole.id}
-          personId={studentId}
-          onSelectRoutine={handleSelectRoutine}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <RoutineList
+              roleId={teacherRole.id}
+              personId={studentId}
+              onSelectRoutine={handleSelectRoutine}
+            />
+          </div>
+          <div>
+            <GoalList personId={studentId} />
+          </div>
+        </div>
       </div>
     </div>
   );
