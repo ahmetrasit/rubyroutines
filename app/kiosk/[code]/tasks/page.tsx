@@ -62,7 +62,7 @@ export default function KioskTasksPage() {
 
   // Fetch person's tasks for kiosk mode
   const { data: personTasksData, isLoading: tasksLoading } = trpc.kiosk.getPersonTasks.useQuery(
-    { personId: personId! },
+    { kioskCodeId: sessionData?.codeId!, personId: personId! },
     {
       enabled: !!sessionData && !!personId,
       refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
@@ -105,6 +105,7 @@ export default function KioskTasksPage() {
 
   const handleComplete = (taskId: string, value?: string) => {
     completeMutation.mutate({
+      kioskCodeId: sessionData!.codeId,
       taskId,
       personId: personId!,
       value,
@@ -112,7 +113,7 @@ export default function KioskTasksPage() {
   };
 
   const handleUndo = (completionId: string) => {
-    undoMutation.mutate({ completionId });
+    undoMutation.mutate({ kioskCodeId: sessionData!.codeId, completionId });
   };
 
   const handleExit = () => {

@@ -27,6 +27,7 @@ export default function KioskPage() {
         // Store session in localStorage
         const sessionData = {
           code,
+          codeId: data.codeId,
           roleId: data.roleId,
           expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(), // 3 hours from now
         };

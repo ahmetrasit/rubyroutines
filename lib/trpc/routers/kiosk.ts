@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { router, publicProcedure, protectedProcedure } from '../init';
+import { router, publicProcedure, authorizedProcedure } from '../init';
 import {
   generateKioskCode,
   validateKioskCode,
   getActiveCodesForRole,
   revokeCode,
-  markCodeAsUsed
+  markCodeAsUsed,
+  validateKioskSession
 } from '@/lib/services/kiosk-code';
 import { TRPCError } from '@trpc/server';
 
@@ -13,7 +14,7 @@ export const kioskRouter = router({
   /**
    * Generate a new kiosk code (protected - requires authentication)
    */
-  generateCode: protectedProcedure
+  generateCode: authorizedProcedure
     .input(z.object({
       roleId: z.string().cuid(),
       wordCount: z.enum(['2', '3']).optional(),
@@ -41,7 +42,7 @@ export const kioskRouter = router({
   /**
    * Get all active codes for a role (protected)
    */
-  listCodes: protectedProcedure
+  listCodes: authorizedProcedure
     .input(z.object({
       roleId: z.string().cuid()
     }))
@@ -62,7 +63,7 @@ export const kioskRouter = router({
   /**
    * Revoke a code (protected)
    */
-  revokeCode: protectedProcedure
+  revokeCode: authorizedProcedure
     .input(z.object({
       codeId: z.string().cuid()
     }))
@@ -139,10 +140,19 @@ export const kioskRouter = router({
    */
   getPersonTasks: publicProcedure
     .input(z.object({
+      kioskCodeId: z.string().cuid(),
       personId: z.string().cuid(),
       date: z.date().optional()
     }))
     .query(async ({ ctx, input }) => {
+      // Validate kiosk session
+      const validation = await validateKioskSession(input.kioskCodeId, input.personId);
+      if (!validation.valid) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: validation.error || 'Invalid kiosk session'
+        });
+      }
       const date = input.date || new Date();
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
@@ -212,12 +222,21 @@ export const kioskRouter = router({
    */
   completeTask: publicProcedure
     .input(z.object({
+      kioskCodeId: z.string().cuid(),
       taskId: z.string().cuid(),
       personId: z.string().cuid(),
       value: z.string().optional(), // For PROGRESS type tasks
       notes: z.string().optional()
     }))
     .mutation(async ({ ctx, input }) => {
+      // Validate kiosk session
+      const validation = await validateKioskSession(input.kioskCodeId, input.personId);
+      if (!validation.valid) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: validation.error || 'Invalid kiosk session'
+        });
+      }
       const task = await ctx.prisma.task.findUnique({
         where: { id: input.taskId }
       });
@@ -255,6 +274,7 @@ export const kioskRouter = router({
    */
   undoCompletion: publicProcedure
     .input(z.object({
+      kioskCodeId: z.string().cuid(),
       completionId: z.string().cuid()
     }))
     .mutation(async ({ ctx, input }) => {
@@ -265,7 +285,16 @@ export const kioskRouter = router({
       if (!completion) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Completion not found'
+          message: 'Completion not found',
+        });
+      }
+
+      // Validate kiosk session
+      const validation = await validateKioskSession(input.kioskCodeId, completion.personId);
+      if (!validation.valid) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: validation.error || 'Invalid kiosk session'
         });
       }
 

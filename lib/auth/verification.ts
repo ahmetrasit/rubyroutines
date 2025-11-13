@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { CodeType, CodeStatus } from '@/lib/types/prisma-enums';
+import bcrypt from 'bcryptjs';
 
 /**
  * Generate a random 6-digit verification code
@@ -9,12 +10,11 @@ export function generateVerificationCode(): string {
 }
 
 /**
- * Hash a verification code (simple hash for codes, not passwords)
+ * Hash a verification code using bcrypt
  */
-export function hashCode(code: string): string {
-  // For production, use a proper hashing library like bcrypt
-  // For now, we'll store codes in plain text for simplicity
-  return code;
+export async function hashCode(code: string): Promise<string> {
+  const saltRounds = 10;
+  return await bcrypt.hash(code, saltRounds);
 }
 
 /**
@@ -39,7 +39,7 @@ export async function createVerificationCode(
 
   // Generate new code
   const code = generateVerificationCode();
-  const hashedCode = hashCode(code);
+  const hashedCode = await hashCode(code);
 
   // Create code record
   await prisma.verificationCode.create({
@@ -66,8 +66,6 @@ export async function verifyCode(
   code: string,
   type: CodeType
 ): Promise<{ success: boolean; error?: string }> {
-  const hashedCode = hashCode(code);
-
   const record = await prisma.verificationCode.findFirst({
     where: {
       userId,
@@ -99,7 +97,10 @@ export async function verifyCode(
     return { success: false, error: 'Too many failed attempts' };
   }
 
-  if (record.code !== hashedCode) {
+  // Use bcrypt.compare to verify the code
+  const isValid = await bcrypt.compare(code, record.code);
+
+  if (!isValid) {
     await prisma.verificationCode.update({
       where: { id: record.id },
       data: { attemptsLeft: record.attemptsLeft - 1 },

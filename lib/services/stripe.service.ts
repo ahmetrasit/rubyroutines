@@ -1,0 +1,336 @@
+import Stripe from 'stripe';
+import { prisma } from '@/lib/prisma';
+import { TRPCError } from '@trpc/server';
+import { Tier } from '@/lib/types/prisma-enums';
+import { checkTierLimit as checkLimit, getTierLimit } from './tier-limits';
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY is not set');
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2025-02-24.acacia',
+});
+
+// Tier pricing (in cents)
+export const TIER_PRICES = {
+  [Tier.BASIC]: 500, // $5.00
+  [Tier.PREMIUM]: 1000, // $10.00
+  [Tier.SCHOOL]: 2500, // $25.00
+};
+
+// Tier limits (re-exported for convenience)
+export { getTierLimit };
+export const checkTierLimit = checkLimit;
+
+interface CreateCheckoutSessionParams {
+  roleId: string;
+  tier: Tier;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+interface CreateBillingPortalSessionParams {
+  roleId: string;
+  returnUrl: string;
+}
+
+/**
+ * Create a Stripe checkout session for tier upgrade
+ */
+export async function createCheckoutSession(params: CreateCheckoutSessionParams) {
+  const { roleId, tier, successUrl, cancelUrl } = params;
+
+  if (tier === Tier.FREE) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Cannot create checkout session for FREE tier',
+    });
+  }
+
+  const role = await prisma.role.findUnique({
+    where: { id: roleId },
+    include: {
+      user: true,
+    },
+  });
+
+  if (!role) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
+  }
+
+  const priceInCents = TIER_PRICES[tier];
+
+  if (!priceInCents) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Invalid tier: ${tier}`,
+    });
+  }
+
+  // Create or retrieve customer
+  let customerId = role.stripeCustomerId;
+
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: role.user.email,
+      metadata: {
+        roleId: role.id,
+        userId: role.userId,
+      },
+    });
+    customerId = customer.id;
+
+    await prisma.role.update({
+      where: { id: roleId },
+      data: { stripeCustomerId: customerId },
+    });
+  }
+
+  // Create checkout session
+  const session = await stripe.checkout.sessions.create({
+    customer: customerId,
+    mode: 'subscription',
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Ruby Routines ${tier} Plan`,
+            description: `${tier} tier subscription`,
+          },
+          recurring: {
+            interval: 'month',
+          },
+          unit_amount: priceInCents,
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: {
+      roleId: role.id,
+      tier,
+    },
+  });
+
+  return {
+    sessionId: session.id,
+    url: session.url,
+  };
+}
+
+/**
+ * Create a Stripe billing portal session for subscription management
+ */
+export async function createBillingPortalSession(params: CreateBillingPortalSessionParams) {
+  const { roleId, returnUrl } = params;
+
+  const role = await prisma.role.findUnique({
+    where: { id: roleId },
+  });
+
+  if (!role) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
+  }
+
+  if (!role.stripeCustomerId) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'No Stripe customer found for this role',
+    });
+  }
+
+  const session = await stripe.billingPortal.sessions.create({
+    customer: role.stripeCustomerId,
+    return_url: returnUrl,
+  });
+
+  return {
+    url: session.url,
+  };
+}
+
+/**
+ * Handle Stripe webhook events
+ */
+export async function handleWebhook(event: Stripe.Event) {
+  switch (event.type) {
+    case 'checkout.session.completed':
+      await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+      break;
+
+    case 'customer.subscription.created':
+      await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
+      break;
+
+    case 'customer.subscription.updated':
+      await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+      break;
+
+    case 'customer.subscription.deleted':
+      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+      break;
+
+    case 'invoice.payment_failed':
+      await handlePaymentFailed(event.data.object as Stripe.Invoice);
+      break;
+
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+}
+
+/**
+ * Handle checkout session completed
+ */
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  const roleId = session.metadata?.roleId;
+  const tier = session.metadata?.tier as Tier;
+
+  if (!roleId || !tier) {
+    console.error('Missing roleId or tier in checkout session metadata');
+    return;
+  }
+
+  const subscriptionId = session.subscription as string;
+
+  await prisma.role.update({
+    where: { id: roleId },
+    data: {
+      tier,
+      stripeSubscriptionId: subscriptionId,
+      subscriptionStatus: 'ACTIVE',
+    },
+  });
+
+  console.log(`Checkout completed for role ${roleId}, upgraded to ${tier}`);
+}
+
+/**
+ * Handle subscription created
+ */
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  const customerId = subscription.customer as string;
+
+  const role = await prisma.role.findFirst({
+    where: { stripeCustomerId: customerId },
+  });
+
+  if (!role) {
+    console.error(`No role found for Stripe customer ${customerId}`);
+    return;
+  }
+
+  await prisma.role.update({
+    where: { id: role.id },
+    data: {
+      stripeSubscriptionId: subscription.id,
+      subscriptionStatus: subscription.status.toUpperCase(),
+    },
+  });
+
+  console.log(`Subscription created for role ${role.id}`);
+}
+
+/**
+ * Handle subscription updated
+ */
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const customerId = subscription.customer as string;
+
+  const role = await prisma.role.findFirst({
+    where: { stripeCustomerId: customerId },
+  });
+
+  if (!role) {
+    console.error(`No role found for Stripe customer ${customerId}`);
+    return;
+  }
+
+  await prisma.role.update({
+    where: { id: role.id },
+    data: {
+      subscriptionStatus: subscription.status.toUpperCase(),
+    },
+  });
+
+  console.log(`Subscription updated for role ${role.id}`);
+}
+
+/**
+ * Handle subscription deleted
+ */
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const customerId = subscription.customer as string;
+
+  const role = await prisma.role.findFirst({
+    where: { stripeCustomerId: customerId },
+  });
+
+  if (!role) {
+    console.error(`No role found for Stripe customer ${customerId}`);
+    return;
+  }
+
+  // Downgrade to FREE tier
+  await prisma.role.update({
+    where: { id: role.id },
+    data: {
+      tier: Tier.FREE,
+      stripeSubscriptionId: null,
+      subscriptionStatus: 'CANCELED',
+    },
+  });
+
+  console.log(`Subscription deleted for role ${role.id}, downgraded to FREE`);
+}
+
+/**
+ * Handle payment failed
+ */
+async function handlePaymentFailed(invoice: Stripe.Invoice) {
+  const customerId = invoice.customer as string;
+
+  const role = await prisma.role.findFirst({
+    where: { stripeCustomerId: customerId },
+  });
+
+  if (!role) {
+    console.error(`No role found for Stripe customer ${customerId}`);
+    return;
+  }
+
+  await prisma.role.update({
+    where: { id: role.id },
+    data: {
+      subscriptionStatus: 'PAYMENT_FAILED',
+    },
+  });
+
+  console.log(`Payment failed for role ${role.id}`);
+}
+
+/**
+ * Get current tier for a role
+ */
+export async function getCurrentTier(roleId: string) {
+  const role = await prisma.role.findUnique({
+    where: { id: roleId },
+    select: {
+      tier: true,
+      subscriptionStatus: true,
+    },
+  });
+
+  if (!role) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
+  }
+
+  return {
+    tier: role.tier,
+    subscriptionStatus: role.subscriptionStatus,
+  };
+}

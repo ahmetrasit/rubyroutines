@@ -33,3 +33,38 @@ export const protectedProcedure = t.procedure.use(async (opts) => {
     },
   });
 });
+
+/**
+ * Procedure that requires email verification for sensitive operations
+ * Use this for: billing, sharing/invitations, marketplace publishing
+ */
+export const verifiedProcedure = protectedProcedure.use(async (opts) => {
+  const { ctx } = opts;
+
+  // Get user from database to check email verification status
+  const user = await ctx.prisma.user.findUnique({
+    where: { id: ctx.user.id },
+    select: { emailVerified: true },
+  });
+
+  if (!user?.emailVerified) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Email verification required for this operation. Please verify your email address.',
+    });
+  }
+
+  return opts.next({
+    ctx,
+  });
+});
+
+// Re-export authorization utilities from middleware
+export { authorizedProcedure } from './middleware/auth';
+export {
+  verifyRoleOwnership,
+  verifyPersonOwnership,
+  verifyRoutineOwnership,
+  verifyTaskOwnership,
+  verifyGoalOwnership,
+} from './middleware/auth';

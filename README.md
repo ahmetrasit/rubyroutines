@@ -65,12 +65,19 @@ Open [http://localhost:3000](http://localhost:3000)
     /parent          # Parent mode
     /teacher         # Teacher mode
     /school          # School/principal mode
+  /admin            # Admin panel (requires admin privileges)
+    /page.tsx       # Admin dashboard
+    /users          # User management
+    /tiers          # Tier configuration
+    /settings       # System settings
+    /audit          # Audit log viewer
   /kiosk            # Kiosk mode (code-based access)
   /marketplace      # Routine/goal marketplace
   /api              # API routes (webhooks, cron)
 /components          # React components
   /ui               # shadcn/ui components
   /auth             # Auth-related components
+  /admin            # Admin panel components
   /routine          # Routine CRUD
   /task             # Task CRUD
   /goal             # Goal CRUD
@@ -79,18 +86,55 @@ Open [http://localhost:3000](http://localhost:3000)
 /lib                 # Utility libraries
   /supabase         # Supabase client setup
   /trpc             # tRPC routers and procedures
+    /routers        # tRPC routers
+      /admin-*      # Admin panel routers
   /services         # Business logic layer
+    /admin          # Admin services (user mgmt, settings, audit)
   /hooks            # Custom React hooks
   /utils            # Helper functions
   /validation       # Zod schemas
 /prisma              # Database schema and migrations
 /supabase            # Supabase configuration
   /policies.sql     # Row Level Security policies
+/scripts             # Utility scripts
+  /create-admin-user.ts  # Create first admin user
 /docs                # Documentation
   /stages           # Stage-by-stage development guides
 /public              # Static assets
 /tests               # Test files
 ```
+
+## Features
+
+### Core Features
+- **Multi-Role Support** - Parent, Teacher, Principal modes with role switching
+- **Routine Management** - Create, schedule, and track daily/weekly/monthly routines
+- **Task Management** - Simple, multiple check-in, and progress-based tasks
+- **Goal System** - Link tasks and routines to measurable goals
+- **Kiosk Mode** - Child-friendly interface with code-based access
+- **Smart Routines** - Conditional routines based on task/goal completion
+- **Analytics Dashboard** - Visual progress tracking with D3.js charts
+
+### Sharing & Collaboration
+- **Co-Parent Sharing** - Share routines with co-parents (granular permissions)
+- **Co-Teacher Collaboration** - Share classrooms between teachers
+- **Student-Parent Connection** - Connect parents to teacher's students via 6-digit codes
+- **Marketplace** - Publish and discover routines/goals from community
+
+### Premium Features
+- **Tier System** - FREE, BASIC, PREMIUM, SCHOOL subscription tiers
+- **Stripe Integration** - Secure payment processing for tier upgrades
+- **Advanced Analytics** - Completion trends, goal progress, task heatmaps
+- **Export Data** - CSV export for reporting and analysis
+
+### Admin Panel
+- **User Management** - Search, view, manage all users
+- **Admin Access Control** - Grant/revoke admin privileges
+- **Tier Management** - Configure system-wide tier limits and pricing
+- **User Tier Overrides** - Set custom limits for specific users
+- **System Settings** - Configure application-wide settings
+- **Audit Logging** - Complete trail of all administrative actions
+- **Statistics Dashboard** - System metrics and activity monitoring
 
 ## Documentation
 
@@ -105,6 +149,7 @@ Open [http://localhost:3000](http://localhost:3000)
 - [Complete Development Plan](docs/plan.md)
 - [Quick Start for New Sessions](QUICKSTART.md)
 - [Local Setup Guide](docs/SETUP.md)
+- [Admin Panel Guide](docs/ADMIN_PANEL.md) - Comprehensive admin documentation
 
 ### Stage Guides (Complete Implementation)
 - [Stage 1: Foundation & Setup](docs/stages/STAGE-1-COMPLETE.md)
@@ -113,6 +158,110 @@ Open [http://localhost:3000](http://localhost:3000)
 - [Stage 4: Kiosk Mode](docs/stages/STAGE-4-COMPLETE.md)
 - [Stage 5: Co-Parent/Teacher + School](docs/stages/STAGE-5-COMPLETE.md)
 - [Stage 6: Analytics + Marketplace](docs/stages/STAGE-6-COMPLETE.md)
+
+## Admin Panel Access
+
+### Creating Your First Admin User
+
+After setting up the application, you'll need to create an admin user to access the admin panel at `/admin`.
+
+**Step 1: Register a Regular User Account**
+```bash
+# Start the application
+npm run dev
+
+# Navigate to http://localhost:3000/signup
+# Register with your email and password
+# Verify your email
+```
+
+**Step 2: Promote User to Admin**
+```bash
+# Run the admin creation script with the registered email
+npx tsx scripts/create-admin-user.ts admin@example.com
+
+# Expected output:
+# ✅ Successfully granted admin access to admin@example.com
+# User ID: user_abc123xyz
+```
+
+**Step 3: Access Admin Panel**
+```
+1. Log in with your admin account
+2. Navigate to http://localhost:3000/admin
+3. You should see the admin dashboard with system statistics
+```
+
+### Admin Panel Features
+
+Once logged in as an admin, you can:
+
+**User Management** (`/admin/users`)
+- Search and filter all users by email, tier, admin status
+- View detailed user information including roles and statistics
+- Grant or revoke admin privileges to other users
+- Change user subscription tiers
+- Set custom tier limits for specific users (overrides system defaults)
+- Delete user accounts (with safety checks to prevent deleting admins)
+
+**Tier Configuration** (`/admin/tiers`)
+- Configure system-wide tier limits for all subscription levels:
+  - FREE: Default limits for new users
+  - BASIC: $5/month tier limits
+  - PREMIUM: $10/month tier limits
+  - SCHOOL: $25/month tier limits
+- Set tier pricing (monthly subscription costs)
+- Limits include: persons, groups, routines, tasks per routine, goals, kiosk codes
+
+**System Settings** (`/admin/settings`)
+- View and manage application configuration
+- Settings organized by category:
+  - General (maintenance mode, registration enabled)
+  - Tiers (tier limits and pricing)
+  - Features (marketplace enabled)
+  - Security (max login attempts, session timeout)
+  - Billing (Stripe configuration)
+
+**Audit Log** (`/admin/audit`)
+- View complete history of all administrative actions
+- Filter by action type, entity type, date range
+- See before/after changes for all modifications
+- Track which admin performed which actions
+- Compliance and security monitoring
+
+**Dashboard** (`/admin`)
+- System statistics (total users, verified users, admins, roles)
+- Tier distribution visualization
+- Recent admin activity feed
+- 30-day activity metrics
+
+### Admin Security Features
+
+- **Access Control**: Only users with `isAdmin = true` can access admin panel
+- **Self-Protection**: Admins cannot revoke their own admin access
+- **Admin Protection**: Cannot delete users who have admin privileges
+- **Audit Trail**: All administrative actions are logged with full context
+- **Authorization**: All admin API endpoints verify admin status on every request
+- **Type Safety**: Full TypeScript coverage with Zod validation
+
+### Database Migration for Admin Panel
+
+If setting up an existing database, run the admin panel migration:
+
+```bash
+# Apply the admin panel migration
+psql $DATABASE_URL < prisma/migrations/add_admin_panel/migration.sql
+
+# Or regenerate Prisma client
+npx prisma generate
+npx prisma db push
+```
+
+This adds:
+- `isAdmin` field to users table
+- `tierOverride` field to roles table
+- `system_settings` table for configuration
+- `audit_logs` table for action tracking
 
 ## Development Stages
 

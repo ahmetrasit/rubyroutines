@@ -1,58 +1,41 @@
 'use client';
 
-
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { PersonForm } from './person-form';
 import { trpc } from '@/lib/trpc/client';
-import { useToast } from '@/components/ui/toast';
+import { useAvatar } from '@/lib/hooks';
+import { useDeleteMutation } from '@/lib/hooks';
+import type { Person } from '@/lib/types/database';
 
 interface PersonCardProps {
-  person: any;
-  onSelect?: (person: any) => void;
+  person: Person;
+  onSelect?: (person: Person) => void;
 }
 
-export function PersonCard({ person, onSelect }: PersonCardProps) {
+export const PersonCard = memo(function PersonCard({ person, onSelect }: PersonCardProps) {
   const [showEdit, setShowEdit] = useState(false);
-  const { toast } = useToast();
   const utils = trpc.useUtils();
 
-  // Parse avatar data
-  let avatarColor = '#FFB3BA'; // Default pastel pink
-  let avatarEmoji = person.name.charAt(0).toUpperCase(); // Fallback to first letter
-
-  if (person.avatar) {
-    try {
-      const parsed = JSON.parse(person.avatar);
-      avatarColor = parsed.color || avatarColor;
-      avatarEmoji = parsed.emoji || avatarEmoji;
-    } catch {
-      // If not JSON, it might be an old URL format - ignore
-    }
-  }
-
-  const deleteMutation = trpc.person.delete.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: `${person.name} has been archived`,
-        variant: 'success',
-      });
-      utils.person.list.invalidate();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+  // Parse avatar data using custom hook
+  const { color, emoji, backgroundColor } = useAvatar({
+    avatarString: person.avatar,
+    fallbackName: person.name,
   });
+
+  const deleteMutation = trpc.person.delete.useMutation();
+  const { mutate: deletePerson, isLoading: isDeleting } = useDeleteMutation(
+    deleteMutation,
+    {
+      entityName: person.name,
+      invalidateQueries: [() => utils.person.list.invalidate()],
+    }
+  );
 
   const handleDelete = () => {
     if (confirm(`Are you sure you want to archive ${person.name}?`)) {
-      deleteMutation.mutate({ id: person.id });
+      deletePerson({ id: person.id });
     }
   };
 
@@ -60,16 +43,16 @@ export function PersonCard({ person, onSelect }: PersonCardProps) {
     <>
       <div
         className="group relative rounded-xl bg-white p-6 shadow-md hover:shadow-lg transition-all cursor-pointer border-t-4"
-        style={{ borderTopColor: avatarColor }}
+        style={{ borderTopColor: color }}
         onClick={() => onSelect?.(person)}
       >
         <div className="flex items-center gap-4 mb-4">
           <div className="flex-shrink-0">
             <div
               className="h-16 w-16 rounded-full flex items-center justify-center text-3xl"
-              style={{ backgroundColor: avatarColor + '20' }}
+              style={{ backgroundColor }}
             >
-              {avatarEmoji}
+              {emoji}
             </div>
           </div>
 
@@ -114,4 +97,4 @@ export function PersonCard({ person, onSelect }: PersonCardProps) {
       )}
     </>
   );
-}
+});

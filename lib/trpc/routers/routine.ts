@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from '../init';
+import { router, authorizedProcedure, verifyRoutineOwnership } from '../init';
 import { TRPCError } from '@trpc/server';
 import { EntityStatus } from '@/lib/types/prisma-enums';
 import { checkTierLimit } from '@/lib/services/tier-limits';
@@ -16,7 +16,7 @@ import {
 } from '@/lib/validation/routine';
 
 export const routineRouter = router({
-  list: protectedProcedure.input(listRoutinesSchema).query(async ({ ctx, input }) => {
+  list: authorizedProcedure.input(listRoutinesSchema).query(async ({ ctx, input }) => {
     const where: any = {
       status: input.includeInactive ? undefined : EntityStatus.ACTIVE,
     };
@@ -59,7 +59,9 @@ export const routineRouter = router({
     return routines;
   }),
 
-  getById: protectedProcedure.input(getRoutineSchema).query(async ({ ctx, input }) => {
+  getById: authorizedProcedure.input(getRoutineSchema).query(async ({ ctx, input }) => {
+    // Verify routine ownership
+    await verifyRoutineOwnership(ctx.user.id, input.id, ctx.prisma);
     const routine = await ctx.prisma.routine.findUnique({
       where: { id: input.id },
       include: {
@@ -82,7 +84,7 @@ export const routineRouter = router({
     return routine;
   }),
 
-  create: protectedProcedure.input(createRoutineSchema).mutation(async ({ ctx, input }) => {
+  create: authorizedProcedure.input(createRoutineSchema).mutation(async ({ ctx, input }) => {
     const { personIds, ...routineData } = input;
 
     // Check tier limit
@@ -121,8 +123,11 @@ export const routineRouter = router({
     return routine;
   }),
 
-  update: protectedProcedure.input(updateRoutineSchema).mutation(async ({ ctx, input }) => {
+  update: authorizedProcedure.input(updateRoutineSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
+
+    // Verify routine ownership
+    await verifyRoutineOwnership(ctx.user.id, id, ctx.prisma);
 
     // Check if this is the "Daily Routine"
     const existingRoutine = await ctx.prisma.routine.findUnique({
@@ -144,7 +149,10 @@ export const routineRouter = router({
     return routine;
   }),
 
-  delete: protectedProcedure.input(deleteRoutineSchema).mutation(async ({ ctx, input }) => {
+  delete: authorizedProcedure.input(deleteRoutineSchema).mutation(async ({ ctx, input }) => {
+    // Verify routine ownership
+    await verifyRoutineOwnership(ctx.user.id, input.id, ctx.prisma);
+
     // Check if this is the "Daily Routine"
     const existingRoutine = await ctx.prisma.routine.findUnique({
       where: { id: input.id },
@@ -168,9 +176,11 @@ export const routineRouter = router({
     return routine;
   }),
 
-  restore: protectedProcedure
+  restore: authorizedProcedure
     .input(restoreRoutineSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify routine ownership
+      await verifyRoutineOwnership(ctx.user.id, input.id, ctx.prisma);
       const routine = await ctx.prisma.routine.update({
         where: { id: input.id },
         data: {
@@ -182,7 +192,9 @@ export const routineRouter = router({
       return routine;
     }),
 
-  copy: protectedProcedure.input(copyRoutineSchema).mutation(async ({ ctx, input }) => {
+  copy: authorizedProcedure.input(copyRoutineSchema).mutation(async ({ ctx, input }) => {
+    // Verify routine ownership
+    await verifyRoutineOwnership(ctx.user.id, input.routineId, ctx.prisma);
     // Get source routine
     const source = await ctx.prisma.routine.findUnique({
       where: { id: input.routineId },
@@ -235,9 +247,11 @@ export const routineRouter = router({
     return copies;
   }),
 
-  createVisibilityOverride: protectedProcedure
+  createVisibilityOverride: authorizedProcedure
     .input(createVisibilityOverrideSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify routine ownership
+      await verifyRoutineOwnership(ctx.user.id, input.routineId, ctx.prisma);
       const routine = await ctx.prisma.routine.findUnique({
         where: { id: input.routineId },
       });
@@ -264,9 +278,11 @@ export const routineRouter = router({
       return override;
     }),
 
-  cancelVisibilityOverride: protectedProcedure
+  cancelVisibilityOverride: authorizedProcedure
     .input(cancelVisibilityOverrideSchema)
     .mutation(async ({ ctx, input }) => {
+      // Verify routine ownership
+      await verifyRoutineOwnership(ctx.user.id, input.routineId, ctx.prisma);
       await ctx.prisma.visibilityOverride.deleteMany({
         where: {
           routineId: input.routineId,
@@ -276,9 +292,11 @@ export const routineRouter = router({
       return { success: true };
     }),
 
-  getVisibilityOverride: protectedProcedure
+  getVisibilityOverride: authorizedProcedure
     .input(z.object({ routineId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
+      // Verify routine ownership
+      await verifyRoutineOwnership(ctx.user.id, input.routineId, ctx.prisma);
       const override = await ctx.prisma.visibilityOverride.findFirst({
         where: {
           routineId: input.routineId,

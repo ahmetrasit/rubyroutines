@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { TRPCProvider } from "@/lib/trpc/Provider";
 import { ToasterProvider } from "@/components/ui/toast";
+import { PageErrorBoundary } from "@/components/error-boundary";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,9 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <TRPCProvider>
-          <ToasterProvider>{children}</ToasterProvider>
-        </TRPCProvider>
+        <PageErrorBoundary>
+          <TRPCProvider>
+            <ToasterProvider>{children}</ToasterProvider>
+          </TRPCProvider>
+        </PageErrorBoundary>
       </body>
     </html>
   );
