@@ -3,11 +3,19 @@ import { TRPCProvider } from "@/lib/trpc/Provider";
 import { ToasterProvider } from "@/components/ui/toast";
 import { PageErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { CookieConsent } from "@/components/cookie-consent";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Ruby Routines",
   description: "Routine management for parents and teachers",
+  manifest: "/manifest.json",
+  themeColor: "#0ea5e9",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Ruby Routines",
+  },
 };
 
 export default function RootLayout({
@@ -29,6 +37,7 @@ export default function RootLayout({
               <ToasterProvider>{children}</ToasterProvider>
             </TRPCProvider>
           </PageErrorBoundary>
+          <CookieConsent />
         </ThemeProvider>
       </body>
     </html>

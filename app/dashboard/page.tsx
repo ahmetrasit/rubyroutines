@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -42,18 +43,21 @@ export default function DashboardPage() {
         <div className="rounded-xl bg-white p-6 shadow-md">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="mt-1 text-gray-600">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+              <p className="mt-1 text-gray-600 dark:text-gray-400">
                 Welcome, {session.user.name || session.user.email}!
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => signOutMutation.mutate()}
-              disabled={signOutMutation.isPending}
-            >
-              {signOutMutation.isPending ? 'Logging out...' : 'Log out'}
-            </Button>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <Button
+                variant="outline"
+                onClick={() => signOutMutation.mutate()}
+                disabled={signOutMutation.isPending}
+              >
+                {signOutMutation.isPending ? 'Logging out...' : 'Log out'}
+              </Button>
+            </div>
           </div>
 
           <div className="mt-6">

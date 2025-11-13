@@ -19,6 +19,7 @@ import { adminSettingsRouter } from './admin-settings';
 import { adminTiersRouter } from './admin-tiers';
 import { adminAuditRouter } from './admin-audit';
 import { gdprRouter } from './gdpr';
+import { streakRouter } from './streak';
 
 export const appRouter = router({
   auth: authRouter,
@@ -41,6 +42,7 @@ export const appRouter = router({
   adminTiers: adminTiersRouter,
   adminAudit: adminAuditRouter,
   gdpr: gdprRouter,
+  streak: streakRouter,
 });
 
 export type AppRouter = typeof appRouter;
