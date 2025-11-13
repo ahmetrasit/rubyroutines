@@ -1,6 +1,6 @@
 'use client';
 
-import { Task, TaskType, TaskCompletion, Person } from '@prisma/client';
+import { TaskType } from '@prisma/client';
 import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
@@ -19,7 +19,7 @@ type TaskWithAggregation = Task & {
 };
 
 interface TaskItemProps {
-  task: TaskWithAggregation;
+  task: anyWithAggregation;
   personId: string;
 }
 

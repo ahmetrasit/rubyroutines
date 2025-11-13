@@ -1,7 +1,6 @@
 'use client';
 
-import { Person } from '@prisma/client';
-import { Card } from '@/components/ui/dialog';
+
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -10,8 +9,8 @@ import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 
 interface PersonCardProps {
-  person: Person;
-  onSelect?: (person: Person) => void;
+  person: any;
+  onSelect?: (person: any) => void;
 }
 
 export function PersonCard({ person, onSelect }: PersonCardProps) {

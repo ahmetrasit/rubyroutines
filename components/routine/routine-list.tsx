@@ -6,18 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { RoutineForm } from './routine-form';
-import { Routine, Task, Person } from '@prisma/client';
+
 
 type RoutineWithRelations = Routine & {
-  tasks: Task[];
-  assignments: Array<{ person: Person }>;
+  tasks: any[];
+  assignments: Array<{ person: any }>;
   _count: { tasks: number };
 };
 
 interface RoutineListProps {
   roleId?: string;
   personId?: string;
-  onSelectRoutine?: (routine: RoutineWithRelations) => void;
+  onSelectRoutine?: (routine: anyWithRelations) => void;
 }
 
 export function RoutineList({ roleId, personId, onSelectRoutine }: RoutineListProps) {

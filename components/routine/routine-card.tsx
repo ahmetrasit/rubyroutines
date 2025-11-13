@@ -1,9 +1,7 @@
 'use client';
 
-import { Routine, Task, Person } from '@prisma/client';
-import { Card } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import { RoutineForm } from './routine-form';
 import { trpc } from '@/lib/trpc/client';
@@ -11,15 +9,11 @@ import { useToast } from '@/components/ui/toast';
 import { isRoutineVisible, formatVisibilityDescription } from '@/lib/services/visibility-rules';
 import { getResetDescription } from '@/lib/services/reset-period';
 
-type RoutineWithRelations = Routine & {
-  tasks: Task[];
-  assignments: Array<{ person: Person }>;
-  _count: { tasks: number };
-};
+type RoutineWithRelations = any;
 
 interface RoutineCardProps {
-  routine: RoutineWithRelations;
-  onSelect?: (routine: RoutineWithRelations) => void;
+  routine: anyWithRelations;
+  onSelect?: (routine: anyWithRelations) => void;
 }
 
 export function RoutineCard({ routine, onSelect }: RoutineCardProps) {

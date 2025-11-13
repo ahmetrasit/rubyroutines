@@ -1,6 +1,6 @@
 'use client';
 
-import { Person } from '@prisma/client';
+
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface PersonFormProps {
-  person?: Person;
+  person?: any;
   roleId?: string;
   onClose: () => void;
 }

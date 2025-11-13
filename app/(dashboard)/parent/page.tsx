@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { PersonList } from '@/components/person/person-list';
-import { Person } from '@prisma/client';
 
 export default function ParentDashboard() {
   const router = useRouter();
@@ -29,7 +28,7 @@ export default function ParentDashboard() {
   }
 
   // Find parent role
-  const parentRole = session.user.roles?.find((role) => role.type === 'PARENT');
+  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
 
   if (!parentRole) {
     return (
@@ -37,14 +36,14 @@ export default function ParentDashboard() {
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold mb-4">No Parent Role</h1>
           <p className="text-gray-600">
-            You don't have a parent role yet. Please contact support.
+            You don&apos;t have a parent role yet. Please contact support.
           </p>
         </div>
       </div>
     );
   }
 
-  const handleSelectPerson = (person: Person) => {
+  const handleSelectPerson = (person: any) => {
     router.push(`/parent/${person.id}`);
   };
 

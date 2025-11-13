@@ -3,10 +3,11 @@ import * as React from "react";
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "default" | "outline" | "ghost";
+  size?: "sm" | "md" | "lg";
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = "", variant = "default", ...props }, ref) => {
+  ({ className = "", variant = "default", size = "md", ...props }, ref) => {
     const baseStyles = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
 
     const variants = {
@@ -15,9 +16,15 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ghost: "hover:bg-gray-100",
     };
 
+    const sizes = {
+      sm: "px-2 py-1 text-xs",
+      md: "px-4 py-2",
+      lg: "px-6 py-3 text-base",
+    };
+
     return (
       <button
-        className={`${baseStyles} ${variants[variant]} px-4 py-2 ${className}`}
+        className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
         ref={ref}
         {...props}
       />

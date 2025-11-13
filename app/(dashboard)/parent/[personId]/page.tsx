@@ -37,14 +37,14 @@ export default function PersonDetailPage() {
   }
 
   // Find parent role
-  const parentRole = session.user.roles?.find((role) => role.type === 'PARENT');
+  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
 
   if (!parentRole) {
     return (
       <div className="container mx-auto p-8">
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold mb-4">No Parent Role</h1>
-          <p className="text-gray-600">You don't have a parent role.</p>
+          <p className="text-gray-600">You don&apos;t have a parent role.</p>
         </div>
       </div>
     );
