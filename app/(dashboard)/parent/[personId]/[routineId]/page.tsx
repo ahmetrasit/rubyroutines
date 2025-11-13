@@ -1,115 +1,126 @@
 'use client';
 
-import { use } from 'react';
+import { useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { TaskList } from '@/components/task/task-list';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, RefreshCw, Eye } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { getResetDescription } from '@/lib/services/reset-period';
-import { formatVisibilityDescription, isRoutineVisible } from '@/lib/services/visibility-rules';
+import { ArrowLeft } from 'lucide-react';
 
-interface RoutineDetailPageProps {
-  params: Promise<{
-    personId: string;
-    routineId: string;
-  }>;
-}
-
-export default function RoutineDetailPage({ params }: RoutineDetailPageProps) {
-  const { personId, routineId } = use(params);
+export default function RoutineDetailPage() {
   const router = useRouter();
+  const params = useParams();
+  const personId = params.personId as string;
+  const routineId = params.routineId as string;
 
-  const { data: routine, isLoading } = trpc.routine.getById.useQuery(
+  const { data: session, isLoading: sessionLoading } = trpc.auth.getSession.useQuery();
+  const { data: person, isLoading: personLoading } = trpc.person.getById.useQuery(
+    { id: personId },
+    { enabled: !!personId }
+  );
+  const { data: routine, isLoading: routineLoading } = trpc.routine.getById.useQuery(
     { id: routineId },
     { enabled: !!routineId }
   );
 
-  const { data: person } = trpc.person.getById.useQuery(
-    { id: personId },
-    { enabled: !!personId }
-  );
+  useEffect(() => {
+    if (!sessionLoading && !session?.user) {
+      router.push('/login');
+    }
+  }, [sessionLoading, session, router]);
 
-  if (isLoading) {
+  if (sessionLoading || personLoading || routineLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-500">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Loading...</p>
       </div>
     );
   }
 
-  if (!routine) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4">
-        <p className="text-gray-500">Routine not found</p>
-        <Button onClick={() => router.back()}>Go Back</Button>
-      </div>
-    );
+  if (!session?.user || !person || !routine) {
+    return null;
   }
 
-  const visible = isRoutineVisible(routine);
+  // Find parent role
+  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
 
-  return (
-    <div className="container mx-auto py-6 max-w-4xl">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-
-        <div className="bg-white rounded-lg border p-6 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold mb-2">{routine.name}</h1>
-
-              {person && (
-                <p className="text-sm text-gray-600 mb-2">
-                  For: <span className="font-medium">{person.name}</span>
-                </p>
-              )}
-
-              {routine.description && (
-                <p className="text-gray-700 mb-4">{routine.description}</p>
-              )}
-
-              <div className="flex flex-wrap gap-2 text-sm">
-                <div className="flex items-center gap-1 px-3 py-1 bg-gray-100 rounded">
-                  <RefreshCw className="h-4 w-4" />
-                  <span>{getResetDescription(routine.resetPeriod, routine.resetDay)}</span>
-                </div>
-
-                <div className="flex items-center gap-1 px-3 py-1 bg-gray-100 rounded">
-                  <Eye className="h-4 w-4" />
-                  <span>{formatVisibilityDescription(routine)}</span>
-                </div>
-
-                <div className="flex items-center gap-1 px-3 py-1 bg-gray-100 rounded">
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    {routine._count?.tasks || 0} {routine._count?.tasks === 1 ? 'task' : 'tasks'}
-                  </span>
-                </div>
-              </div>
-
-              {!visible && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                  <p className="text-sm text-yellow-800">
-                    This routine is currently not visible based on its visibility rules.
-                  </p>
-                </div>
-              )}
-            </div>
+  if (!parentRole) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <h1 className="text-2xl font-bold mb-4">No Parent Role</h1>
+            <p className="text-gray-600">You don&apos;t have a parent role.</p>
           </div>
         </div>
       </div>
+    );
+  }
 
-      <div className="bg-white rounded-lg border p-6 shadow-sm">
-        <TaskList routineId={routineId} personId={personId} />
+  // Parse avatar data for person
+  let avatarColor = '#FFB3BA';
+  let avatarEmoji = person.name.charAt(0).toUpperCase();
+
+  if (person.avatar) {
+    try {
+      const parsed = JSON.parse(person.avatar);
+      avatarColor = parsed.color || avatarColor;
+      avatarEmoji = parsed.emoji || avatarEmoji;
+    } catch {
+      // Fallback to initials
+    }
+  }
+
+  const isDailyRoutine = routine.name === 'Daily Routine';
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push(`/parent/${personId}`)}
+          className="mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to {person.name}&apos;s Routines
+        </Button>
+
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div
+                className="h-16 w-16 rounded-full flex items-center justify-center text-3xl"
+                style={{ backgroundColor: avatarColor + '20' }}
+              >
+                {avatarEmoji}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{routine.name}</h1>
+                <p className="text-gray-600 mt-1">for {person.name}</p>
+              </div>
+            </div>
+          </div>
+
+          {routine.description && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <p className="text-gray-700">{routine.description}</p>
+            </div>
+          )}
+
+          {isDailyRoutine && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                This is the default Daily Routine that cannot be deleted or renamed.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <TaskList
+          routineId={routineId}
+          roleId={parentRole.id}
+        />
       </div>
     </div>
   );

@@ -121,6 +121,18 @@ export const routineRouter = router({
   update: protectedProcedure.input(updateRoutineSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
 
+    // Check if this is the "Daily Routine"
+    const existingRoutine = await ctx.prisma.routine.findUnique({
+      where: { id },
+    });
+
+    if (existingRoutine?.name === 'Daily Routine' && data.name && data.name !== 'Daily Routine') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Cannot rename the Daily Routine',
+      });
+    }
+
     const routine = await ctx.prisma.routine.update({
       where: { id },
       data,
@@ -130,6 +142,18 @@ export const routineRouter = router({
   }),
 
   delete: protectedProcedure.input(deleteRoutineSchema).mutation(async ({ ctx, input }) => {
+    // Check if this is the "Daily Routine"
+    const existingRoutine = await ctx.prisma.routine.findUnique({
+      where: { id: input.id },
+    });
+
+    if (existingRoutine?.name === 'Daily Routine') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Cannot delete the Daily Routine',
+      });
+    }
+
     const routine = await ctx.prisma.routine.update({
       where: { id: input.id },
       data: {

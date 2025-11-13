@@ -118,7 +118,13 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
               required
               maxLength={100}
               placeholder="Morning Routine"
+              disabled={routine?.name === 'Daily Routine'}
             />
+            {routine?.name === 'Daily Routine' && (
+              <p className="text-xs text-gray-500 mt-1">
+                The Daily Routine name cannot be changed
+              </p>
+            )}
           </div>
 
           <div>
