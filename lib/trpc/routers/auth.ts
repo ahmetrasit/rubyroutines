@@ -29,9 +29,9 @@ export const authRouter = router({
         } else if (error.message.includes('password')) {
           message = 'Password is too weak. Please use at least 6 characters.';
         } else if (error.message.includes('invalid') && error.message.includes('email')) {
-          message = 'Please use a simpler email format (e.g., yourname@example.com). Some special characters may not be supported.';
+          message = 'This email format is not accepted. Please use a real email address from a common provider (Gmail, Outlook, Yahoo, etc.). Test/temporary email addresses are not allowed.';
         } else if (error.message.includes('email')) {
-          message = error.message; // Show the actual error from Supabase
+          message = 'Invalid email address. Please use a valid email from a real email provider.';
         }
 
         throw new TRPCError({

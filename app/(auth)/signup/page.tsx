@@ -114,9 +114,12 @@ export default function SignUpPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              placeholder="your.name@gmail.com"
               className="mt-1"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Please use a real email address from Gmail, Outlook, Yahoo, or similar providers
+            </p>
           </div>
 
           <div>

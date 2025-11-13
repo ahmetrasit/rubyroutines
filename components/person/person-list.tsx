@@ -35,9 +35,9 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
   const hasInactive = (allPersons?.length ?? 0) > (persons?.length ?? 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">People</h2>
+        <h2 className="text-2xl font-bold text-gray-900">People</h2>
         <div className="flex gap-2">
           {hasInactive && (
             <Button variant="outline" size="sm" onClick={() => setShowRestore(true)}>
@@ -45,8 +45,8 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
               Restore
             </Button>
           )}
-          <Button size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button size="md" onClick={() => setShowForm(true)}>
+            <Plus className="h-5 w-5 mr-2" />
             Add Child
           </Button>
         </div>
