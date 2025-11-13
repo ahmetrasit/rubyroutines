@@ -18,6 +18,20 @@ export function PersonCard({ person, onSelect }: PersonCardProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
+  // Parse avatar data
+  let avatarColor = '#FFB3BA'; // Default pastel pink
+  let avatarEmoji = person.name.charAt(0).toUpperCase(); // Fallback to first letter
+
+  if (person.avatar) {
+    try {
+      const parsed = JSON.parse(person.avatar);
+      avatarColor = parsed.color || avatarColor;
+      avatarEmoji = parsed.emoji || avatarEmoji;
+    } catch {
+      // If not JSON, it might be an old URL format - ignore
+    }
+  }
+
   const deleteMutation = trpc.person.delete.useMutation({
     onSuccess: () => {
       toast({
@@ -50,26 +64,16 @@ export function PersonCard({ person, onSelect }: PersonCardProps) {
       >
         <div className="flex items-center gap-4">
           <div className="flex-shrink-0">
-            {person.avatar ? (
-              <img
-                src={person.avatar}
-                alt={person.name}
-                className="h-12 w-12 rounded-full object-cover"
-              />
-            ) : (
-              <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-xl font-semibold text-gray-600">
-                {person.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <div
+              className="h-14 w-14 rounded-full flex items-center justify-center text-2xl shadow-sm"
+              style={{ backgroundColor: avatarColor }}
+            >
+              {avatarEmoji}
+            </div>
           </div>
 
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg truncate">{person.name}</h3>
-            {person.birthDate && (
-              <p className="text-sm text-gray-500">
-                {new Date(person.birthDate).toLocaleDateString()}
-              </p>
-            )}
           </div>
 
           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
