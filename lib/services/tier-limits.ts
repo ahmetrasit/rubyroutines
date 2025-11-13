@@ -1,4 +1,4 @@
-import { Tier } from '@prisma/client';
+import { Tier } from '@/lib/types/prisma-enums';
 import { TRPCError } from '@trpc/server';
 
 type LimitKey =

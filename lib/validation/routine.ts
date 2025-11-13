@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RoutineType, ResetPeriod, Visibility } from '@prisma/client';
+import { RoutineType, ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
 
 export const createRoutineSchema = z.object({
   roleId: z.string().cuid(),

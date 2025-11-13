@@ -1,6 +1,13 @@
 import { router, publicProcedure, protectedProcedure } from '../init';
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import {
+  createVerificationCode,
+  verifyCode,
+  canResendCode,
+  incrementResendCount
+} from '@/lib/auth/verification';
+import { CodeType } from '@prisma/client';
 
 export const authRouter = router({
   signUp: publicProcedure
@@ -265,5 +272,84 @@ export const authRouter = router({
       });
 
       return { user: dbUser };
+    }),
+
+  sendVerificationCode: publicProcedure
+    .input(z.object({
+      userId: z.string(),
+      email: z.string().email(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const code = await createVerificationCode(
+        input.userId,
+        input.email,
+        CodeType.EMAIL_VERIFICATION
+      );
+
+      // TODO: Send email with code using Resend
+      // For development, log the code
+      console.log(`Verification code for ${input.email}: ${code}`);
+
+      return { success: true };
+    }),
+
+  verifyEmailCode: publicProcedure
+    .input(z.object({
+      userId: z.string(),
+      code: z.string().length(6),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await verifyCode(
+        input.userId,
+        input.code,
+        CodeType.EMAIL_VERIFICATION
+      );
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error || 'Invalid code',
+        });
+      }
+
+      // Update user's emailVerified status
+      await ctx.prisma.user.update({
+        where: { id: input.userId },
+        data: { emailVerified: new Date() },
+      });
+
+      return { success: true };
+    }),
+
+  resendVerificationCode: publicProcedure
+    .input(z.object({
+      userId: z.string(),
+      email: z.string().email(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const canResend = await canResendCode(
+        input.userId,
+        CodeType.EMAIL_VERIFICATION
+      );
+
+      if (!canResend.canResend) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: canResend.error || 'Cannot resend code at this time',
+        });
+      }
+
+      await incrementResendCount(input.userId, CodeType.EMAIL_VERIFICATION);
+
+      const code = await createVerificationCode(
+        input.userId,
+        input.email,
+        CodeType.EMAIL_VERIFICATION
+      );
+
+      // TODO: Send email with code using Resend
+      console.log(`Resent verification code for ${input.email}: ${code}`);
+
+      return { success: true };
     }),
 });

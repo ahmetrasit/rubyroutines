@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { CodeType, CodeStatus } from '@prisma/client';
+import { CodeType, CodeStatus } from '@/lib/types/prisma-enums';
 
 /**
  * Generate a random 6-digit verification code

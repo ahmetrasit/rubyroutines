@@ -1,6 +1,6 @@
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
-import { EntityStatus } from '@prisma/client';
+import { EntityStatus } from '@/lib/types/prisma-enums';
 import {
   createGroupSchema,
   updateGroupSchema,

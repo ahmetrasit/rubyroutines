@@ -1,6 +1,7 @@
 'use client';
 
-import { Routine, ResetPeriod, Visibility } from '@prisma/client';
+import { ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
+type Routine = any;
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';

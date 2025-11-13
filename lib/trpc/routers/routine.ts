@@ -1,7 +1,8 @@
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
-import { EntityStatus } from '@prisma/client';
+import { EntityStatus } from '@/lib/types/prisma-enums';
 import { checkTierLimit } from '@/lib/services/tier-limits';
+import { z } from 'zod';
 import {
   createRoutineSchema,
   updateRoutineSchema,
@@ -10,6 +11,8 @@ import {
   listRoutinesSchema,
   getRoutineSchema,
   copyRoutineSchema,
+  createVisibilityOverrideSchema,
+  cancelVisibilityOverrideSchema,
 } from '@/lib/validation/routine';
 
 export const routineRouter = router({
@@ -231,4 +234,60 @@ export const routineRouter = router({
 
     return copies;
   }),
+
+  createVisibilityOverride: protectedProcedure
+    .input(createVisibilityOverrideSchema)
+    .mutation(async ({ ctx, input }) => {
+      const routine = await ctx.prisma.routine.findUnique({
+        where: { id: input.routineId },
+      });
+
+      if (!routine) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Routine not found' });
+      }
+
+      // Cancel any existing override
+      await ctx.prisma.visibilityOverride.deleteMany({
+        where: {
+          routineId: input.routineId,
+        },
+      });
+
+      // Create new override
+      const override = await ctx.prisma.visibilityOverride.create({
+        data: {
+          routineId: input.routineId,
+          expiresAt: new Date(Date.now() + input.duration * 60 * 1000),
+        },
+      });
+
+      return override;
+    }),
+
+  cancelVisibilityOverride: protectedProcedure
+    .input(cancelVisibilityOverrideSchema)
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.visibilityOverride.deleteMany({
+        where: {
+          routineId: input.routineId,
+        },
+      });
+
+      return { success: true };
+    }),
+
+  getVisibilityOverride: protectedProcedure
+    .input(z.object({ routineId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const override = await ctx.prisma.visibilityOverride.findFirst({
+        where: {
+          routineId: input.routineId,
+          expiresAt: {
+            gt: new Date(),
+          },
+        },
+      });
+
+      return override;
+    }),
 });

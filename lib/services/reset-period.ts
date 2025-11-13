@@ -1,4 +1,4 @@
-import { ResetPeriod } from '@prisma/client';
+import { ResetPeriod } from '@/lib/types/prisma-enums';
 
 export function calculateNextReset(
   period: ResetPeriod,

@@ -1,6 +1,6 @@
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
-import { EntityStatus, TaskType } from '@prisma/client';
+import { EntityStatus, TaskType } from '@/lib/types/prisma-enums';
 import {
   createTaskSchema,
   updateTaskSchema,

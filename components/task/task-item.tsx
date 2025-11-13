@@ -1,6 +1,9 @@
 'use client';
 
-import { TaskType } from '@prisma/client';
+import { TaskType } from '@/lib/types/prisma-enums';
+type Task = any;
+type TaskCompletion = any;
+type Person = any;
 import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
@@ -19,7 +22,7 @@ type TaskWithAggregation = Task & {
 };
 
 interface TaskItemProps {
-  task: anyWithAggregation;
+  task: TaskWithAggregation;
   personId: string;
 }
 

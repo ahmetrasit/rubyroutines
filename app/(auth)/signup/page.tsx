@@ -17,18 +17,18 @@ export default function SignUpPage() {
   const [success, setSuccess] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const signUpMutation = trpc.auth.signUp.useMutation({
-    onSuccess: async () => {
-      // Check if user is logged in (no email confirmation required)
-      const { data: { session } } = await supabase.auth.getSession();
+  const sendCodeMutation = trpc.auth.sendVerificationCode.useMutation();
 
-      if (session) {
-        // User is logged in, redirect to dashboard with full page reload
-        window.location.href = '/dashboard';
-      } else {
-        // Email confirmation required
-        setSuccess('Account created! Please check your email to verify your account before logging in.');
-      }
+  const signUpMutation = trpc.auth.signUp.useMutation({
+    onSuccess: async (data) => {
+      // Send verification code
+      await sendCodeMutation.mutateAsync({
+        userId: data.userId,
+        email: email,
+      });
+
+      // Redirect to verification page
+      window.location.href = `/verify?userId=${data.userId}&email=${encodeURIComponent(email)}`;
     },
     onError: (err) => {
       setError(err.message);
