@@ -1,0 +1,118 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { trpc } from '@/lib/trpc/client';
+import { RoutineList } from '@/components/routine/routine-list';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+
+export default function PersonDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const personId = params.personId as string;
+
+  const { data: session, isLoading: sessionLoading } = trpc.auth.getSession.useQuery();
+  const { data: person, isLoading: personLoading } = trpc.person.getById.useQuery(
+    { id: personId },
+    { enabled: !!personId }
+  );
+
+  useEffect(() => {
+    if (!sessionLoading && !session?.user) {
+      router.push('/login');
+    }
+  }, [sessionLoading, session, router]);
+
+  if (sessionLoading || personLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!session?.user || !person) {
+    return null;
+  }
+
+  // Find parent role
+  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
+
+  if (!parentRole) {
+    return (
+      <div className="container mx-auto p-8">
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-bold mb-4">No Parent Role</h1>
+          <p className="text-gray-600">You don&apos;t have a parent role.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleSelectRoutine = (routine: any) => {
+    router.push(`/parent/${personId}/${routine.id}`);
+  };
+
+  // Parse avatar data
+  let avatarColor = '#FFB3BA'; // Default pastel pink
+  let avatarEmoji = person.name.charAt(0).toUpperCase(); // Fallback
+
+  if (person.avatar) {
+    try {
+      const parsed = JSON.parse(person.avatar);
+      avatarColor = parsed.color || avatarColor;
+      avatarEmoji = parsed.emoji || avatarEmoji;
+    } catch {
+      // If not JSON, might be old URL format or initials - ignore
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push('/parent')}
+          className="mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
+
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <div className="flex items-center gap-6">
+            <div
+              className="h-24 w-24 rounded-full flex items-center justify-center text-5xl"
+              style={{ backgroundColor: avatarColor + '20' }}
+            >
+              {avatarEmoji}
+            </div>
+
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{person.name}</h1>
+              {person.birthDate && (
+                <p className="text-gray-600 mt-1">
+                  Born {new Date(person.birthDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {person.notes && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-gray-700">{person.notes}</p>
+            </div>
+          )}
+        </div>
+
+        <RoutineList
+          roleId={parentRole.id}
+          personId={personId}
+          onSelectRoutine={handleSelectRoutine}
+        />
+      </div>
+    </div>
+  );
+}
