@@ -51,11 +51,33 @@ export const authRouter = router({
             id: data.user.id,
             email: input.email,
             name: input.name,
+            roles: {
+              create: {
+                type: 'PARENT',
+                tier: 'FREE',
+              },
+            },
           },
         });
       } catch (dbError) {
-        // User already exists in DB, that's okay
+        // User already exists in DB, ensure they have a role
         console.error('User already exists in database:', dbError);
+
+        // Check if user has any roles, create PARENT role if not
+        const existingUser = await ctx.prisma.user.findUnique({
+          where: { id: data.user.id },
+          include: { roles: true },
+        });
+
+        if (existingUser && existingUser.roles.length === 0) {
+          await ctx.prisma.role.create({
+            data: {
+              userId: data.user.id,
+              type: 'PARENT',
+              tier: 'FREE',
+            },
+          });
+        }
       }
 
       return { success: true, userId: data.user.id };
@@ -76,6 +98,35 @@ export const authRouter = router({
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'Invalid credentials',
+        });
+      }
+
+      // Ensure user exists in database (upsert for existing Supabase users)
+      const user = await ctx.prisma.user.upsert({
+        where: { id: data.user.id },
+        update: {
+          email: data.user.email!,
+          emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
+        },
+        create: {
+          id: data.user.id,
+          email: data.user.email!,
+          name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+          emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
+        },
+        include: {
+          roles: true,
+        },
+      });
+
+      // Auto-create PARENT role for first-time users
+      if (user.roles.length === 0) {
+        await ctx.prisma.role.create({
+          data: {
+            userId: user.id,
+            type: 'PARENT',
+            tier: 'FREE',
+          },
         });
       }
 
