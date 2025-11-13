@@ -86,32 +86,30 @@ export default function RoutineDetailPage() {
           Back to {person.name}&apos;s Routines
         </Button>
 
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div
-                className="h-16 w-16 rounded-full flex items-center justify-center text-3xl"
-                style={{ backgroundColor: avatarColor + '20' }}
-              >
-                {avatarEmoji}
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">{routine.name}</h1>
-                <p className="text-gray-600 mt-1">for {person.name}</p>
-              </div>
+        <div className="bg-white rounded-xl shadow-md p-8 mb-8">
+          <div className="flex items-center gap-6 mb-6">
+            <div
+              className="h-20 w-20 rounded-full flex items-center justify-center text-4xl shadow-sm"
+              style={{ backgroundColor: avatarColor + '20' }}
+            >
+              {avatarEmoji}
+            </div>
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">{routine.name}</h1>
+              <p className="text-gray-600 text-lg">for {person.name}</p>
             </div>
           </div>
 
           {routine.description && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <p className="text-gray-700">{routine.description}</p>
             </div>
           )}
 
           {isDailyRoutine && (
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                This is the default Daily Routine that cannot be deleted or renamed.
+            <div className="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+              <p className="text-sm text-blue-900 font-medium">
+                📌 This is the default Daily Routine that cannot be deleted or renamed.
               </p>
             </div>
           )}
@@ -119,7 +117,7 @@ export default function RoutineDetailPage() {
 
         <TaskList
           routineId={routineId}
-          roleId={parentRole.id}
+          personId={personId}
         />
       </div>
     </div>

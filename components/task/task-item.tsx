@@ -227,34 +227,40 @@ export function TaskItem({ task, personId }: TaskItemProps) {
 
   return (
     <>
-      <div className="group flex items-start gap-3 p-3 border rounded-lg bg-white hover:shadow-sm transition-shadow">
+      <div className="group flex items-start gap-3 p-4 border border-gray-200 rounded-xl bg-white hover:shadow-md transition-all">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h4 className="font-medium">{task.name}</h4>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-semibold text-gray-900">{task.name}</h4>
+            {task.isComplete && task.type === TaskType.SIMPLE && (
+              <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">
+                ✓ Done today
+              </span>
+            )}
             {task.type === TaskType.MULTIPLE_CHECKIN && (
-              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
-                Multi
+              <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                Multi Check-in
               </span>
             )}
             {task.type === TaskType.PROGRESS && (
-              <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">
-                Progress
+              <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
+                Progress Tracking
               </span>
             )}
           </div>
 
           {task.description && (
-            <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+            <p className="text-sm text-gray-500 mt-2 line-clamp-2">{task.description}</p>
           )}
 
-          <div className="mt-3">{renderCompletionUI()}</div>
+          <div className="mt-4">{renderCompletionUI()}</div>
         </div>
 
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1">
           <Button
             size="sm"
             variant="ghost"
             onClick={() => setShowEdit(true)}
+            className="h-8 w-8 p-0"
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -262,6 +268,7 @@ export function TaskItem({ task, personId }: TaskItemProps) {
             size="sm"
             variant="ghost"
             onClick={handleDelete}
+            className="h-8 w-8 p-0"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

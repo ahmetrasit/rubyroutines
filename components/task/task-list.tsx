@@ -10,10 +10,10 @@ import { useToast } from '@/components/ui/toast';
 
 interface TaskListProps {
   routineId: string;
-  personId: string;
+  personId?: string;
 }
 
-export function TaskList({ routineId, personId }: TaskListProps) {
+export function TaskList({ routineId, personId = '' }: TaskListProps) {
   const [showForm, setShowForm] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -60,37 +60,37 @@ export function TaskList({ routineId, personId }: TaskListProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Tasks</h3>
-        <Button size="sm" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+        <h3 className="text-2xl font-bold text-gray-900">Tasks</h3>
+        <Button size="md" onClick={() => setShowForm(true)}>
+          <Plus className="h-5 w-5 mr-2" />
           Add Task
         </Button>
       </div>
 
       {tasks && tasks.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {tasks.map((task, index) => (
-            <div key={task.id} className="flex items-center gap-2">
+            <div key={task.id} className="flex items-center gap-3">
               <div className="flex flex-col gap-1">
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => moveTask(index, 'up')}
                   disabled={index === 0 || reorderMutation.isPending}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0 hover:bg-gray-100"
                 >
-                  <ArrowUp className="h-3 w-3" />
+                  <ArrowUp className="h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => moveTask(index, 'down')}
                   disabled={index === tasks.length - 1 || reorderMutation.isPending}
-                  className="h-6 w-6 p-0"
+                  className="h-7 w-7 p-0 hover:bg-gray-100"
                 >
-                  <ArrowDown className="h-3 w-3" />
+                  <ArrowDown className="h-4 w-4" />
                 </Button>
               </div>
               <div className="flex-1">
@@ -100,8 +100,10 @@ export function TaskList({ routineId, personId }: TaskListProps) {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 border-2 border-dashed rounded-lg">
-          <p className="text-gray-500 mb-4">No tasks yet</p>
+        <div className="text-center py-16 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
+          <div className="text-6xl mb-4">📝</div>
+          <p className="text-gray-600 mb-2 text-lg font-medium">No tasks yet</p>
+          <p className="text-gray-500 text-sm mb-6">Start building this routine by adding tasks</p>
           <Button onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Your First Task
@@ -110,7 +112,7 @@ export function TaskList({ routineId, personId }: TaskListProps) {
       )}
 
       {showForm && (
-        <TaskForm routineId={routineId} onClose={() => setShowForm(false)} />
+        <TaskForm routineId={routineId} personId={personId} onClose={() => setShowForm(false)} />
       )}
     </div>
   );
