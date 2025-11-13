@@ -32,6 +32,10 @@ export default function DashboardPage() {
     return null;
   }
 
+  // Check user roles for navigation
+  const hasParentRole = session.user.roles?.some((role: any) => role.type === 'PARENT');
+  const hasTeacherRole = session.user.roles?.some((role: any) => role.type === 'TEACHER');
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="mx-auto max-w-4xl">
@@ -71,6 +75,34 @@ export default function DashboardPage() {
             ) : (
               <p className="mt-2 text-gray-600">No roles yet</p>
             )}
+          </div>
+
+          <div className="mt-8 border-t pt-6">
+            <h2 className="text-lg font-semibold mb-4">Quick Access</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {hasParentRole && (
+                <Button
+                  onClick={() => router.push('/parent')}
+                  className="w-full h-24 text-lg"
+                >
+                  Parent Mode
+                  <span className="block text-sm font-normal mt-1">
+                    Manage your children and routines
+                  </span>
+                </Button>
+              )}
+              {hasTeacherRole && (
+                <Button
+                  onClick={() => router.push('/teacher')}
+                  className="w-full h-24 text-lg"
+                >
+                  Teacher Mode
+                  <span className="block text-sm font-normal mt-1">
+                    Manage students and classrooms
+                  </span>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

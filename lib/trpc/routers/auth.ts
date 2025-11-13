@@ -17,18 +17,21 @@ export const authRouter = router({
           data: {
             name: input.name,
           },
+          emailRedirectTo: undefined, // Disable email confirmation for local development
         },
       });
 
       if (error) {
         // Provide user-friendly error messages
         let message = error.message;
-        if (error.message.includes('already registered')) {
+        if (error.message.includes('already registered') || error.message.includes('User already registered')) {
           message = 'This email is already registered. Please log in instead.';
         } else if (error.message.includes('password')) {
           message = 'Password is too weak. Please use at least 6 characters.';
+        } else if (error.message.includes('invalid') && error.message.includes('email')) {
+          message = 'Please use a simpler email format (e.g., yourname@example.com). Some special characters may not be supported.';
         } else if (error.message.includes('email')) {
-          message = 'Please enter a valid email address.';
+          message = error.message; // Show the actual error from Supabase
         }
 
         throw new TRPCError({
