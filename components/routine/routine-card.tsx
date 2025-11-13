@@ -9,11 +9,20 @@ import { useToast } from '@/components/ui/toast';
 import { isRoutineVisible, formatVisibilityDescription } from '@/lib/services/visibility-rules';
 import { getResetDescription } from '@/lib/services/reset-period';
 
-type RoutineWithRelations = any;
+type RoutineWithRelations = {
+  id: string;
+  name: string;
+  description?: string;
+  resetPeriod: string;
+  resetDay?: number;
+  tasks: any[];
+  assignments: Array<{ person: any }>;
+  _count: { tasks: number };
+};
 
 interface RoutineCardProps {
-  routine: anyWithRelations;
-  onSelect?: (routine: anyWithRelations) => void;
+  routine: RoutineWithRelations;
+  onSelect?: (routine: RoutineWithRelations) => void;
 }
 
 export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
@@ -51,7 +60,7 @@ export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
   return (
     <>
       <div
-        className={`group relative rounded-lg border bg-white p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
+        className={`group relative rounded-xl border bg-white p-6 shadow-md hover:shadow-lg transition-all cursor-pointer ${
           !visible ? 'opacity-60' : ''
         }`}
         onClick={() => onSelect?.(routine)}

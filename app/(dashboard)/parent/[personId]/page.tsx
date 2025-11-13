@@ -54,54 +54,65 @@ export default function PersonDetailPage() {
     router.push(`/parent/${personId}/${routine.id}`);
   };
 
+  // Parse avatar data
+  let avatarColor = '#FFB3BA'; // Default pastel pink
+  let avatarEmoji = person.name.charAt(0).toUpperCase(); // Fallback
+
+  if (person.avatar) {
+    try {
+      const parsed = JSON.parse(person.avatar);
+      avatarColor = parsed.color || avatarColor;
+      avatarEmoji = parsed.emoji || avatarEmoji;
+    } catch {
+      // If not JSON, might be old URL format or initials - ignore
+    }
+  }
+
   return (
-    <div className="container mx-auto p-8">
-      <div className="mb-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => router.push('/parent')}
-          className="mb-4"
+          className="mb-6"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
 
-        <div className="flex items-center gap-4">
-          {person.avatar ? (
-            <img
-              src={person.avatar}
-              alt={person.name}
-              className="h-16 w-16 rounded-full object-cover"
-            />
-          ) : (
-            <div className="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl font-semibold text-gray-600">
-              {person.name.charAt(0).toUpperCase()}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+          <div className="flex items-center gap-6">
+            <div
+              className="h-24 w-24 rounded-full flex items-center justify-center text-5xl"
+              style={{ backgroundColor: avatarColor + '20' }}
+            >
+              {avatarEmoji}
+            </div>
+
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{person.name}</h1>
+              {person.birthDate && (
+                <p className="text-gray-600 mt-1">
+                  Born {new Date(person.birthDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {person.notes && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <p className="text-gray-700">{person.notes}</p>
             </div>
           )}
-
-          <div>
-            <h1 className="text-3xl font-bold">{person.name}</h1>
-            {person.birthDate && (
-              <p className="text-gray-600">
-                Born {new Date(person.birthDate).toLocaleDateString()}
-              </p>
-            )}
-          </div>
         </div>
 
-        {person.notes && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <p className="text-gray-700">{person.notes}</p>
-          </div>
-        )}
+        <RoutineList
+          roleId={parentRole.id}
+          personId={personId}
+          onSelectRoutine={handleSelectRoutine}
+        />
       </div>
-
-      <RoutineList
-        roleId={parentRole.id}
-        personId={personId}
-        onSelectRoutine={handleSelectRoutine}
-      />
     </div>
   );
 }

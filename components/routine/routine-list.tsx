@@ -8,7 +8,12 @@ import { useState } from 'react';
 import { RoutineForm } from './routine-form';
 
 
-type RoutineWithRelations = Routine & {
+type RoutineWithRelations = {
+  id: string;
+  name: string;
+  description?: string;
+  resetPeriod: string;
+  resetDay?: number;
   tasks: any[];
   assignments: Array<{ person: any }>;
   _count: { tasks: number };
@@ -17,7 +22,7 @@ type RoutineWithRelations = Routine & {
 interface RoutineListProps {
   roleId?: string;
   personId?: string;
-  onSelectRoutine?: (routine: anyWithRelations) => void;
+  onSelectRoutine?: (routine: RoutineWithRelations) => void;
 }
 
 export function RoutineList({ roleId, personId, onSelectRoutine }: RoutineListProps) {
@@ -37,19 +42,19 @@ export function RoutineList({ roleId, personId, onSelectRoutine }: RoutineListPr
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Routines</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Routines</h2>
         {roleId && (
-          <Button size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button size="md" onClick={() => setShowForm(true)}>
+            <Plus className="h-5 w-5 mr-2" />
             Add Routine
           </Button>
         )}
       </div>
 
       {routines && routines.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {routines.map((routine) => (
             <RoutineCard
               key={routine.id}
@@ -59,8 +64,8 @@ export function RoutineList({ roleId, personId, onSelectRoutine }: RoutineListPr
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 border-2 border-dashed rounded-lg">
-          <p className="text-gray-500 mb-4">No routines yet</p>
+        <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
+          <p className="text-gray-600 mb-4 text-lg">No routines yet</p>
           {roleId && (
             <Button onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4 mr-2" />
