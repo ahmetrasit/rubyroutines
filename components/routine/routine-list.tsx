@@ -55,7 +55,7 @@ export function RoutineList({ roleId, personId, onSelectRoutine }: RoutineListPr
 
       {routines && routines.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {routines.map((routine) => (
+          {routines.map((routine: any) => (
             <RoutineCard
               key={routine.id}
               routine={routine}

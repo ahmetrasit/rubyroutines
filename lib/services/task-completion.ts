@@ -1,4 +1,4 @@
-import { TaskType } from '@prisma/client';
+import { TaskType } from '@/lib/types/prisma-enums';
 import { differenceInMinutes } from 'date-fns';
 
 // Admin-configurable undo window in minutes

@@ -1,6 +1,7 @@
 'use client';
 
-import { Task, TaskType } from '@prisma/client';
+import { TaskType } from '@/lib/types/prisma-enums';
+type Task = any;
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';

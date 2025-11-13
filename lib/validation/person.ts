@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EntityStatus } from '@prisma/client';
+import { EntityStatus } from '@/lib/types/prisma-enums';
 
 export const createPersonSchema = z.object({
   roleId: z.string().cuid(),

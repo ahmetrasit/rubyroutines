@@ -1,6 +1,6 @@
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
-import { EntityStatus, TaskType } from '@prisma/client';
+import { EntityStatus, TaskType } from '@/lib/types/prisma-enums';
 import {
   createTaskSchema,
   updateTaskSchema,
@@ -45,7 +45,7 @@ export const taskRouter = router({
       });
 
       // Add aggregation data for each task
-      return tasks.map((task) => {
+      return tasks.map((task: any) => {
         const resetDate = calculateNextReset(
           task.routine.resetPeriod,
           task.routine.resetDay

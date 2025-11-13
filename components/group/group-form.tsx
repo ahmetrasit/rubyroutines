@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { GroupType } from '@prisma/client';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
+
+import { GroupType } from '@/lib/types/prisma-enums';
 import {
   Dialog,
   DialogContent,

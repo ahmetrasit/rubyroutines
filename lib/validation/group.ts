@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { GroupType } from '@prisma/client';
+import { GroupType } from '@/lib/types/prisma-enums';
 
 export const createGroupSchema = z.object({
   roleId: z.string().cuid(),

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { PersonList } from '@/components/person/person-list';
+import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 
 export default function ParentDashboard() {
   const router = useRouter();
@@ -55,7 +56,14 @@ export default function ParentDashboard() {
           <p className="text-gray-600 mt-2">Manage your children and their routines</p>
         </div>
 
-        <PersonList roleId={parentRole.id} onSelectPerson={handleSelectPerson} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          <div className="lg:col-span-2">
+            <PersonList roleId={parentRole.id} onSelectPerson={handleSelectPerson} />
+          </div>
+          <div>
+            <KioskCodeManager />
+          </div>
+        </div>
       </div>
     </div>
   );

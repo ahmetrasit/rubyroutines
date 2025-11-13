@@ -1,4 +1,4 @@
-import { Visibility } from '@prisma/client';
+import { Visibility } from '@/lib/types/prisma-enums';
 
 export interface VisibilityOverride {
   id: string;

@@ -1,4 +1,5 @@
-import { PrismaClient, RoleType, Tier, EntityStatus, GroupType, RoutineType, TaskType, ResetPeriod, Visibility } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { RoleType, Tier, EntityStatus, GroupType, RoutineType, TaskType, ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
 
 const prisma = new PrismaClient();
 

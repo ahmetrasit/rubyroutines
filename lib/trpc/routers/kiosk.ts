@@ -1,0 +1,299 @@
+import { z } from 'zod';
+import { router, publicProcedure, protectedProcedure } from '../init';
+import {
+  generateKioskCode,
+  validateKioskCode,
+  getActiveCodesForRole,
+  revokeCode,
+  markCodeAsUsed
+} from '@/lib/services/kiosk-code';
+import { TRPCError } from '@trpc/server';
+
+export const kioskRouter = router({
+  /**
+   * Generate a new kiosk code (protected - requires authentication)
+   */
+  generateCode: protectedProcedure
+    .input(z.object({
+      roleId: z.string().cuid(),
+      wordCount: z.enum(['2', '3']).optional(),
+      expiresInHours: z.number().min(1).max(168).optional() // Max 1 week
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify user owns this role
+      const role = await ctx.prisma.role.findUnique({
+        where: { id: input.roleId }
+      });
+
+      if (!role || role.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      const code = await generateKioskCode({
+        roleId: input.roleId,
+        wordCount: input.wordCount === '3' ? 3 : 2,
+        expiresInHours: input.expiresInHours
+      });
+
+      return code;
+    }),
+
+  /**
+   * Get all active codes for a role (protected)
+   */
+  listCodes: protectedProcedure
+    .input(z.object({
+      roleId: z.string().cuid()
+    }))
+    .query(async ({ ctx, input }) => {
+      // Verify user owns this role
+      const role = await ctx.prisma.role.findUnique({
+        where: { id: input.roleId }
+      });
+
+      if (!role || role.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      const codes = await getActiveCodesForRole(input.roleId);
+      return codes;
+    }),
+
+  /**
+   * Revoke a code (protected)
+   */
+  revokeCode: protectedProcedure
+    .input(z.object({
+      codeId: z.string().cuid()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify user owns this code's role
+      const code = await ctx.prisma.code.findUnique({
+        where: { id: input.codeId },
+        include: { role: true }
+      });
+
+      if (!code) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Code not found' });
+      }
+
+      if (code.role.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      await revokeCode(input.codeId);
+
+      return { success: true };
+    }),
+
+  /**
+   * Validate code and get role/persons data (public - no auth required)
+   */
+  validateCode: publicProcedure
+    .input(z.object({
+      code: z.string().min(1)
+    }))
+    .query(async ({ ctx, input }) => {
+      const result = await validateKioskCode(input.code);
+
+      if (!result.valid) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: result.error || 'Invalid code'
+        });
+      }
+
+      const code = await ctx.prisma.code.findUnique({
+        where: { id: result.kioskCode!.id },
+        include: {
+          role: {
+            include: {
+              persons: {
+                where: { status: 'ACTIVE' },
+                orderBy: { name: 'asc' }
+              },
+              groups: {
+                where: { status: 'ACTIVE' },
+                include: {
+                  members: {
+                    where: { person: { status: 'ACTIVE' } },
+                    include: { person: true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      return {
+        codeId: code!.id,
+        roleId: code!.roleId,
+        persons: code!.role.persons,
+        groups: code!.role.groups
+      };
+    }),
+
+  /**
+   * Get today's tasks for person in kiosk mode (public)
+   */
+  getPersonTasks: publicProcedure
+    .input(z.object({
+      personId: z.string().cuid(),
+      date: z.date().optional()
+    }))
+    .query(async ({ ctx, input }) => {
+      const date = input.date || new Date();
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Get person's routines and tasks
+      const person = await ctx.prisma.person.findUnique({
+        where: { id: input.personId },
+        include: {
+          assignments: {
+            where: {
+              routine: { status: 'ACTIVE' }
+            },
+            include: {
+              routine: {
+                include: {
+                  tasks: {
+                    where: { status: 'ACTIVE' },
+                    include: {
+                      completions: {
+                        where: {
+                          personId: input.personId,
+                          completedAt: {
+                            gte: startOfDay,
+                            lte: endOfDay
+                          }
+                        },
+                        orderBy: { completedAt: 'desc' }
+                      }
+                    },
+                    orderBy: { order: 'asc' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!person) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Person not found'
+        });
+      }
+
+      // Flatten tasks with completion status
+      const tasks = person.assignments.flatMap((assignment: any) =>
+        assignment.routine.tasks.map((task: any) => ({
+          ...task,
+          routineName: assignment.routine.name,
+          isCompleted: task.completions.length > 0,
+          completionCount: task.completions.length,
+          lastCompletedAt: task.completions[0]?.completedAt
+        }))
+      );
+
+      return {
+        person,
+        tasks: tasks.sort((a: any, b: any) => a.order - b.order)
+      };
+    }),
+
+  /**
+   * Complete task in kiosk mode (public)
+   */
+  completeTask: publicProcedure
+    .input(z.object({
+      taskId: z.string().cuid(),
+      personId: z.string().cuid(),
+      value: z.string().optional(), // For PROGRESS type tasks
+      notes: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const task = await ctx.prisma.task.findUnique({
+        where: { id: input.taskId }
+      });
+
+      if (!task) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Task not found'
+        });
+      }
+
+      // Validate value for PROGRESS tasks
+      if (task.type === 'PROGRESS' && !input.value) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Progress value required'
+        });
+      }
+
+      const completion = await ctx.prisma.taskCompletion.create({
+        data: {
+          taskId: input.taskId,
+          personId: input.personId,
+          completedAt: new Date(),
+          value: input.value,
+          notes: input.notes
+        }
+      });
+
+      return completion;
+    }),
+
+  /**
+   * Undo task completion (if completed within last 5 minutes) (public)
+   */
+  undoCompletion: publicProcedure
+    .input(z.object({
+      completionId: z.string().cuid()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const completion = await ctx.prisma.taskCompletion.findUnique({
+        where: { id: input.completionId }
+      });
+
+      if (!completion) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Completion not found'
+        });
+      }
+
+      // Check if within 5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      if (completion.completedAt < fiveMinutesAgo) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Can only undo completions from last 5 minutes'
+        });
+      }
+
+      await ctx.prisma.taskCompletion.delete({
+        where: { id: input.completionId }
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Mark kiosk code as used after session starts (public)
+   */
+  markCodeUsed: publicProcedure
+    .input(z.object({
+      codeId: z.string().cuid()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await markCodeAsUsed(input.codeId);
+      return { success: true };
+    })
+});

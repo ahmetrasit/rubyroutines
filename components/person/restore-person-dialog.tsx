@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { EntityStatus } from '@prisma/client';
+import { EntityStatus } from '@/lib/types/prisma-enums';
 
 interface RestorePersonDialogProps {
   roleId: string;
@@ -44,7 +44,7 @@ export function RestorePersonDialog({ roleId, onClose }: RestorePersonDialogProp
     },
   });
 
-  const inactive = inactivePersons?.filter((p) => p.status === EntityStatus.INACTIVE) || [];
+  const inactive = inactivePersons?.filter((p: any) => p.status === EntityStatus.INACTIVE) || [];
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -62,7 +62,7 @@ export function RestorePersonDialog({ roleId, onClose }: RestorePersonDialogProp
           <p className="text-center py-4 text-gray-500">No archived people</p>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {inactive.map((person) => (
+            {inactive.map((person: any) => (
               <div
                 key={person.id}
                 className="flex items-center justify-between p-3 border rounded-lg"

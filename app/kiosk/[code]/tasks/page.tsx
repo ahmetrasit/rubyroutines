@@ -1,0 +1,170 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { TaskList } from '@/components/kiosk/task-list';
+import { SessionTimeout } from '@/components/kiosk/session-timeout';
+import { ConfettiCelebration } from '@/components/kiosk/confetti-celebration';
+import { trpc } from '@/lib/trpc/client';
+import { useToast } from '@/components/ui/toast';
+import { Loader2 } from 'lucide-react';
+
+export default function KioskTasksPage() {
+  const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const code = params.code as string;
+  const personId = searchParams.get('personId');
+  const [sessionData, setSessionData] = useState<any>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
+
+  useEffect(() => {
+    // Verify session from localStorage
+    const stored = localStorage.getItem('kiosk_session');
+    if (!stored) {
+      router.push('/kiosk');
+      return;
+    }
+
+    try {
+      const session = JSON.parse(stored);
+      if (session.code !== code) {
+        router.push('/kiosk');
+        return;
+      }
+
+      // Check if session expired
+      const expiresAt = new Date(session.expiresAt);
+      if (expiresAt <= new Date()) {
+        localStorage.removeItem('kiosk_session');
+        router.push('/kiosk');
+        return;
+      }
+
+      setSessionData(session);
+    } catch (error) {
+      router.push('/kiosk');
+    }
+  }, [code, router]);
+
+  useEffect(() => {
+    if (!personId) {
+      router.push(`/kiosk/${code}`);
+    }
+  }, [personId, code, router]);
+
+  const { data: person, isLoading: personLoading } = trpc.person.getById.useQuery(
+    { id: personId! },
+    { enabled: !!sessionData && !!personId }
+  );
+
+  // Fetch person's tasks for kiosk mode
+  const { data: personTasksData, isLoading: tasksLoading } = trpc.kiosk.getPersonTasks.useQuery(
+    { personId: personId! },
+    {
+      enabled: !!sessionData && !!personId,
+      refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
+    }
+  );
+
+  const tasks = personTasksData?.tasks || [];
+
+  const completeMutation = trpc.kiosk.completeTask.useMutation({
+    onSuccess: () => {
+      setShowCelebration(true);
+      utils.kiosk.getPersonTasks.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const undoMutation = trpc.kiosk.undoCompletion.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Task completion undone',
+        variant: 'success',
+      });
+      utils.kiosk.getPersonTasks.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleComplete = (taskId: string, value?: string) => {
+    completeMutation.mutate({
+      taskId,
+      personId: personId!,
+      value,
+    });
+  };
+
+  const handleUndo = (completionId: string) => {
+    undoMutation.mutate({ completionId });
+  };
+
+  const handleExit = () => {
+    localStorage.removeItem('kiosk_session');
+    router.push('/kiosk');
+  };
+
+  const handleTimeout = () => {
+    handleExit();
+  };
+
+  if (!sessionData || !personId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (personLoading || tasksLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!person) {
+    return null;
+  }
+
+  return (
+    <>
+      <SessionTimeout
+        expiresAt={new Date(sessionData.expiresAt)}
+        onTimeout={handleTimeout}
+      />
+      <TaskList
+        tasks={tasks || []}
+        personId={personId}
+        personName={person.name}
+        onComplete={handleComplete}
+        onUndo={handleUndo}
+        onExit={handleExit}
+      />
+      <ConfettiCelebration
+        show={showCelebration}
+        onComplete={() => setShowCelebration(false)}
+      />
+    </>
+  );
+}

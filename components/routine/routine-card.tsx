@@ -1,9 +1,14 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff, Clock } from 'lucide-react';
 import { useState } from 'react';
 import { RoutineForm } from './routine-form';
+import { VisibilityOverrideDialog } from './visibility-override-dialog';
+import { VisibilityOverrideBadge } from './visibility-override-badge';
+import { UpgradeToSmartButton } from '@/components/smart-routine/upgrade-to-smart-button';
+import { LinkToGoalButton } from '@/components/goal/link-to-goal-button';
+import { Badge } from '@/components/ui/badge';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { isRoutineVisible, formatVisibilityDescription } from '@/lib/services/visibility-rules';
@@ -13,8 +18,13 @@ type RoutineWithRelations = {
   id: string;
   name: string;
   description?: string;
-  resetPeriod: string;
+  type: any;
+  resetPeriod: any;
   resetDay?: number;
+  visibility: any;
+  visibleDays: number[];
+  startDate?: Date | null;
+  endDate?: Date | null;
   tasks: any[];
   assignments: Array<{ person: any }>;
   _count: { tasks: number };
@@ -27,6 +37,7 @@ interface RoutineCardProps {
 
 export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
   const [showEdit, setShowEdit] = useState(false);
+  const [showOverride, setShowOverride] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -88,6 +99,23 @@ export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
               <span className="px-2 py-1 bg-gray-100 rounded">
                 {formatVisibilityDescription(routine)}
               </span>
+              <VisibilityOverrideBadge routineId={routine.id} />
+              {routine.type === 'SMART' && (
+                <Badge variant="default">Smart Routine</Badge>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              <UpgradeToSmartButton
+                routineId={routine.id}
+                routineName={routine.name}
+                currentType={routine.type}
+              />
+              <LinkToGoalButton
+                entityType="routine"
+                entityId={routine.id}
+                entityName={routine.name}
+              />
             </div>
 
             {routine.assignments.length > 0 && (
@@ -105,6 +133,19 @@ export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
           </div>
 
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+            {!visible && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowOverride(true);
+                }}
+                title="Show temporarily"
+              >
+                <Clock className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -132,6 +173,13 @@ export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
       </div>
 
       {showEdit && <RoutineForm routine={routine} onClose={() => setShowEdit(false)} />}
+
+      <VisibilityOverrideDialog
+        routineId={routine.id}
+        routineName={routine.name}
+        isOpen={showOverride}
+        onClose={() => setShowOverride(false)}
+      />
     </>
   );
 }

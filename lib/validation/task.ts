@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TaskType, EntityStatus } from '@prisma/client';
+import { TaskType, EntityStatus } from '@/lib/types/prisma-enums';
 
 // Base task input schema
 export const createTaskSchema = z.object({

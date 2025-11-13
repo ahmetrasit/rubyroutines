@@ -71,7 +71,7 @@ export function TaskList({ routineId, personId = '' }: TaskListProps) {
 
       {tasks && tasks.length > 0 ? (
         <div className="space-y-3">
-          {tasks.map((task, index) => (
+          {tasks.map((task: any, index: number) => (
             <div key={task.id} className="flex items-center gap-3">
               <div className="flex flex-col gap-1">
                 <Button
