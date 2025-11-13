@@ -10,6 +10,7 @@ import { kioskRouter } from './kiosk';
 import { coParentRouter } from './coparent';
 import { coTeacherRouter } from './coteacher';
 import { connectionRouter } from './connection';
+import { invitationRouter } from './invitation';
 import { analyticsRouter } from './analytics';
 import { marketplaceRouter } from './marketplace';
 import { billingRouter } from './billing';
@@ -26,6 +27,7 @@ export const appRouter = router({
   coParent: coParentRouter,
   coTeacher: coTeacherRouter,
   connection: connectionRouter,
+  invitation: invitationRouter,
   analytics: analyticsRouter,
   marketplace: marketplaceRouter,
   billing: billingRouter,

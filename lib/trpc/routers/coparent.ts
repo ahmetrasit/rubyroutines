@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../trpc';
+import { router, protectedProcedure } from '../init';
 import {
   sendInvitation,
   InvitationType,
   revokeCoParentAccess
 } from '@/lib/services/invitation.service';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 
 export const coParentRouter = router({
   // Send co-parent invitation

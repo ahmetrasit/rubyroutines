@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { startOfDay, endOfDay, subDays, eachDayOfInterval, format } from 'date-fns';
 
 export interface CompletionTrendData {
