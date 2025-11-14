@@ -22,18 +22,11 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
     {
       enabled: !!roleId && roleId.length > 0,
       retry: false,
-      onError: (err) => {
-        console.error('Error fetching kiosk codes:', err);
-      },
-      onSuccess: (data) => {
-        console.log('Kiosk codes loaded:', data);
-      }
     }
   );
 
   const generateMutation = trpc.kiosk.generateCode.useMutation({
     onSuccess: async (data) => {
-      console.log('Kiosk code generated successfully:', data);
       // Refetch immediately to update UI
       await refetch();
       toast({
@@ -44,12 +37,7 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
       setIsRevealed(true);
     },
     onError: (error) => {
-      console.error('Failed to generate kiosk code:', {
-        error,
-        message: error.message,
-        cause: error.cause,
-        shape: error.shape
-      });
+      console.error('Failed to generate kiosk code:', error.message);
       toast({
         title: 'Error',
         description: error.message || 'Failed to generate kiosk code',
@@ -69,16 +57,6 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
 
   // Auto-generate default code if none exists
   useEffect(() => {
-    console.log('Auto-generation check:', {
-      isLoading,
-      error: error?.message,
-      roleId,
-      roleIdLength: roleId?.length,
-      codesLength: codes?.length,
-      hasAttemptedGeneration: hasAttemptedGeneration.current,
-      isPending: generateMutation.isPending
-    });
-
     if (
       !isLoading &&
       !error &&
@@ -89,7 +67,6 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
       !hasAttemptedGeneration.current &&
       !generateMutation.isPending
     ) {
-      console.log('Auto-generating kiosk code for roleId:', roleId);
       hasAttemptedGeneration.current = true;
       generateMutation.mutate({ roleId, expiresInHours: 168 }); // 1 week expiration (max allowed)
     }
@@ -97,10 +74,9 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
 
   const handleGenerateNew = () => {
     if (confirm('Are you sure you want to generate a new code? The current code will be revoked.')) {
-      // Revoke all existing codes first
-      const activeCode = activeCodes[0];
-      if (activeCode) {
-        revokeMutation.mutate({ codeId: activeCode.id });
+      // Revoke existing code first if it exists
+      if (currentCode) {
+        revokeMutation.mutate({ codeId: currentCode.id });
       }
       // Generate new code with 1 week expiration (max allowed)
       generateMutation.mutate({ roleId, expiresInHours: 168 });
@@ -113,8 +89,9 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
     },
   });
 
-  const activeCodes = codes?.filter((c: any) => c.status === 'ACTIVE') || [];
-  const currentCode = activeCodes[0];
+  // getActiveCodesForRole already filters for ACTIVE codes server-side
+  // The returned KioskCode objects have isActive: boolean, not status field
+  const currentCode = codes?.[0]; // Take the first code (most recent)
 
   if (!roleId || roleId.length === 0) {
     return <div className="text-center py-4 text-gray-500">Loading role...</div>;
