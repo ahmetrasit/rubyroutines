@@ -59,6 +59,8 @@ const nextConfig = {
   },
   // Security Headers
   async headers() {
+    const isDev = process.env.NODE_ENV !== 'production';
+
     const cspDirectives = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
@@ -74,50 +76,79 @@ const nextConfig = {
     ];
 
     // Only upgrade to HTTPS in production
-    if (process.env.NODE_ENV === 'production') {
+    if (!isDev) {
       cspDirectives.push("upgrade-insecure-requests");
     }
+
+    const headers = [
+      // Content Security Policy
+      {
+        key: 'Content-Security-Policy',
+        value: cspDirectives.join('; ')
+      },
+      // Prevent clickjacking
+      {
+        key: 'X-Frame-Options',
+        value: 'DENY'
+      },
+      // Prevent MIME sniffing
+      {
+        key: 'X-Content-Type-Options',
+        value: 'nosniff'
+      },
+      // Enable XSS filter
+      {
+        key: 'X-XSS-Protection',
+        value: '1; mode=block'
+      },
+      // Referrer policy
+      {
+        key: 'Referrer-Policy',
+        value: 'strict-origin-when-cross-origin'
+      },
+      // Permissions policy - disable unused features
+      {
+        key: 'Permissions-Policy',
+        value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+      }
+    ];
+
+    // Only add HSTS in production
+    if (!isDev) {
+      headers.push({
+        key: 'Strict-Transport-Security',
+        value: 'max-age=31536000; includeSubDomains; preload'
+      });
+    }
+
+    // Add CORS headers for API routes in development
+    const apiCorsHeaders = isDev ? [
+      {
+        key: 'Access-Control-Allow-Origin',
+        value: '*'
+      },
+      {
+        key: 'Access-Control-Allow-Methods',
+        value: 'GET, POST, PUT, DELETE, OPTIONS'
+      },
+      {
+        key: 'Access-Control-Allow-Headers',
+        value: 'Content-Type, Authorization, trpc-batch-mode'
+      },
+      {
+        key: 'Access-Control-Allow-Credentials',
+        value: 'true'
+      }
+    ] : [];
 
     return [
       {
         source: '/:path*',
-        headers: [
-          // Content Security Policy
-          {
-            key: 'Content-Security-Policy',
-            value: cspDirectives.join('; ')
-          },
-          // Prevent clickjacking
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY'
-          },
-          // Prevent MIME sniffing
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff'
-          },
-          // Enable XSS filter
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block'
-          },
-          // HTTPS only (in production)
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains; preload'
-          },
-          // Referrer policy
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin'
-          },
-          // Permissions policy - disable unused features
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
-          }
-        ]
+        headers: headers
+      },
+      {
+        source: '/api/:path*',
+        headers: [...headers, ...apiCorsHeaders]
       }
     ]
   },
