@@ -4,13 +4,26 @@ import { TRPCError } from '@trpc/server';
 import { Tier } from '@/lib/types/prisma-enums';
 import { checkTierLimit as checkLimit, getTierLimit } from './tier-limits';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
+// Allow development without Stripe configured
+let stripe: Stripe | null = null;
+
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-02-24.acacia',
+  });
+} else if (process.env.NODE_ENV === 'production') {
+  throw new Error('STRIPE_SECRET_KEY is required in production');
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-02-24.acacia',
-});
+function requireStripe(): Stripe {
+  if (!stripe) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.',
+    });
+  }
+  return stripe;
+}
 
 // Tier pricing (in cents)
 export const TIER_PRICES = {
@@ -72,7 +85,7 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
   let customerId = role.stripeCustomerId;
 
   if (!customerId) {
-    const customer = await stripe.customers.create({
+    const customer = await requireStripe().customers.create({
       email: role.user.email,
       metadata: {
         roleId: role.id,
@@ -88,7 +101,7 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
   }
 
   // Create checkout session
-  const session = await stripe.checkout.sessions.create({
+  const session = await requireStripe().checkout.sessions.create({
     customer: customerId,
     mode: 'subscription',
     payment_method_types: ['card'],
@@ -143,7 +156,7 @@ export async function createBillingPortalSession(params: CreateBillingPortalSess
     });
   }
 
-  const session = await stripe.billingPortal.sessions.create({
+  const session = await requireStripe().billingPortal.sessions.create({
     customer: role.stripeCustomerId,
     return_url: returnUrl,
   });
