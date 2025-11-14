@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { GroupList } from '@/components/group/group-list';
-import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 import { ModeSwitcher } from '@/components/mode-switcher';
 
 export default function TeacherDashboard() {
@@ -80,13 +79,8 @@ export default function TeacherDashboard() {
               <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your classrooms and students</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-              <div className="lg:col-span-2">
-                <GroupList roleId={teacherRole.id} roleType="TEACHER" onSelectGroup={handleSelectGroup} />
-              </div>
-              <div>
-                <KioskCodeManager />
-              </div>
+            <div className="mb-8">
+              <GroupList roleId={teacherRole.id} roleType="TEACHER" onSelectGroup={handleSelectGroup} />
             </div>
           </div>
         </div>

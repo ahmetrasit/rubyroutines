@@ -170,8 +170,8 @@ export async function GET(request: Request) {
         const defaultClassroom = await prisma.group.create({
           data: {
             roleId: teacherRole.id,
-            name: 'My Classroom',
-            description: 'Default classroom',
+            name: 'Teacher Only',
+            description: 'For teachers and co-teachers only',
             type: 'CLASSROOM',
             isClassroom: true,
             status: 'ACTIVE',

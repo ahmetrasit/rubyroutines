@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import { PersonList } from '@/components/person/person-list';
+import { ClassroomMemberList } from '@/components/classroom/classroom-member-list';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -83,8 +83,11 @@ export default function ClassroomDetailPage() {
           )}
         </div>
 
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Students</h2>
-        <PersonList roleId={teacherRole.id} onSelectPerson={handleSelectStudent} />
+        <ClassroomMemberList
+          classroomId={classroomId}
+          roleId={teacherRole.id}
+          onSelectPerson={handleSelectStudent}
+        />
       </div>
     </div>
   );
