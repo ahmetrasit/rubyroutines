@@ -114,7 +114,6 @@ function UsersContent() {
   };
 
   const handleDeleteUser = (user: any) => {
-    console.log('Delete user clicked:', user?.id, typeof user?.id);
     if (!user?.id || typeof user.id !== 'string') {
       toast({
         title: 'Error',
