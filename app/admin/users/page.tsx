@@ -114,6 +114,15 @@ function UsersContent() {
   };
 
   const handleDeleteUser = (user: any) => {
+    console.log('Delete user clicked:', user?.id, typeof user?.id);
+    if (!user?.id || typeof user.id !== 'string') {
+      toast({
+        title: 'Error',
+        description: 'Invalid user data',
+        variant: 'destructive',
+      });
+      return;
+    }
     setSelectedUser(user);
     setShowDeleteDialog(true);
   };
@@ -339,7 +348,17 @@ function UsersContent() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => selectedUser && deleteUserMutation.mutate({ userId: selectedUser.id })}
+                onClick={() => {
+                  if (!selectedUser?.id) {
+                    toast({
+                      title: 'Error',
+                      description: 'Invalid user ID',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  deleteUserMutation.mutate({ userId: selectedUser.id });
+                }}
                 disabled={deleteUserMutation.isPending}
               >
                 Delete User
