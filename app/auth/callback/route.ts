@@ -110,7 +110,7 @@ export async function GET(request: Request) {
         });
 
         // Auto-create "Me" person for both parent and teacher roles
-        await prisma.person.create({
+        const parentMePerson = await prisma.person.create({
           data: {
             roleId: parentRole.id,
             name: 'Me',
@@ -122,7 +122,23 @@ export async function GET(request: Request) {
           },
         });
 
-        await prisma.person.create({
+        // Create default "Daily Routine" for parent "Me"
+        await prisma.routine.create({
+          data: {
+            roleId: parentRole.id,
+            name: 'Daily Routine',
+            description: 'Default routine for daily tasks',
+            resetPeriod: 'DAILY',
+            status: 'ACTIVE',
+            assignments: {
+              create: {
+                personId: parentMePerson.id,
+              },
+            },
+          },
+        });
+
+        const teacherMePerson = await prisma.person.create({
           data: {
             roleId: teacherRole.id,
             name: 'Me',
@@ -131,6 +147,22 @@ export async function GET(request: Request) {
               emoji: '👤',
             }),
             status: 'ACTIVE',
+          },
+        });
+
+        // Create default "Daily Routine" for teacher "Me"
+        await prisma.routine.create({
+          data: {
+            roleId: teacherRole.id,
+            name: 'Daily Routine',
+            description: 'Default routine for daily tasks',
+            resetPeriod: 'DAILY',
+            status: 'ACTIVE',
+            assignments: {
+              create: {
+                personId: teacherMePerson.id,
+              },
+            },
           },
         });
         } else {
@@ -179,7 +211,7 @@ export async function GET(request: Request) {
           });
 
           if (!mePersonExists) {
-            await prisma.person.create({
+            const parentMePerson = await prisma.person.create({
               data: {
                 roleId: parentRole.id,
                 name: 'Me',
@@ -188,6 +220,22 @@ export async function GET(request: Request) {
                   emoji: '👤',
                 }),
                 status: 'ACTIVE',
+              },
+            });
+
+            // Create default "Daily Routine" for parent "Me"
+            await prisma.routine.create({
+              data: {
+                roleId: parentRole.id,
+                name: 'Daily Routine',
+                description: 'Default routine for daily tasks',
+                resetPeriod: 'DAILY',
+                status: 'ACTIVE',
+                assignments: {
+                  create: {
+                    personId: parentMePerson.id,
+                  },
+                },
               },
             });
           }
@@ -203,7 +251,7 @@ export async function GET(request: Request) {
           });
 
           if (!mePersonExists) {
-            await prisma.person.create({
+            const teacherMePerson = await prisma.person.create({
               data: {
                 roleId: teacherRole.id,
                 name: 'Me',
@@ -212,6 +260,22 @@ export async function GET(request: Request) {
                   emoji: '👤',
                 }),
                 status: 'ACTIVE',
+              },
+            });
+
+            // Create default "Daily Routine" for teacher "Me"
+            await prisma.routine.create({
+              data: {
+                roleId: teacherRole.id,
+                name: 'Daily Routine',
+                description: 'Default routine for daily tasks',
+                resetPeriod: 'DAILY',
+                status: 'ACTIVE',
+                assignments: {
+                  create: {
+                    personId: teacherMePerson.id,
+                  },
+                },
               },
             });
           }

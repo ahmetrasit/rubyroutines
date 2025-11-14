@@ -94,7 +94,7 @@ export const authRouter = router({
         // Auto-create "Me" person for the parent role
         const parentRole = newUser.roles.find((role) => role.type === 'PARENT');
         if (parentRole) {
-          await ctx.prisma.person.create({
+          const parentMePerson = await ctx.prisma.person.create({
             data: {
               roleId: parentRole.id,
               name: 'Me',
@@ -103,6 +103,54 @@ export const authRouter = router({
                 emoji: '👤',
               }),
               status: 'ACTIVE',
+            },
+          });
+
+          // Create default "Daily Routine" for parent "Me"
+          await ctx.prisma.routine.create({
+            data: {
+              roleId: parentRole.id,
+              name: 'Daily Routine',
+              description: 'Default routine for daily tasks',
+              resetPeriod: 'DAILY',
+              status: 'ACTIVE',
+              assignments: {
+                create: {
+                  personId: parentMePerson.id,
+                },
+              },
+            },
+          });
+        }
+
+        // Auto-create "Me" person for the teacher role
+        const teacherRole = newUser.roles.find((role) => role.type === 'TEACHER');
+        if (teacherRole) {
+          const teacherMePerson = await ctx.prisma.person.create({
+            data: {
+              roleId: teacherRole.id,
+              name: 'Me',
+              avatar: JSON.stringify({
+                color: '#BAE1FF',
+                emoji: '👤',
+              }),
+              status: 'ACTIVE',
+            },
+          });
+
+          // Create default "Daily Routine" for teacher "Me"
+          await ctx.prisma.routine.create({
+            data: {
+              roleId: teacherRole.id,
+              name: 'Daily Routine',
+              description: 'Default routine for daily tasks',
+              resetPeriod: 'DAILY',
+              status: 'ACTIVE',
+              assignments: {
+                create: {
+                  personId: teacherMePerson.id,
+                },
+              },
             },
           });
         }
@@ -135,8 +183,8 @@ export const authRouter = router({
             },
           });
 
-          // Auto-create "Me" person
-          await ctx.prisma.person.create({
+          // Auto-create "Me" person for parent
+          const parentMePerson = await ctx.prisma.person.create({
             data: {
               roleId: parentRole.id,
               name: 'Me',
@@ -145,6 +193,22 @@ export const authRouter = router({
                 emoji: '👤',
               }),
               status: 'ACTIVE',
+            },
+          });
+
+          // Create default "Daily Routine" for parent "Me"
+          await ctx.prisma.routine.create({
+            data: {
+              roleId: parentRole.id,
+              name: 'Daily Routine',
+              description: 'Default routine for daily tasks',
+              resetPeriod: 'DAILY',
+              status: 'ACTIVE',
+              assignments: {
+                create: {
+                  personId: parentMePerson.id,
+                },
+              },
             },
           });
         }
@@ -256,7 +320,7 @@ export const authRouter = router({
         });
 
         // Auto-create "Me" person for both parent and teacher roles
-        await ctx.prisma.person.create({
+        const parentMePerson = await ctx.prisma.person.create({
           data: {
             roleId: parentRole.id,
             name: 'Me',
@@ -268,7 +332,23 @@ export const authRouter = router({
           },
         });
 
-        await ctx.prisma.person.create({
+        // Create default "Daily Routine" for parent "Me"
+        await ctx.prisma.routine.create({
+          data: {
+            roleId: parentRole.id,
+            name: 'Daily Routine',
+            description: 'Default routine for daily tasks',
+            resetPeriod: 'DAILY',
+            status: 'ACTIVE',
+            assignments: {
+              create: {
+                personId: parentMePerson.id,
+              },
+            },
+          },
+        });
+
+        const teacherMePerson = await ctx.prisma.person.create({
           data: {
             roleId: teacherRole.id,
             name: 'Me',
@@ -277,6 +357,22 @@ export const authRouter = router({
               emoji: '👤',
             }),
             status: 'ACTIVE',
+          },
+        });
+
+        // Create default "Daily Routine" for teacher "Me"
+        await ctx.prisma.routine.create({
+          data: {
+            roleId: teacherRole.id,
+            name: 'Daily Routine',
+            description: 'Default routine for daily tasks',
+            resetPeriod: 'DAILY',
+            status: 'ACTIVE',
+            assignments: {
+              create: {
+                personId: teacherMePerson.id,
+              },
+            },
           },
         });
       } else {
@@ -322,7 +418,7 @@ export const authRouter = router({
 
           // Create "Me" person if it doesn't exist
           if (!mePersonExists) {
-            await ctx.prisma.person.create({
+            const parentMePerson = await ctx.prisma.person.create({
               data: {
                 roleId: parentRole.id,
                 name: 'Me',
@@ -331,6 +427,63 @@ export const authRouter = router({
                   emoji: '👤',
                 }),
                 status: 'ACTIVE',
+              },
+            });
+
+            // Create default "Daily Routine" for parent "Me"
+            await ctx.prisma.routine.create({
+              data: {
+                roleId: parentRole.id,
+                name: 'Daily Routine',
+                description: 'Default routine for daily tasks',
+                resetPeriod: 'DAILY',
+                status: 'ACTIVE',
+                assignments: {
+                  create: {
+                    personId: parentMePerson.id,
+                  },
+                },
+              },
+            });
+          }
+        }
+
+        // Check if "Me" person exists for teacher role
+        if (teacherRole) {
+          const mePersonExists = await ctx.prisma.person.findFirst({
+            where: {
+              roleId: teacherRole.id,
+              name: 'Me',
+            },
+          });
+
+          // Create "Me" person if it doesn't exist
+          if (!mePersonExists) {
+            const teacherMePerson = await ctx.prisma.person.create({
+              data: {
+                roleId: teacherRole.id,
+                name: 'Me',
+                avatar: JSON.stringify({
+                  color: '#BAE1FF',
+                  emoji: '👤',
+                }),
+                status: 'ACTIVE',
+              },
+            });
+
+            // Create default "Daily Routine" for teacher "Me"
+            await ctx.prisma.routine.create({
+              data: {
+                roleId: teacherRole.id,
+                name: 'Daily Routine',
+                description: 'Default routine for daily tasks',
+                resetPeriod: 'DAILY',
+                status: 'ACTIVE',
+                assignments: {
+                  create: {
+                    personId: teacherMePerson.id,
+                  },
+                },
               },
             });
           }
