@@ -110,7 +110,7 @@ export function ClassroomMemberList({ classroomId, roleId, onSelectPerson }: Cla
 
         {!kioskCollapsed && (
           <div className="px-6 pb-6 border-t border-gray-100">
-            <KioskCodeManager />
+            <KioskCodeManager roleId={roleId} />
           </div>
         )}
       </div>

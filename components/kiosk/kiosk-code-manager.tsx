@@ -6,15 +6,15 @@ import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 
-export function KioskCodeManager() {
+interface KioskCodeManagerProps {
+  roleId: string;
+}
+
+export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
   const [isRevealed, setIsRevealed] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const hasAttemptedGeneration = useRef(false);
-
-  // Get current role ID
-  const { data: session } = trpc.auth.getSession.useQuery();
-  const roleId = session?.user?.roles?.[0]?.id || '';
 
   const { data: codes, isLoading } = trpc.kiosk.listCodes.useQuery(
     { roleId },
