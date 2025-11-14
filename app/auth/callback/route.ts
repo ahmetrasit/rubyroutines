@@ -100,7 +100,7 @@ export async function GET(request: Request) {
           },
         });
 
-        await prisma.role.create({
+        const teacherRole = await prisma.role.create({
           data: {
             userId: user.id,
             type: 'TEACHER',
@@ -109,10 +109,22 @@ export async function GET(request: Request) {
           },
         });
 
-        // Auto-create "Me" person for parent role
+        // Auto-create "Me" person for both parent and teacher roles
         await prisma.person.create({
           data: {
             roleId: parentRole.id,
+            name: 'Me',
+            avatar: JSON.stringify({
+              color: '#BAE1FF',
+              emoji: '👤',
+            }),
+            status: 'ACTIVE',
+          },
+        });
+
+        await prisma.person.create({
+          data: {
+            roleId: teacherRole.id,
             name: 'Me',
             avatar: JSON.stringify({
               color: '#BAE1FF',
@@ -129,6 +141,7 @@ export async function GET(request: Request) {
           console.log('Has PARENT role:', hasParentRole, '| Has TEACHER role:', hasTeacherRole);
 
         let parentRole = user.roles.find((role: any) => role.type === 'PARENT');
+          let teacherRole = user.roles.find((role: any) => role.type === 'TEACHER');
 
           // Create missing PARENT role
           if (!hasParentRole) {
@@ -146,7 +159,7 @@ export async function GET(request: Request) {
           // Create missing TEACHER role
           if (!hasTeacherRole) {
             console.log('Creating missing TEACHER role');
-            await prisma.role.create({
+            teacherRole = await prisma.role.create({
               data: {
                 userId: user.id,
                 type: 'TEACHER',
@@ -169,6 +182,30 @@ export async function GET(request: Request) {
             await prisma.person.create({
               data: {
                 roleId: parentRole.id,
+                name: 'Me',
+                avatar: JSON.stringify({
+                  color: '#BAE1FF',
+                  emoji: '👤',
+                }),
+                status: 'ACTIVE',
+              },
+            });
+          }
+        }
+
+        // Ensure "Me" person exists for teacher role
+        if (teacherRole) {
+          const mePersonExists = await prisma.person.findFirst({
+            where: {
+              roleId: teacherRole.id,
+              name: 'Me',
+            },
+          });
+
+          if (!mePersonExists) {
+            await prisma.person.create({
+              data: {
+                roleId: teacherRole.id,
                 name: 'Me',
                 avatar: JSON.stringify({
                   color: '#BAE1FF',

@@ -246,7 +246,7 @@ export const authRouter = router({
           },
         });
 
-        await ctx.prisma.role.create({
+        const teacherRole = await ctx.prisma.role.create({
           data: {
             userId: user.id,
             type: 'TEACHER',
@@ -255,10 +255,22 @@ export const authRouter = router({
           },
         });
 
-        // Auto-create "Me" person for parent role
+        // Auto-create "Me" person for both parent and teacher roles
         await ctx.prisma.person.create({
           data: {
             roleId: parentRole.id,
+            name: 'Me',
+            avatar: JSON.stringify({
+              color: '#BAE1FF',
+              emoji: '👤',
+            }),
+            status: 'ACTIVE',
+          },
+        });
+
+        await ctx.prisma.person.create({
+          data: {
+            roleId: teacherRole.id,
             name: 'Me',
             avatar: JSON.stringify({
               color: '#BAE1FF',
@@ -273,6 +285,7 @@ export const authRouter = router({
         const hasTeacherRole = user.roles.some((role: any) => role.type === 'TEACHER');
 
         let parentRole = user.roles.find((role: any) => role.type === 'PARENT');
+        let teacherRole = user.roles.find((role: any) => role.type === 'TEACHER');
 
         // Create missing PARENT role
         if (!hasParentRole) {
@@ -288,7 +301,7 @@ export const authRouter = router({
 
         // Create missing TEACHER role
         if (!hasTeacherRole) {
-          await ctx.prisma.role.create({
+          teacherRole = await ctx.prisma.role.create({
             data: {
               userId: user.id,
               type: 'TEACHER',
