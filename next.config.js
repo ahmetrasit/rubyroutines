@@ -69,7 +69,7 @@ const nextConfig = {
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co https://api.stripe.com wss://*.supabase.co",
       "frame-src 'self' https://js.stripe.com",
-      "object-src 'none' data:",
+      "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",

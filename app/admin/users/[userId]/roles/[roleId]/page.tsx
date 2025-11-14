@@ -58,8 +58,11 @@ function ManageRoleTierContent() {
         title: 'Success',
         description: 'Tier updated successfully',
       });
-      utils.adminUsers.details.invalidate({ userId });
+      if (userId) {
+        utils.adminUsers.details.invalidate({ userId });
+      }
       utils.adminUsers.search.invalidate();
+      utils.adminUsers.statistics.invalidate();
       setHasChanges(false);
     },
     onError: (error) => {
@@ -87,10 +90,26 @@ function ManageRoleTierContent() {
   };
 
   const handleSave = () => {
-    if (!selectedTier || selectedTier === '') return;
+    if (!selectedTier || selectedTier === '') {
+      toast({
+        title: 'Error',
+        description: 'Please select a tier',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!roleId || typeof roleId !== 'string') {
+      toast({
+        title: 'Error',
+        description: 'Invalid role ID',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     changeTierMutation.mutate({
-      roleId,
+      roleId: roleId,
       tier: selectedTier as Tier,
     });
   };
