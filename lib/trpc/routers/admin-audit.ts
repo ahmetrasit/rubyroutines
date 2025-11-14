@@ -13,7 +13,7 @@ export const adminAuditRouter = router({
   getLogs: adminProcedure
     .input(
       z.object({
-        userId: z.string().cuid().optional(),
+        userId: z.string().uuid().optional(),
         action: z.nativeEnum(AdminAction).optional(),
         entityType: z.string().optional(),
         startDate: z.date().optional(),
