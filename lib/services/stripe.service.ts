@@ -25,11 +25,20 @@ function requireStripe(): Stripe {
   return stripe;
 }
 
-// Tier pricing (in cents)
+// Tier pricing (in cents) - different for parent and teacher modes
 export const TIER_PRICES = {
-  [Tier.BRONZE]: 199, // $1.99
-  [Tier.GOLD]: 399, // $3.99
-  [Tier.PRO]: 1299, // $12.99
+  [Tier.BRONZE]: {
+    PARENT: 199, // $1.99
+    TEACHER: 499, // $4.99
+  },
+  [Tier.GOLD]: {
+    PARENT: 399, // $3.99
+    TEACHER: 999, // $9.99
+  },
+  [Tier.PRO]: {
+    PARENT: 1299, // $12.99
+    TEACHER: 2999, // $29.99
+  },
 };
 
 // Tier limits (re-exported for convenience)
@@ -72,12 +81,22 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
   }
 
-  const priceInCents = TIER_PRICES[tier];
+  // Get price based on role type (parent or teacher)
+  const tierPrices = TIER_PRICES[tier];
+
+  if (!tierPrices) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Invalid tier: ${tier}`,
+    });
+  }
+
+  const priceInCents = tierPrices[role.type] || tierPrices.PARENT;
 
   if (!priceInCents) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: `Invalid tier: ${tier}`,
+      message: `Invalid price for tier ${tier} and role type ${role.type}`,
     });
   }
 

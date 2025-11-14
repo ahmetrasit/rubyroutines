@@ -75,11 +75,11 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
   },
 };
 
-const TIER_PRICES: Record<string, number> = {
-  FREE: 0,
-  BRONZE: 5,
-  GOLD: 10,
-  PRO: 25,
+const TIER_PRICES: Record<string, { parent: number; teacher: number }> = {
+  FREE: { parent: 0, teacher: 0 },
+  BRONZE: { parent: 1.99, teacher: 4.99 },
+  GOLD: { parent: 3.99, teacher: 9.99 },
+  PRO: { parent: 12.99, teacher: 29.99 },
 };
 
 export default function PricingPage() {
@@ -142,12 +142,24 @@ export default function PricingPage() {
                       <h3 className="text-xl font-bold text-gray-900">{tier}</h3>
                       {isPopular && <Badge variant="default">Popular</Badge>}
                     </div>
-                    <div className="text-3xl font-bold text-gray-900">
-                      ${price}
-                      {price > 0 && <span className="text-lg text-gray-600">/month</span>}
-                    </div>
-                    {price === 0 && (
-                      <p className="text-sm text-gray-600 mt-1">Forever free</p>
+                    {price.parent === 0 && price.teacher === 0 ? (
+                      <>
+                        <div className="text-3xl font-bold text-gray-900">Free</div>
+                        <p className="text-sm text-gray-600 mt-1">Forever free</p>
+                      </>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-center gap-2 text-sm">
+                          <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                          <span className="text-gray-600">Parent:</span>
+                          <span className="font-bold text-gray-900">${price.parent}/mo</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 text-sm">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          <span className="text-gray-600">Teacher:</span>
+                          <span className="font-bold text-gray-900">${price.teacher}/mo</span>
+                        </div>
+                      </div>
                     )}
                   </div>
 

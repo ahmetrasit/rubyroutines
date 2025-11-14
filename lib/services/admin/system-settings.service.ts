@@ -318,9 +318,18 @@ export async function updateTierLimits(
  */
 export async function getTierPrices() {
   const defaultPrices = {
-    [Tier.BRONZE]: 199, // $1.99
-    [Tier.GOLD]: 399, // $3.99
-    [Tier.PRO]: 1299, // $12.99
+    [Tier.BRONZE]: {
+      parent: 199, // $1.99
+      teacher: 499, // $4.99
+    },
+    [Tier.GOLD]: {
+      parent: 399, // $3.99
+      teacher: 999, // $9.99
+    },
+    [Tier.PRO]: {
+      parent: 1299, // $12.99
+      teacher: 2999, // $29.99
+    },
   };
 
   try {
@@ -347,6 +356,17 @@ export async function getTierPrices() {
       } else {
         // Already using new name
         migratedSetting[oldKey] = value;
+      }
+    }
+
+    // Migrate old flat structure to nested parent/teacher structure
+    for (const [tier, value] of Object.entries(migratedSetting)) {
+      if (typeof value === 'number') {
+        // Old flat structure, convert to nested
+        migratedSetting[tier] = {
+          parent: value,
+          teacher: value,
+        };
       }
     }
 

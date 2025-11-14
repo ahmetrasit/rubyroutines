@@ -241,39 +241,99 @@ function TiersContent() {
             {pricesLoading ? (
               <Skeleton className="h-48" />
             ) : prices ? (
-              <div className="space-y-4">
-                {['BRONZE', 'GOLD', 'PRO'].map((tier) => {
-                  const price = prices[tier];
-                  if (price === undefined) return null;
-                  return (
-                  <div key={tier} className="flex items-center gap-4">
-                    <Label htmlFor={`price-${tier}`} className="w-32 font-semibold capitalize">
-                      {tier.toLowerCase()}
-                    </Label>
-                    <Input
-                      id={`price-${tier}`}
-                      type="number"
-                      min="0"
-                      step="100"
-                      value={editedPrices?.[tier] ?? price}
-                      onChange={(e) => {
-                        const parsedValue = parseInt(e.target.value);
-                        const value = isNaN(parsedValue) ? 0 : parsedValue;
-
-                        setEditedPrices((prev: any) => ({
-                          ...(prev || prices),
-                          [tier]: value,
-                        }));
-                      }}
-                      className="w-40"
-                    />
-                    <span className="text-muted-foreground">
-                      = ${((editedPrices?.[tier] ?? price) / 100).toFixed(2)}/month
+              <div className="space-y-6">
+                {/* Header row */}
+                <div className="grid grid-cols-12 gap-4 items-center font-semibold text-sm text-muted-foreground pb-2 border-b">
+                  <div className="col-span-2">Tier</div>
+                  <div className="col-span-5 text-center">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-3 h-3 bg-purple-500 rounded-full"></span>
+                      Parent Mode
                     </span>
                   </div>
-                );})}
+                  <div className="col-span-5 text-center">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                      Teacher Mode
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pricing rows */}
+                {['BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                  const tierPrices = prices[tier];
+                  if (!tierPrices) return null;
+                  return (
+                    <div key={tier} className="grid grid-cols-12 gap-4 items-center">
+                      <Label className="col-span-2 font-semibold capitalize text-base">
+                        {tier.toLowerCase()}
+                      </Label>
+
+                      {/* Parent Mode Price */}
+                      <div className="col-span-5 flex items-center gap-2">
+                        <Input
+                          id={`price-${tier}-parent`}
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={editedPrices?.[tier]?.parent ?? tierPrices.parent}
+                          onChange={(e) => {
+                            const parsedValue = parseInt(e.target.value);
+                            const value = isNaN(parsedValue) ? 0 : parsedValue;
+
+                            setEditedPrices((prev: any) => {
+                              const base = prev || JSON.parse(JSON.stringify(prices));
+                              return {
+                                ...base,
+                                [tier]: {
+                                  ...base[tier],
+                                  parent: value,
+                                },
+                              };
+                            });
+                          }}
+                          className="w-32"
+                        />
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          = ${((editedPrices?.[tier]?.parent ?? tierPrices.parent) / 100).toFixed(2)}/mo
+                        </span>
+                      </div>
+
+                      {/* Teacher Mode Price */}
+                      <div className="col-span-5 flex items-center gap-2">
+                        <Input
+                          id={`price-${tier}-teacher`}
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={editedPrices?.[tier]?.teacher ?? tierPrices.teacher}
+                          onChange={(e) => {
+                            const parsedValue = parseInt(e.target.value);
+                            const value = isNaN(parsedValue) ? 0 : parsedValue;
+
+                            setEditedPrices((prev: any) => {
+                              const base = prev || JSON.parse(JSON.stringify(prices));
+                              return {
+                                ...base,
+                                [tier]: {
+                                  ...base[tier],
+                                  teacher: value,
+                                },
+                              };
+                            });
+                          }}
+                          className="w-32"
+                        />
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          = ${((editedPrices?.[tier]?.teacher ?? tierPrices.teacher) / 100).toFixed(2)}/mo
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
                 {editedPrices && (
-                  <div className="flex gap-2 pt-4">
+                  <div className="flex gap-2 pt-4 border-t">
                     <Button onClick={handleSavePrices} disabled={updatePricesMutation.isPending}>
                       Save Prices
                     </Button>

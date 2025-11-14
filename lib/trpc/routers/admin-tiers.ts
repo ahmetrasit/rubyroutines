@@ -67,9 +67,18 @@ export const adminTiersRouter = router({
     .input(
       z.object({
         prices: z.object({
-          BRONZE: z.number().int().min(0),
-          GOLD: z.number().int().min(0),
-          PRO: z.number().int().min(0),
+          BRONZE: z.object({
+            parent: z.number().int().min(0),
+            teacher: z.number().int().min(0),
+          }),
+          GOLD: z.object({
+            parent: z.number().int().min(0),
+            teacher: z.number().int().min(0),
+          }),
+          PRO: z.object({
+            parent: z.number().int().min(0),
+            teacher: z.number().int().min(0),
+          }),
         }),
       })
     )

@@ -74,20 +74,21 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
   },
 };
 
-const TIER_PRICES: Record<string, number> = {
-  FREE: 0,
-  BRONZE: 5,
-  GOLD: 10,
-  PRO: 25,
+const TIER_PRICES: Record<string, { parent: number; teacher: number }> = {
+  FREE: { parent: 0, teacher: 0 },
+  BRONZE: { parent: 1.99, teacher: 4.99 },
+  GOLD: { parent: 3.99, teacher: 9.99 },
+  PRO: { parent: 12.99, teacher: 29.99 },
 };
 
 interface PricingTableProps {
   currentTier: string;
   onUpgrade: (tier: string) => void;
   isLoading?: boolean;
+  roleType?: 'PARENT' | 'TEACHER'; // Role type to determine pricing
 }
 
-export function PricingTable({ currentTier, onUpgrade, isLoading }: PricingTableProps) {
+export function PricingTable({ currentTier, onUpgrade, isLoading, roleType = 'PARENT' }: PricingTableProps) {
   const tiers = ['FREE', 'BRONZE', 'GOLD', 'PRO'];
 
   const renderFeature = (label: string, value: string | number | boolean) => {
@@ -117,7 +118,8 @@ export function PricingTable({ currentTier, onUpgrade, isLoading }: PricingTable
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {tiers.map((tier) => {
         const features = TIER_FEATURES[tier];
-        const price = TIER_PRICES[tier];
+        const tierPrices = TIER_PRICES[tier];
+        const price = roleType === 'TEACHER' ? tierPrices.teacher : tierPrices.parent;
         const isCurrent = currentTier === tier;
         const isUpgrade = tiers.indexOf(tier) > tiers.indexOf(currentTier);
 
