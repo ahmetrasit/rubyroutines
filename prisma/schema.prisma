@@ -733,18 +733,23 @@ model CommentFlag {
 // ============================================================================
 
 model VerificationCode {
-  id        String   @id @default(cuid())
-  userId    String
-  code      String   // 6-digit code
-  type      String   @default("EMAIL_VERIFICATION")
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  userId       String
+  email        String?   // Email address for verification
+  code         String    // 6-digit code (hashed)
+  type         String    @default("EMAIL_VERIFICATION")
+  status       String    @default("PENDING") // PENDING, USED, EXPIRED
+  expiresAt    DateTime
+  usedAt       DateTime?
+  attemptsLeft Int       @default(3)
+  resendCount  Int       @default(0)
+  createdAt    DateTime  @default(now())
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([email])
   @@index([code])
   @@index([expiresAt])
   @@map("verification_codes")

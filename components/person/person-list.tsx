@@ -18,7 +18,7 @@ interface PersonListProps {
 export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
   const [showForm, setShowForm] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
-  const [kioskCollapsed, setKioskCollapsed] = useState(false);
+  const [kioskCollapsed, setKioskCollapsed] = useState(true); // Collapsed by default
 
   const { data: persons, isLoading } = trpc.person.list.useQuery(
     { roleId },
@@ -57,7 +57,7 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
             </div>
             <div className="text-left">
               <h3 className="font-semibold text-gray-900">Family Kiosk Code</h3>
-              <p className="text-sm text-gray-500">Access code for all family members</p>
+              <p className="text-sm text-gray-500">for all members in one screen</p>
             </div>
           </div>
           {kioskCollapsed ? (
@@ -76,17 +76,16 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
 
       {/* Row 2: Adults (Parent and Co-Parent) */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Adults</h2>
-          {hasInactive && (
+        {hasInactive && (
+          <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => setShowRestore(true)}>
               <RotateCcw className="h-4 w-4 mr-2" />
               Restore
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Me person card */}
           {adults.map((person) => (
             <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
@@ -113,9 +112,7 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
 
       {/* Row 3: Children */}
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-gray-900">Children</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Child cards */}
           {children.map((person) => (
             <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
@@ -132,7 +129,7 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
             <span className="text-gray-600 group-hover:text-purple-600 font-medium transition-colors">
               Add Member
             </span>
-            <span className="text-sm text-gray-400 mt-1">Add a child to your family</span>
+            <span className="text-sm text-gray-400 mt-1">add a family member</span>
           </button>
         </div>
       </div>
