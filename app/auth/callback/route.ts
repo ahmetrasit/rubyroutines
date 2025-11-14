@@ -189,6 +189,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Redirect to dashboard using the actual host from request
-  return NextResponse.redirect(`${redirectBase}/dashboard`);
+  // Redirect to parent mode by default
+  return NextResponse.redirect(`${redirectBase}/parent`);
 }

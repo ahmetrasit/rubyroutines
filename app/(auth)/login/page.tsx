@@ -18,7 +18,7 @@ export default function LoginPage() {
   const signInMutation = trpc.auth.signIn.useMutation({
     onSuccess: () => {
       // Use window.location.href to force full page reload and pick up session cookies
-      window.location.href = '/dashboard';
+      window.location.href = '/parent';
     },
     onError: (err) => {
       setError(err.message);

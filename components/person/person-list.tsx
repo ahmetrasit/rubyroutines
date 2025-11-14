@@ -18,11 +18,14 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
   const [showForm, setShowForm] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
 
-  const { data: persons, isLoading } = trpc.person.list.useQuery({ roleId });
-  const { data: allPersons } = trpc.person.list.useQuery({
-    roleId,
-    includeInactive: true,
-  });
+  const { data: persons, isLoading } = trpc.person.list.useQuery(
+    { roleId },
+    { enabled: !!roleId }
+  );
+  const { data: allPersons } = trpc.person.list.useQuery(
+    { roleId, includeInactive: true },
+    { enabled: !!roleId }
+  );
 
   if (isLoading) {
     return (
