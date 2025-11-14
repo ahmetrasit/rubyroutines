@@ -81,38 +81,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Check email verification for authenticated users
-  if (user) {
-    // Check email verification status from Supabase user metadata
-    // This is set to true when user verifies their email, or for OAuth users
-    const isEmailVerified = user.user_metadata?.emailVerified === true;
-
-    // If user is not verified
-    if (!isEmailVerified) {
-      // Allow access to verify page
-      if (isVerifyRoute) {
-        return response;
-      }
-
-      // Redirect to verify if trying to access protected routes or auth routes
-      if (isProtectedRoute || isAuthRoute) {
-        // Get email from Supabase user
-        const email = user.email || '';
-        return NextResponse.redirect(
-          new URL(`/verify?userId=${user.id}&email=${encodeURIComponent(email)}`, request.url)
-        );
-      }
-    } else {
-      // User is verified, redirect away from auth routes to parent dashboard
-      if (isAuthRoute) {
-        return NextResponse.redirect(new URL('/parent', request.url));
-      }
-
-      // Redirect away from verify route to parent dashboard if already verified
-      if (isVerifyRoute) {
-        return NextResponse.redirect(new URL('/parent', request.url));
-      }
-    }
+  // Redirect authenticated users away from auth routes
+  if (isAuthRoute && user) {
+    return NextResponse.redirect(new URL('/parent', request.url));
   }
 
   return response;

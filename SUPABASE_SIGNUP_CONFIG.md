@@ -1,65 +1,63 @@
-# Supabase Signup Configuration
+# Supabase Email Verification Configuration
 
-## Issue: "Invalid credentials" after signup
+## Current Setup: Using Supabase Email Confirmation
 
-If you're experiencing "invalid credentials" errors after signing up, this is likely because **Supabase email confirmation is enabled** and the user account is not confirmed yet.
+The app now uses **Supabase's built-in email confirmation system**. Here's how it works:
 
-## Solution: Disable Email Confirmation (Development)
+### Flow:
 
-For development environments, you should disable Supabase's built-in email confirmation:
+1. User signs up with email/password
+2. Supabase sends a verification email automatically
+3. User clicks the verification link in the email
+4. User is redirected to `/auth/callback` and then to `/parent`
+5. User can now log in and access the app
 
-### Steps:
+### Configuration Required:
 
-1. **Go to your Supabase Dashboard**
-2. Navigate to **Authentication** → **Providers** → **Email**
-3. Scroll down to **"Email confirmation"** section
-4. **Uncheck** "Enable email confirmations"
-5. Click **Save**
+**In Supabase Dashboard:**
 
-### What this does:
+1. Go to **Authentication** → **Providers** → **Email**
+2. Make sure **"Enable email confirmations"** is **CHECKED**
+3. Set **"Confirm email"** redirect URL to: `http://localhost:3000/auth/callback` (or your production URL)
+4. Click **Save**
 
-- Users are automatically confirmed when they sign up
-- No confirmation email is sent by Supabase
-- Your custom verification code system (in the app) still works
-- Users can log in immediately after signup
+**Email Template (Optional):**
 
-## Alternative: Manual Confirmation (Production)
+You can customize the verification email template in:
+**Authentication** → **Email Templates** → **Confirm Signup**
 
-If you want to keep email confirmation enabled, you'll need to:
+### Development Testing:
 
-1. Have Supabase send confirmation emails
-2. OR manually confirm users via SQL:
+If you want to skip email verification during development:
+
+1. Sign up a test user
+2. Go to **Authentication** → **Users** in Supabase Dashboard
+3. Find the user and click to edit
+4. Manually set `email_confirmed_at` to current timestamp
+5. User can now log in
+
+Or use SQL:
 
 ```sql
--- Find unconfirmed users
-SELECT id, email, email_confirmed_at 
-FROM auth.users 
-WHERE email_confirmed_at IS NULL;
-
--- Manually confirm a user
-UPDATE auth.users 
+-- Manually confirm a test user
+UPDATE auth.users
 SET email_confirmed_at = NOW()
-WHERE email = 'user@example.com';
+WHERE email = 'test@example.com';
 ```
 
-## Current App Behavior:
+### Troubleshooting:
 
-The app has its own verification code system that:
-- Generates a 6-digit code after signup
-- Logs it to the console (development)
-- Requires users to enter the code before accessing protected routes
-- Sets `user_metadata.emailVerified = true` after code verification
+**"Invalid credentials" after signup:**
+- User hasn't clicked the verification link yet
+- Check spam/junk folder for verification email
+- Manually confirm the user via Supabase dashboard (for testing)
 
-This works independently of Supabase's email confirmation system.
+**Email not being sent:**
+- Check Supabase email settings
+- Make sure email confirmation is enabled
+- Check Supabase logs for email delivery errors
 
-## Recommended Setup:
-
-**Development:**
-- Disable Supabase email confirmation
-- Use app's verification code system (console logs)
-
-**Production:**
-- Keep Supabase email confirmation disabled
-- Implement proper email service for verification codes
-- OR enable Supabase confirmation and remove app verification
-
+**User confirmed but still can't log in:**
+- Check if email_confirmed_at is set in auth.users table
+- Try refreshing the Supabase session
+- Make sure user exists in both auth.users and your users table

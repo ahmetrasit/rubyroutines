@@ -17,19 +17,11 @@ export default function SignUpPage() {
   const [success, setSuccess] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const sendCodeMutation = trpc.auth.sendVerificationCode.useMutation();
-
   const signUpMutation = trpc.auth.signUp.useMutation({
     onSuccess: async (data) => {
-      // User is already logged in after signup (Supabase creates session automatically)
-      // Send verification code
-      await sendCodeMutation.mutateAsync({
-        userId: data.userId,
-        email: email,
-      });
-
-      // Redirect to verification page
-      window.location.href = `/verify?userId=${data.userId}&email=${encodeURIComponent(email)}`;
+      // Supabase will send verification email automatically
+      // Redirect to verify page to inform user
+      window.location.href = `/verify?email=${encodeURIComponent(email)}`;
     },
     onError: (err) => {
       setError(err.message);

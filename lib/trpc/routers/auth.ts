@@ -33,9 +33,9 @@ export const authRouter = router({
         options: {
           data: {
             name: input.name,
-            emailVerified: false, // Set initial verification status
           },
-          emailRedirectTo: undefined, // Disable Supabase's built-in email confirmation
+          // Supabase will send email confirmation automatically
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
         },
       });
 
