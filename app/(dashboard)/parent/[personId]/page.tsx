@@ -117,7 +117,7 @@ export default function PersonDetailPage() {
             />
           </div>
           <div>
-            <GoalList personId={personId} />
+            <GoalList roleId={parentRole.id} personId={personId} />
           </div>
         </div>
       </div>

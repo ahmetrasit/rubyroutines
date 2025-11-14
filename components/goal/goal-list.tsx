@@ -9,18 +9,15 @@ import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 
 interface GoalListProps {
+  roleId: string;
   personId?: string;
 }
 
-export function GoalList({ personId }: GoalListProps) {
+export function GoalList({ roleId, personId }: GoalListProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
-
-  // Get current user's role
-  const { data: session } = trpc.auth.getSession.useQuery();
-  const roleId = session?.user?.roles?.[0]?.id || '';
 
   const { data: goals, isLoading } = trpc.goal.list.useQuery(
     { roleId },
@@ -146,6 +143,7 @@ export function GoalList({ personId }: GoalListProps) {
 
       {showForm && (
         <GoalForm
+          roleId={roleId}
           goal={editingGoal}
           personId={personId}
           onClose={handleCloseForm}
