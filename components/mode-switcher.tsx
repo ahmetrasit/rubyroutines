@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { RealtimeStatus } from '@/components/realtime-status';
 
 interface ModeSwitcherProps {
-  currentMode: 'parent' | 'teacher';
+  currentMode: 'parent' | 'teacher' | 'admin';
 }
 
 export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
@@ -23,16 +23,20 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
   const roles = session?.user?.roles || [];
   const parentRole = roles.find((role: any) => role.type === 'PARENT');
   const teacherRole = roles.find((role: any) => role.type === 'TEACHER');
+  const isAdmin = session?.user?.isAdmin || false;
 
   // Default colors if not set
   const parentColor = parentRole?.color || '#9333ea'; // purple-600
   const teacherColor = teacherRole?.color || '#3b82f6'; // blue-500
+  const adminColor = '#dc2626'; // red-600
 
-  const handleModeSwitch = (mode: 'parent' | 'teacher') => {
+  const handleModeSwitch = (mode: 'parent' | 'teacher' | 'admin') => {
     if (mode === 'parent') {
       router.push('/parent');
-    } else {
+    } else if (mode === 'teacher') {
       router.push('/teacher');
+    } else {
+      router.push('/admin');
     }
   };
 
@@ -86,6 +90,28 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
             >
               Teacher Mode
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => handleModeSwitch('admin')}
+                className={`
+                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  ${
+                    currentMode === 'admin'
+                      ? 'border-current text-gray-900 dark:text-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }
+                `}
+                style={
+                  currentMode === 'admin'
+                    ? { borderColor: adminColor, color: adminColor }
+                    : undefined
+                }
+                aria-label="Switch to admin mode"
+                aria-current={currentMode === 'admin' ? 'page' : undefined}
+              >
+                Admin Mode
+              </button>
+            )}
           </nav>
 
           <div className="flex items-center gap-3">
