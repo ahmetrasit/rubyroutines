@@ -14,7 +14,7 @@ import {
 import { Tier } from '@/lib/types/prisma-enums';
 
 // Flexible ID validator that accepts both UUID and CUID formats
-const idValidator = z.string().min(1).refine(
+const idValidator = z.string().min(1).transform((val) => val.trim()).refine(
   (id) => {
     // Accept UUID format (with hyphens)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
