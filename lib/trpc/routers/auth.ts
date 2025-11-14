@@ -35,7 +35,7 @@ export const authRouter = router({
             name: input.name,
             emailVerified: false, // Set initial verification status
           },
-          emailRedirectTo: undefined, // Disable email confirmation for local development
+          emailRedirectTo: undefined, // Disable Supabase's built-in email confirmation
         },
       });
 

@@ -46,10 +46,15 @@ export default function VerifyPage() {
   }, [resendCooldown]);
 
   const verifyMutation = trpc.auth.verifyEmailCode.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       setSuccess('Email verified successfully! Redirecting to your dashboard...');
+
+      // Refresh the Supabase session to get updated user metadata
+      const supabase = (await import('@/lib/supabase/client')).createClient();
+      await supabase.auth.refreshSession();
+
       setTimeout(() => {
-        router.push('/parent');
+        window.location.href = '/parent'; // Use window.location for hard refresh
       }, 2000);
     },
     onError: (err) => {
