@@ -1,38 +1,39 @@
+import { idValidator } from './id-validator';
 import { z } from 'zod';
 import { GroupType } from '@/lib/types/prisma-enums';
 
 export const createGroupSchema = z.object({
-  roleId: z.string().cuid(),
+  roleId: idValidator,
   name: z.string().min(1).max(100),
   type: z.nativeEnum(GroupType),
   description: z.string().max(500).optional(),
 });
 
 export const updateGroupSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional(),
 });
 
 export const deleteGroupSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 export const addMemberSchema = z.object({
-  groupId: z.string().cuid(),
-  personId: z.string().cuid(),
+  groupId: idValidator,
+  personId: idValidator,
 });
 
 export const removeMemberSchema = z.object({
-  groupId: z.string().cuid(),
-  personId: z.string().cuid(),
+  groupId: idValidator,
+  personId: idValidator,
 });
 
 export const listGroupsSchema = z.object({
-  roleId: z.string().cuid(),
+  roleId: idValidator,
   includeInactive: z.boolean().optional().default(false),
 });
 
 export const getGroupByIdSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });

@@ -1,8 +1,9 @@
+import { idValidator } from './id-validator';
 import { z } from 'zod';
 import { RoutineType, ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
 
 export const createRoutineSchema = z.object({
-  roleId: z.string().cuid(),
+  roleId: idValidator,
   name: z.string().min(1, 'Name is required').max(100),
   description: z.string().max(500).optional(),
   type: z.nativeEnum(RoutineType).default(RoutineType.REGULAR),
@@ -12,11 +13,11 @@ export const createRoutineSchema = z.object({
   visibleDays: z.array(z.number().int().min(0).max(6)).default([]),
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
-  personIds: z.array(z.string().cuid()).optional().default([]),
+  personIds: z.array(idValidator).optional().default([]),
 });
 
 export const updateRoutineSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional().nullable(),
   resetPeriod: z.nativeEnum(ResetPeriod).optional(),
@@ -28,35 +29,35 @@ export const updateRoutineSchema = z.object({
 });
 
 export const deleteRoutineSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 export const restoreRoutineSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 export const listRoutinesSchema = z.object({
-  roleId: z.string().cuid().optional(),
-  personId: z.string().cuid().optional(),
+  roleId: idValidator.optional(),
+  personId: idValidator.optional(),
   includeInactive: z.boolean().optional().default(false),
 });
 
 export const getRoutineSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 export const copyRoutineSchema = z.object({
-  routineId: z.string().cuid(),
-  targetPersonIds: z.array(z.string().cuid()).min(1, 'At least one person required'),
+  routineId: idValidator,
+  targetPersonIds: z.array(idValidator).min(1, 'At least one person required'),
 });
 
 export const createVisibilityOverrideSchema = z.object({
-  routineId: z.string().cuid(),
+  routineId: idValidator,
   duration: z.number().int().min(10).max(60), // 10-60 minutes
 });
 
 export const cancelVisibilityOverrideSchema = z.object({
-  routineId: z.string().cuid(),
+  routineId: idValidator,
 });
 
 export type CreateRoutineInput = z.infer<typeof createRoutineSchema>;

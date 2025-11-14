@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { EntityStatus } from '@/lib/types/prisma-enums';
+import { idValidator } from './id-validator';
 
 export const createPersonSchema = z.object({
-  roleId: z.string().cuid(),
+  roleId: idValidator,
   name: z.string().min(1, 'Name is required').max(100),
   birthDate: z.coerce.date().optional(),
   avatar: z.string().optional(), // Can be URL or JSON string
@@ -10,7 +11,7 @@ export const createPersonSchema = z.object({
 });
 
 export const updatePersonSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
   name: z.string().min(1).max(100).optional(),
   birthDate: z.coerce.date().optional().nullable(),
   avatar: z.string().optional().nullable(), // Can be URL or JSON string
@@ -18,20 +19,20 @@ export const updatePersonSchema = z.object({
 });
 
 export const deletePersonSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 export const restorePersonSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 export const listPersonsSchema = z.object({
-  roleId: z.string().cuid(),
+  roleId: idValidator,
   includeInactive: z.boolean().optional().default(false),
 });
 
 export const getPersonSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 export type CreatePersonInput = z.infer<typeof createPersonSchema>;
