@@ -245,7 +245,34 @@ export async function getTierLimits() {
     };
   }
 
-  return setting;
+  // Migrate old tier names to new ones if present
+  const tierNameMap: Record<string, Tier> = {
+    'BASIC': Tier.BRONZE,
+    'PREMIUM': Tier.GOLD,
+    'SCHOOL': Tier.PRO,
+  };
+
+  const migratedSetting: any = {};
+  let needsMigration = false;
+
+  for (const [oldKey, value] of Object.entries(setting)) {
+    if (tierNameMap[oldKey]) {
+      // Old tier name found, map to new name
+      migratedSetting[tierNameMap[oldKey]] = value;
+      needsMigration = true;
+    } else {
+      // Already using new name or is FREE tier
+      migratedSetting[oldKey] = value;
+    }
+  }
+
+  // If migration was needed, save the migrated version back to database
+  if (needsMigration) {
+    await setSetting('tier_limits', migratedSetting, 'TIER_MANAGEMENT');
+    logger.info('Migrated tier limits from old tier names to new tier names');
+  }
+
+  return migratedSetting;
 }
 
 /**
@@ -301,7 +328,34 @@ export async function getTierPrices() {
     };
   }
 
-  return setting;
+  // Migrate old tier names to new ones if present
+  const tierNameMap: Record<string, Tier> = {
+    'BASIC': Tier.BRONZE,
+    'PREMIUM': Tier.GOLD,
+    'SCHOOL': Tier.PRO,
+  };
+
+  const migratedSetting: any = {};
+  let needsMigration = false;
+
+  for (const [oldKey, value] of Object.entries(setting)) {
+    if (tierNameMap[oldKey]) {
+      // Old tier name found, map to new name
+      migratedSetting[tierNameMap[oldKey]] = value;
+      needsMigration = true;
+    } else {
+      // Already using new name
+      migratedSetting[oldKey] = value;
+    }
+  }
+
+  // If migration was needed, save the migrated version back to database
+  if (needsMigration) {
+    await setSetting('tier_prices', migratedSetting, 'TIER_MANAGEMENT');
+    logger.info('Migrated tier prices from old tier names to new tier names');
+  }
+
+  return migratedSetting;
 }
 
 /**

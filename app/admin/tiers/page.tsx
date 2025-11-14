@@ -114,9 +114,12 @@ function TiersContent() {
                     Parent Mode Limits
                   </h3>
                   <div className="space-y-6">
-                    {Object.entries(limits).map(([tier, tierLimits]: [string, any]) => (
+                    {['FREE', 'BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                      const tierLimits = limits[tier];
+                      if (!tierLimits) return null;
+                      return (
                       <div key={`parent-${tier}`} className="bg-white border border-purple-200 rounded-lg p-5">
-                        <h4 className="font-semibold mb-4 text-lg text-purple-900">{tier}</h4>
+                        <h4 className="font-semibold mb-4 text-lg text-purple-900 capitalize">{tier.toLowerCase()}</h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {tierLimits.parent && Object.entries(tierLimits.parent).map(([limitKey, limitValue]: [string, any]) => (
                             <div key={limitKey}>
@@ -153,7 +156,7 @@ function TiersContent() {
                           ))}
                         </div>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 </div>
 
@@ -164,9 +167,12 @@ function TiersContent() {
                     Teacher Mode Limits
                   </h3>
                   <div className="space-y-6">
-                    {Object.entries(limits).map(([tier, tierLimits]: [string, any]) => (
+                    {['FREE', 'BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                      const tierLimits = limits[tier];
+                      if (!tierLimits) return null;
+                      return (
                       <div key={`teacher-${tier}`} className="bg-white border border-blue-200 rounded-lg p-5">
-                        <h4 className="font-semibold mb-4 text-lg text-blue-900">{tier}</h4>
+                        <h4 className="font-semibold mb-4 text-lg text-blue-900 capitalize">{tier.toLowerCase()}</h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {tierLimits.teacher && Object.entries(tierLimits.teacher).map(([limitKey, limitValue]: [string, any]) => (
                             <div key={limitKey}>
@@ -203,7 +209,7 @@ function TiersContent() {
                           ))}
                         </div>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 </div>
 
@@ -236,10 +242,13 @@ function TiersContent() {
               <Skeleton className="h-48" />
             ) : prices ? (
               <div className="space-y-4">
-                {Object.entries(prices).map(([tier, price]: [string, any]) => (
+                {['BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                  const price = prices[tier];
+                  if (price === undefined) return null;
+                  return (
                   <div key={tier} className="flex items-center gap-4">
-                    <Label htmlFor={`price-${tier}`} className="w-32 font-semibold">
-                      {tier}
+                    <Label htmlFor={`price-${tier}`} className="w-32 font-semibold capitalize">
+                      {tier.toLowerCase()}
                     </Label>
                     <Input
                       id={`price-${tier}`}
@@ -262,7 +271,7 @@ function TiersContent() {
                       = ${((editedPrices?.[tier] ?? price) / 100).toFixed(2)}/month
                     </span>
                   </div>
-                ))}
+                );})}
                 {editedPrices && (
                   <div className="flex gap-2 pt-4">
                     <Button onClick={handleSavePrices} disabled={updatePricesMutation.isPending}>
