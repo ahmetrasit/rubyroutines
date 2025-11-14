@@ -16,9 +16,12 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
   const utils = trpc.useUtils();
   const hasAttemptedGeneration = useRef(false);
 
-  const { data: codes, isLoading } = trpc.kiosk.listCodes.useQuery(
+  const { data: codes, isLoading, error } = trpc.kiosk.listCodes.useQuery(
     { roleId },
-    { enabled: !!roleId }
+    {
+      enabled: !!roleId && roleId.length > 0,
+      retry: false,
+    }
   );
 
   const generateMutation = trpc.kiosk.generateCode.useMutation({
@@ -30,23 +33,36 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
       });
       utils.kiosk.listCodes.invalidate();
       setIsRevealed(true);
+      hasAttemptedGeneration.current = false; // Reset to allow future auto-generations
     },
     onError: (error) => {
+      console.error('Failed to generate kiosk code:', error);
       toast({
         title: 'Error',
-        description: error.message,
+        description: error.message || 'Failed to generate kiosk code',
         variant: 'destructive',
       });
+      hasAttemptedGeneration.current = false; // Reset on error to allow retry
     },
   });
 
   // Auto-generate default code if none exists
   useEffect(() => {
-    if (!isLoading && roleId && codes && codes.length === 0 && !hasAttemptedGeneration.current && !generateMutation.isPending) {
+    if (
+      !isLoading &&
+      !error &&
+      roleId &&
+      roleId.length > 0 &&
+      codes &&
+      codes.length === 0 &&
+      !hasAttemptedGeneration.current &&
+      !generateMutation.isPending
+    ) {
+      console.log('Auto-generating kiosk code for roleId:', roleId);
       hasAttemptedGeneration.current = true;
       generateMutation.mutate({ roleId, expiresInHours: 168 }); // 1 week expiration (max allowed)
     }
-  }, [isLoading, roleId, codes, generateMutation]);
+  }, [isLoading, error, roleId, codes, generateMutation]);
 
   const handleGenerateNew = () => {
     if (confirm('Are you sure you want to generate a new code? The current code will be revoked.')) {
@@ -69,8 +85,20 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
   const activeCodes = codes?.filter((c: any) => c.status === 'ACTIVE') || [];
   const currentCode = activeCodes[0];
 
+  if (!roleId || roleId.length === 0) {
+    return <div className="text-center py-4 text-gray-500">Loading role...</div>;
+  }
+
   if (isLoading) {
     return <div className="text-center py-4 text-gray-500">Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-4 text-red-500">
+        Error loading kiosk codes: {error.message}
+      </div>
+    );
   }
 
   return (
