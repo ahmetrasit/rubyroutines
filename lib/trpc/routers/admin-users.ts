@@ -13,6 +13,21 @@ import {
 } from '@/lib/services/admin/user-management.service';
 import { Tier } from '@/lib/types/prisma-enums';
 
+// Flexible ID validator that accepts both UUID and CUID formats
+const idValidator = z.string().min(1).refine(
+  (id) => {
+    // Accept UUID format (with hyphens)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    // Accept CUID format (starts with 'c' followed by alphanumeric)
+    const cuidRegex = /^c[a-z0-9]{24,}$/i;
+    // Accept plain alphanumeric IDs
+    const plainIdRegex = /^[a-z0-9_-]{10,}$/i;
+
+    return uuidRegex.test(id) || cuidRegex.test(id) || plainIdRegex.test(id);
+  },
+  { message: 'Invalid ID format' }
+);
+
 export const adminUsersRouter = router({
   // Get system statistics
   statistics: adminProcedure.query(async () => {
@@ -38,7 +53,7 @@ export const adminUsersRouter = router({
   details: adminProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
+        userId: idValidator,
       })
     )
     .query(async ({ input }) => {
@@ -49,7 +64,7 @@ export const adminUsersRouter = router({
   grantAdmin: adminProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
+        userId: idValidator,
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -70,7 +85,7 @@ export const adminUsersRouter = router({
   revokeAdmin: adminProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
+        userId: idValidator,
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -91,7 +106,7 @@ export const adminUsersRouter = router({
   changeTier: adminProcedure
     .input(
       z.object({
-        roleId: z.string().uuid(),
+        roleId: idValidator,
         tier: z.nativeEnum(Tier),
       })
     )
@@ -114,7 +129,7 @@ export const adminUsersRouter = router({
   setTierOverride: adminProcedure
     .input(
       z.object({
-        roleId: z.string().uuid(),
+        roleId: idValidator,
         limits: z.object({
           persons: z.number().int().min(0).optional(),
           groups: z.number().int().min(0).optional(),
@@ -144,7 +159,7 @@ export const adminUsersRouter = router({
   removeTierOverride: adminProcedure
     .input(
       z.object({
-        roleId: z.string().uuid(),
+        roleId: idValidator,
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -165,7 +180,7 @@ export const adminUsersRouter = router({
   deleteUser: adminProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
+        userId: idValidator,
       })
     )
     .mutation(async ({ ctx, input }) => {
