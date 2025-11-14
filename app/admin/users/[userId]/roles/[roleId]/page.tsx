@@ -36,15 +36,21 @@ function ManageRoleTierContent() {
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
-  const userId = params.userId as string;
-  const roleId = params.roleId as string;
+  // Handle both string and array params from Next.js dynamic routes
+  const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId;
+  const roleId = Array.isArray(params.roleId) ? params.roleId[0] : params.roleId;
 
   const [selectedTier, setSelectedTier] = useState<Tier | ''>('');
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: userDetails, isLoading } = trpc.adminUsers.details.useQuery({
-    userId,
-  });
+  // Only run query if we have a valid userId
+  const { data: userDetails, isLoading, error } = trpc.adminUsers.details.useQuery(
+    { userId: userId || '' },
+    {
+      enabled: !!userId && typeof userId === 'string' && userId.length > 0,
+      retry: false,
+    }
+  );
 
   const changeTierMutation = trpc.adminUsers.changeTier.useMutation({
     onSuccess: () => {
@@ -102,6 +108,34 @@ function ManageRoleTierContent() {
         <div className="max-w-4xl mx-auto">
           <Skeleton className="h-12 w-64 mb-8" />
           <Skeleton className="h-96" />
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if query failed
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-4xl mx-auto">
+          <Card>
+            <CardContent className="p-8 text-center">
+              <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Error Loading User</h2>
+              <p className="text-muted-foreground mb-2">
+                {error.message || 'Failed to load user details'}
+              </p>
+              <p className="text-sm text-muted-foreground mb-4">
+                User ID: {userId || 'undefined'}
+              </p>
+              <Link href="/admin/users">
+                <Button variant="outline">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Users
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
