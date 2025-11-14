@@ -63,23 +63,31 @@ export default function ParentDashboard() {
   const rgbColor = hexToRgb(roleColor);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: `rgba(${rgbColor}, 0.05)` }}>
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <ModeSwitcher currentMode="parent" />
-      <div
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
-        style={{ borderLeft: `4px solid ${roleColor}`, borderRight: `4px solid ${roleColor}` }}
-      >
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Parent Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your children and their routines</p>
-        </div>
+      <div className="bg-white dark:bg-gray-900">
+        <div
+          className="max-w-7xl mx-auto"
+          style={{
+            borderLeft: `4px solid ${roleColor}`,
+            borderRight: `4px solid ${roleColor}`,
+            backgroundColor: `rgba(${rgbColor}, 0.05)`
+          }}
+        >
+          <div className="px-4 sm:px-6 lg:px-8 py-8">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Parent Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your children and their routines</p>
+            </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          <div className="lg:col-span-2">
-            <PersonList roleId={parentRole.id} onSelectPerson={handleSelectPerson} />
-          </div>
-          <div>
-            <KioskCodeManager />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+              <div className="lg:col-span-2">
+                <PersonList roleId={parentRole.id} onSelectPerson={handleSelectPerson} />
+              </div>
+              <div>
+                <KioskCodeManager />
+              </div>
+            </div>
           </div>
         </div>
       </div>
