@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { Tier } from '@/lib/types/prisma-enums';
+import { Tier } from '@prisma/client';
 import { createAuditLog, AdminAction } from './audit.service';
 import { logger } from '@/lib/utils/logger';
 

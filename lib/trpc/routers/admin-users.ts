@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Tier } from '@prisma/client';
 import { router, adminProcedure } from '../init';
 import {
   searchUsers,
@@ -11,7 +12,6 @@ import {
   getSystemStatistics,
   deleteUserAccount,
 } from '@/lib/services/admin/user-management.service';
-import { Tier } from '@/lib/types/prisma-enums';
 
 // Flexible ID validator that accepts both UUID and CUID formats
 const idValidator = z.string().min(1).transform((val) => val.trim()).refine(
