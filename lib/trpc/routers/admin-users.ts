@@ -38,7 +38,7 @@ export const adminUsersRouter = router({
   details: adminProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
+        userId: z.string().cuid(),
       })
     )
     .query(async ({ input }) => {
@@ -49,7 +49,7 @@ export const adminUsersRouter = router({
   grantAdmin: adminProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
+        userId: z.string().cuid(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -70,7 +70,7 @@ export const adminUsersRouter = router({
   revokeAdmin: adminProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
+        userId: z.string().cuid(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -91,7 +91,7 @@ export const adminUsersRouter = router({
   changeTier: adminProcedure
     .input(
       z.object({
-        roleId: z.string().uuid(),
+        roleId: z.string().cuid(),
         tier: z.nativeEnum(Tier),
       })
     )
@@ -114,7 +114,7 @@ export const adminUsersRouter = router({
   setTierOverride: adminProcedure
     .input(
       z.object({
-        roleId: z.string().uuid(),
+        roleId: z.string().cuid(),
         limits: z.object({
           persons: z.number().int().min(0).optional(),
           groups: z.number().int().min(0).optional(),
@@ -144,7 +144,7 @@ export const adminUsersRouter = router({
   removeTierOverride: adminProcedure
     .input(
       z.object({
-        roleId: z.string().uuid(),
+        roleId: z.string().cuid(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -165,7 +165,7 @@ export const adminUsersRouter = router({
   deleteUser: adminProcedure
     .input(
       z.object({
-        userId: z.string().uuid(),
+        userId: z.string().cuid(),
       })
     )
     .mutation(async ({ ctx, input }) => {
