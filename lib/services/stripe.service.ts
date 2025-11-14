@@ -27,9 +27,9 @@ function requireStripe(): Stripe {
 
 // Tier pricing (in cents)
 export const TIER_PRICES = {
-  [Tier.BRONZE]: 500, // $5.00
-  [Tier.GOLD]: 1000, // $10.00
-  [Tier.PRO]: 2500, // $25.00
+  [Tier.BRONZE]: 199, // $1.99
+  [Tier.GOLD]: 399, // $3.99
+  [Tier.PRO]: 1299, // $12.99
 };
 
 // Tier limits (re-exported for convenience)
