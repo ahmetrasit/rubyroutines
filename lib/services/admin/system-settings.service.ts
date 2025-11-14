@@ -161,91 +161,118 @@ export async function deleteSetting(
  * Get tier limits (system-level)
  */
 export async function getTierLimits() {
-  const setting = await getSetting('tier_limits');
+  const defaultLimits = {
+    [Tier.FREE]: {
+      parent: {
+        persons: 3,
+        maxCoParents: 0,
+        routines: 10,
+        tasksPerRoutine: 10,
+        goals: 3,
+        kioskCodes: 1,
+      },
+      teacher: {
+        classrooms: 1,
+        studentsPerClassroom: 5,
+        maxCoTeachers: 0,
+        routines: 10,
+        tasksPerRoutine: 10,
+        goals: 3,
+        kioskCodes: 1,
+      },
+    },
+    [Tier.BRONZE]: {
+      parent: {
+        persons: 10,
+        maxCoParents: 1,
+        routines: 50,
+        tasksPerRoutine: 20,
+        goals: 10,
+        kioskCodes: 5,
+      },
+      teacher: {
+        classrooms: 3,
+        studentsPerClassroom: 20,
+        maxCoTeachers: 2,
+        routines: 50,
+        tasksPerRoutine: 20,
+        goals: 10,
+        kioskCodes: 5,
+      },
+    },
+    [Tier.GOLD]: {
+      parent: {
+        persons: 50,
+        maxCoParents: 3,
+        routines: 200,
+        tasksPerRoutine: 50,
+        goals: 50,
+        kioskCodes: 20,
+      },
+      teacher: {
+        classrooms: 10,
+        studentsPerClassroom: 50,
+        maxCoTeachers: 5,
+        routines: 200,
+        tasksPerRoutine: 50,
+        goals: 50,
+        kioskCodes: 20,
+      },
+    },
+    [Tier.PRO]: {
+      parent: {
+        persons: 100,
+        maxCoParents: 5,
+        routines: 500,
+        tasksPerRoutine: 100,
+        goals: 200,
+        kioskCodes: 50,
+      },
+      teacher: {
+        classrooms: 50,
+        studentsPerClassroom: 100,
+        maxCoTeachers: 10,
+        routines: 1000,
+        tasksPerRoutine: 100,
+        goals: 200,
+        kioskCodes: 100,
+      },
+    },
+  };
 
-  if (!setting) {
-    // Return default limits with separate parent and teacher sections
-    return {
-      [Tier.FREE]: {
-        parent: {
-          persons: 3,
-          maxCoParents: 0,
-          routines: 10,
-          tasksPerRoutine: 10,
-          goals: 3,
-          kioskCodes: 1,
-        },
-        teacher: {
-          classrooms: 1,
-          studentsPerClassroom: 5,
-          maxCoTeachers: 0,
-          routines: 10,
-          tasksPerRoutine: 10,
-          goals: 3,
-          kioskCodes: 1,
-        },
-      },
-      [Tier.BASIC]: {
-        parent: {
-          persons: 10,
-          maxCoParents: 1,
-          routines: 50,
-          tasksPerRoutine: 20,
-          goals: 10,
-          kioskCodes: 5,
-        },
-        teacher: {
-          classrooms: 3,
-          studentsPerClassroom: 20,
-          maxCoTeachers: 2,
-          routines: 50,
-          tasksPerRoutine: 20,
-          goals: 10,
-          kioskCodes: 5,
-        },
-      },
-      [Tier.PREMIUM]: {
-        parent: {
-          persons: 50,
-          maxCoParents: 3,
-          routines: 200,
-          tasksPerRoutine: 50,
-          goals: 50,
-          kioskCodes: 20,
-        },
-        teacher: {
-          classrooms: 10,
-          studentsPerClassroom: 50,
-          maxCoTeachers: 5,
-          routines: 200,
-          tasksPerRoutine: 50,
-          goals: 50,
-          kioskCodes: 20,
-        },
-      },
-      [Tier.SCHOOL]: {
-        parent: {
-          persons: 100,
-          maxCoParents: 5,
-          routines: 500,
-          tasksPerRoutine: 100,
-          goals: 200,
-          kioskCodes: 50,
-        },
-        teacher: {
-          classrooms: 50,
-          studentsPerClassroom: 100,
-          maxCoTeachers: 10,
-          routines: 1000,
-          tasksPerRoutine: 100,
-          goals: 200,
-          kioskCodes: 100,
-        },
-      },
+  try {
+    const setting = await getSetting('tier_limits');
+
+    if (!setting) {
+      // Return default limits with separate parent and teacher sections
+      return defaultLimits;
+    }
+
+    // Migrate old tier names to new ones if present (mapping only, no database write)
+    const tierNameMap: Record<string, Tier> = {
+      'BASIC': Tier.BRONZE,
+      'PREMIUM': Tier.GOLD,
+      'SCHOOL': Tier.PRO,
     };
-  }
 
-  return setting;
+    const migratedSetting: any = {};
+
+    for (const [oldKey, value] of Object.entries(setting)) {
+      if (tierNameMap[oldKey]) {
+        // Old tier name found, map to new name
+        migratedSetting[tierNameMap[oldKey]] = value;
+      } else {
+        // Already using new name or is FREE tier
+        migratedSetting[oldKey] = value;
+      }
+    }
+
+    return migratedSetting;
+  } catch (error) {
+    // If there's any database error, log it and return defaults
+    logger.error('Error fetching tier limits from database:', error);
+    return defaultLimits;
+  }
 }
 
 /**
@@ -290,18 +317,65 @@ export async function updateTierLimits(
  * Get tier prices (system-level)
  */
 export async function getTierPrices() {
-  const setting = await getSetting('tier_prices');
+  const defaultPrices = {
+    [Tier.BRONZE]: {
+      parent: 199, // $1.99
+      teacher: 499, // $4.99
+    },
+    [Tier.GOLD]: {
+      parent: 399, // $3.99
+      teacher: 999, // $9.99
+    },
+    [Tier.PRO]: {
+      parent: 1299, // $12.99
+      teacher: 2999, // $29.99
+    },
+  };
 
-  if (!setting) {
-    // Return default prices (in cents)
-    return {
-      [Tier.BASIC]: 500, // $5.00
-      [Tier.PREMIUM]: 1000, // $10.00
-      [Tier.SCHOOL]: 2500, // $25.00
+  try {
+    const setting = await getSetting('tier_prices');
+
+    if (!setting) {
+      // Return default prices (in cents)
+      return defaultPrices;
+    }
+
+    // Migrate old tier names to new ones if present (mapping only, no database write)
+    const tierNameMap: Record<string, Tier> = {
+      'BASIC': Tier.BRONZE,
+      'PREMIUM': Tier.GOLD,
+      'SCHOOL': Tier.PRO,
     };
-  }
 
-  return setting;
+    const migratedSetting: any = {};
+
+    for (const [oldKey, value] of Object.entries(setting)) {
+      if (tierNameMap[oldKey]) {
+        // Old tier name found, map to new name
+        migratedSetting[tierNameMap[oldKey]] = value;
+      } else {
+        // Already using new name
+        migratedSetting[oldKey] = value;
+      }
+    }
+
+    // Migrate old flat structure to nested parent/teacher structure
+    for (const [tier, value] of Object.entries(migratedSetting)) {
+      if (typeof value === 'number') {
+        // Old flat structure, convert to nested
+        migratedSetting[tier] = {
+          parent: value,
+          teacher: value,
+        };
+      }
+    }
+
+    return migratedSetting;
+  } catch (error) {
+    // If there's any database error, log it and return defaults
+    logger.error('Error fetching tier prices from database:', error);
+    return defaultPrices;
+  }
 }
 
 /**

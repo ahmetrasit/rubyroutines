@@ -163,7 +163,13 @@ export function ClassroomMemberList({ classroomId, roleId, onSelectPerson }: Cla
         </div>
       </div>
 
-      {showForm && <PersonForm roleId={roleId} onClose={() => setShowForm(false)} />}
+      {showForm && (
+        <PersonForm
+          roleId={roleId}
+          classroomId={classroomId}
+          onClose={() => setShowForm(false)}
+        />
+      )}
     </div>
   );
 }

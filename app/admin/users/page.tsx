@@ -114,6 +114,14 @@ function UsersContent() {
   };
 
   const handleDeleteUser = (user: any) => {
+    if (!user?.id || typeof user.id !== 'string') {
+      toast({
+        title: 'Error',
+        description: 'Invalid user data',
+        variant: 'destructive',
+      });
+      return;
+    }
     setSelectedUser(user);
     setShowDeleteDialog(true);
   };
@@ -154,9 +162,9 @@ function UsersContent() {
                 <SelectContent>
                   <SelectItem value="">All tiers</SelectItem>
                   <SelectItem value="FREE">Free</SelectItem>
-                  <SelectItem value="BASIC">Basic</SelectItem>
-                  <SelectItem value="PREMIUM">Premium</SelectItem>
-                  <SelectItem value="SCHOOL">School</SelectItem>
+                  <SelectItem value="BRONZE">Bronze</SelectItem>
+                  <SelectItem value="GOLD">Gold</SelectItem>
+                  <SelectItem value="PRO">Pro</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -339,7 +347,17 @@ function UsersContent() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => selectedUser && deleteUserMutation.mutate({ userId: selectedUser.id })}
+                onClick={() => {
+                  if (!selectedUser?.id) {
+                    toast({
+                      title: 'Error',
+                      description: 'Invalid user ID',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  deleteUserMutation.mutate({ userId: selectedUser.id });
+                }}
                 disabled={deleteUserMutation.isPending}
               >
                 Delete User

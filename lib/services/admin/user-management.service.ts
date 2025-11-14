@@ -143,9 +143,6 @@ export async function getUserDetails(userId: string) {
       _count: {
         select: {
           roles: true,
-          marketplaceItems: true,
-          marketplaceRatings: true,
-          marketplaceComments: true,
         },
       },
     },
@@ -399,6 +396,7 @@ export async function getSystemStatistics() {
     verifiedUsers,
     totalRoles,
     tierCounts,
+    tierCountsByType,
     recentUsers,
   ] = await Promise.all([
     prisma.user.count(),
@@ -407,6 +405,10 @@ export async function getSystemStatistics() {
     prisma.role.count(),
     prisma.role.groupBy({
       by: ['tier'],
+      _count: true,
+    }),
+    prisma.role.groupBy({
+      by: ['type', 'tier'],
       _count: true,
     }),
     prisma.user.count({
@@ -423,6 +425,17 @@ export async function getSystemStatistics() {
     tierDistribution[item.tier] = item._count;
   });
 
+  // Group tier distribution by role type
+  const tierDistributionByType: Record<string, Record<string, number>> = {
+    PARENT: {},
+    TEACHER: {},
+  };
+  tierCountsByType.forEach((item) => {
+    if (item.type === 'PARENT' || item.type === 'TEACHER') {
+      tierDistributionByType[item.type][item.tier] = item._count;
+    }
+  });
+
   return {
     totalUsers,
     totalAdmins,
@@ -430,6 +443,7 @@ export async function getSystemStatistics() {
     unverifiedUsers: totalUsers - verifiedUsers,
     totalRoles,
     tierDistribution,
+    tierDistributionByType,
     recentUsers,
   };
 }

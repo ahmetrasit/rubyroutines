@@ -22,12 +22,23 @@ export const adminTiersRouter = router({
         limits: z.record(
           z.nativeEnum(Tier),
           z.object({
-            persons: z.number().int().min(0),
-            groups: z.number().int().min(0),
-            routines: z.number().int().min(0),
-            tasksPerRoutine: z.number().int().min(0),
-            goals: z.number().int().min(0),
-            kioskCodes: z.number().int().min(0),
+            parent: z.object({
+              persons: z.number().int().min(0),
+              maxCoParents: z.number().int().min(0),
+              routines: z.number().int().min(0),
+              tasksPerRoutine: z.number().int().min(0),
+              goals: z.number().int().min(0),
+              kioskCodes: z.number().int().min(0),
+            }),
+            teacher: z.object({
+              classrooms: z.number().int().min(0),
+              studentsPerClassroom: z.number().int().min(0),
+              maxCoTeachers: z.number().int().min(0),
+              routines: z.number().int().min(0),
+              tasksPerRoutine: z.number().int().min(0),
+              goals: z.number().int().min(0),
+              kioskCodes: z.number().int().min(0),
+            }),
           })
         ),
       })
@@ -39,8 +50,8 @@ export const adminTiersRouter = router({
       await updateTierLimits(
         input.limits as any,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };
@@ -56,9 +67,18 @@ export const adminTiersRouter = router({
     .input(
       z.object({
         prices: z.object({
-          BASIC: z.number().int().min(0),
-          PREMIUM: z.number().int().min(0),
-          SCHOOL: z.number().int().min(0),
+          BRONZE: z.object({
+            parent: z.number().int().min(0),
+            teacher: z.number().int().min(0),
+          }),
+          GOLD: z.object({
+            parent: z.number().int().min(0),
+            teacher: z.number().int().min(0),
+          }),
+          PRO: z.object({
+            parent: z.number().int().min(0),
+            teacher: z.number().int().min(0),
+          }),
         }),
       })
     )
@@ -69,8 +89,8 @@ export const adminTiersRouter = router({
       await updateTierPrices(
         input.prices,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };

@@ -59,10 +59,22 @@ export const billingRouter = router({
   getTierPricing: authorizedProcedure.query(async () => {
     return {
       prices: {
-        [Tier.FREE]: 0,
-        [Tier.BASIC]: TIER_PRICES[Tier.BASIC] / 100, // Convert cents to dollars
-        [Tier.PREMIUM]: TIER_PRICES[Tier.PREMIUM] / 100,
-        [Tier.SCHOOL]: TIER_PRICES[Tier.SCHOOL] / 100,
+        [Tier.FREE]: {
+          parent: 0,
+          teacher: 0,
+        },
+        [Tier.BRONZE]: {
+          parent: TIER_PRICES[Tier.BRONZE].PARENT / 100, // Convert cents to dollars
+          teacher: TIER_PRICES[Tier.BRONZE].TEACHER / 100,
+        },
+        [Tier.GOLD]: {
+          parent: TIER_PRICES[Tier.GOLD].PARENT / 100,
+          teacher: TIER_PRICES[Tier.GOLD].TEACHER / 100,
+        },
+        [Tier.PRO]: {
+          parent: TIER_PRICES[Tier.PRO].PARENT / 100,
+          teacher: TIER_PRICES[Tier.PRO].TEACHER / 100,
+        },
       },
     };
   }),

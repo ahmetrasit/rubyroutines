@@ -9,9 +9,9 @@ export enum RoleType {
 
 export enum Tier {
   FREE = 'FREE',
-  BASIC = 'BASIC',
-  PREMIUM = 'PREMIUM',
-  SCHOOL = 'SCHOOL',
+  BRONZE = 'BRONZE',
+  GOLD = 'GOLD',
+  PRO = 'PRO',
 }
 
 export enum GroupType {

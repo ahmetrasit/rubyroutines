@@ -34,7 +34,7 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: false,
     support: 'Community',
   },
-  BASIC: {
+  BRONZE: {
     persons: 10,
     groups: 3,
     routines: 20,
@@ -47,7 +47,7 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: false,
     support: 'Email',
   },
-  PREMIUM: {
+  GOLD: {
     persons: 25,
     groups: 10,
     routines: 50,
@@ -60,7 +60,7 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: true,
     support: 'Priority Email',
   },
-  SCHOOL: {
+  PRO: {
     persons: 100,
     groups: 50,
     routines: 200,
@@ -75,15 +75,15 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
   },
 };
 
-const TIER_PRICES: Record<string, number> = {
-  FREE: 0,
-  BASIC: 5,
-  PREMIUM: 10,
-  SCHOOL: 25,
+const TIER_PRICES: Record<string, { parent: number; teacher: number }> = {
+  FREE: { parent: 0, teacher: 0 },
+  BRONZE: { parent: 1.99, teacher: 4.99 },
+  GOLD: { parent: 3.99, teacher: 9.99 },
+  PRO: { parent: 12.99, teacher: 29.99 },
 };
 
 export default function PricingPage() {
-  const tiers = ['FREE', 'BASIC', 'PREMIUM', 'SCHOOL'];
+  const tiers = ['FREE', 'BRONZE', 'GOLD', 'PRO'];
 
   const renderFeature = (label: string, value: string | number | boolean) => {
     if (typeof value === 'boolean') {
@@ -126,7 +126,7 @@ export default function PricingPage() {
           {tiers.map((tier) => {
             const features = TIER_FEATURES[tier];
             const price = TIER_PRICES[tier];
-            const isPopular = tier === 'PREMIUM';
+            const isPopular = tier === 'GOLD';
 
             return (
               <Card
@@ -142,12 +142,24 @@ export default function PricingPage() {
                       <h3 className="text-xl font-bold text-gray-900">{tier}</h3>
                       {isPopular && <Badge variant="default">Popular</Badge>}
                     </div>
-                    <div className="text-3xl font-bold text-gray-900">
-                      ${price}
-                      {price > 0 && <span className="text-lg text-gray-600">/month</span>}
-                    </div>
-                    {price === 0 && (
-                      <p className="text-sm text-gray-600 mt-1">Forever free</p>
+                    {price.parent === 0 && price.teacher === 0 ? (
+                      <>
+                        <div className="text-3xl font-bold text-gray-900">Free</div>
+                        <p className="text-sm text-gray-600 mt-1">Forever free</p>
+                      </>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-center gap-2 text-sm">
+                          <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                          <span className="text-gray-600">Parent:</span>
+                          <span className="font-bold text-gray-900">${price.parent}/mo</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 text-sm">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                          <span className="text-gray-600">Teacher:</span>
+                          <span className="font-bold text-gray-900">${price.teacher}/mo</span>
+                        </div>
+                      </div>
                     )}
                   </div>
 

@@ -33,7 +33,7 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: false,
     support: 'Community',
   },
-  BASIC: {
+  BRONZE: {
     persons: 10,
     groups: 3,
     routines: 20,
@@ -46,7 +46,7 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: false,
     support: 'Email',
   },
-  PREMIUM: {
+  GOLD: {
     persons: 25,
     groups: 10,
     routines: 50,
@@ -59,7 +59,7 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: true,
     support: 'Priority Email',
   },
-  SCHOOL: {
+  PRO: {
     persons: 100,
     groups: 50,
     routines: 200,
@@ -74,21 +74,22 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
   },
 };
 
-const TIER_PRICES: Record<string, number> = {
-  FREE: 0,
-  BASIC: 5,
-  PREMIUM: 10,
-  SCHOOL: 25,
+const TIER_PRICES: Record<string, { parent: number; teacher: number }> = {
+  FREE: { parent: 0, teacher: 0 },
+  BRONZE: { parent: 1.99, teacher: 4.99 },
+  GOLD: { parent: 3.99, teacher: 9.99 },
+  PRO: { parent: 12.99, teacher: 29.99 },
 };
 
 interface PricingTableProps {
   currentTier: string;
   onUpgrade: (tier: string) => void;
   isLoading?: boolean;
+  roleType?: 'PARENT' | 'TEACHER'; // Role type to determine pricing
 }
 
-export function PricingTable({ currentTier, onUpgrade, isLoading }: PricingTableProps) {
-  const tiers = ['FREE', 'BASIC', 'PREMIUM', 'SCHOOL'];
+export function PricingTable({ currentTier, onUpgrade, isLoading, roleType = 'PARENT' }: PricingTableProps) {
+  const tiers = ['FREE', 'BRONZE', 'GOLD', 'PRO'];
 
   const renderFeature = (label: string, value: string | number | boolean) => {
     if (typeof value === 'boolean') {
@@ -117,7 +118,8 @@ export function PricingTable({ currentTier, onUpgrade, isLoading }: PricingTable
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {tiers.map((tier) => {
         const features = TIER_FEATURES[tier];
-        const price = TIER_PRICES[tier];
+        const tierPrices = TIER_PRICES[tier];
+        const price = roleType === 'TEACHER' ? tierPrices.teacher : tierPrices.parent;
         const isCurrent = currentTier === tier;
         const isUpgrade = tiers.indexOf(tier) > tiers.indexOf(currentTier);
 
@@ -126,7 +128,7 @@ export function PricingTable({ currentTier, onUpgrade, isLoading }: PricingTable
             key={tier}
             className={`p-6 ${
               isCurrent ? 'ring-2 ring-blue-500 shadow-lg' : ''
-            } ${tier === 'PREMIUM' ? 'border-blue-300' : ''}`}
+            } ${tier === 'GOLD' ? 'border-blue-300' : ''}`}
           >
             <div className="space-y-4">
               {/* Header */}
@@ -134,7 +136,7 @@ export function PricingTable({ currentTier, onUpgrade, isLoading }: PricingTable
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <h3 className="text-xl font-bold text-gray-900">{tier}</h3>
                   {isCurrent && <Badge variant="default">Current</Badge>}
-                  {tier === 'PREMIUM' && !isCurrent && (
+                  {tier === 'GOLD' && !isCurrent && (
                     <Badge variant="outline">Popular</Badge>
                   )}
                 </div>

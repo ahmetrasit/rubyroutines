@@ -49,3 +49,7 @@ prisma/migrations/dev.db-journal
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# PWA (next-pwa generated files)
+public/sw.js
+public/workbox-*.js

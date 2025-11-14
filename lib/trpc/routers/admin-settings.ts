@@ -71,8 +71,8 @@ export const adminSettingsRouter = router({
           description: input.description,
         },
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
     }),
 
@@ -90,8 +90,8 @@ export const adminSettingsRouter = router({
       await deleteSetting(
         input.key,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };

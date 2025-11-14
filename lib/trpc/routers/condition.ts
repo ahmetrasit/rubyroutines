@@ -295,10 +295,10 @@ export const conditionRouter = router({
         where: { id: routine.roleId }
       });
 
-      if (role && (role.tier === 'FREE' || role.tier === 'BASIC')) {
+      if (role && (role.tier === 'FREE' || role.tier === 'BRONZE')) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Smart routines require PREMIUM tier or higher'
+          message: 'Smart routines require GOLD tier or higher'
         });
       }
 

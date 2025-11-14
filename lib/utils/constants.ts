@@ -34,7 +34,7 @@ export const TIER_LIMITS = {
     coParents: 0,
     marketplace: false,
   },
-  BASIC: {
+  BRONZE: {
     persons: 10,
     routines: 20,
     goals: 10,
@@ -43,7 +43,7 @@ export const TIER_LIMITS = {
     coParents: 2,
     marketplace: true,
   },
-  PREMIUM: {
+  GOLD: {
     persons: -1, // unlimited
     routines: -1, // unlimited
     goals: -1, // unlimited
@@ -52,7 +52,7 @@ export const TIER_LIMITS = {
     coParents: -1, // unlimited
     marketplace: true,
   },
-  SCHOOL: {
+  PRO: {
     persons: -1, // unlimited
     routines: -1, // unlimited
     goals: -1, // unlimited

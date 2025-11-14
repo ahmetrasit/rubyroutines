@@ -107,75 +107,112 @@ function TiersContent() {
               <Skeleton className="h-96" />
             ) : limits ? (
               <div className="space-y-6">
-                {Object.entries(limits).map(([tier, tierLimits]: [string, any]) => (
-                  <div key={tier} className="border rounded-lg p-6">
-                    <h3 className="font-bold mb-6 text-xl">{tier}</h3>
+                {/* Parent Mode Limits - Purple Box */}
+                <div className="border-2 border-purple-300 bg-purple-50 rounded-lg p-6">
+                  <h3 className="font-bold mb-6 text-xl text-purple-800 flex items-center gap-2">
+                    <span className="w-3 h-3 bg-purple-700 rounded-full"></span>
+                    Parent Mode Limits
+                  </h3>
+                  <div className="space-y-6">
+                    {['FREE', 'BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                      const tierLimits = limits[tier];
+                      if (!tierLimits) return null;
+                      return (
+                      <div key={`parent-${tier}`} className="bg-white border border-purple-200 rounded-lg p-5">
+                        <h4 className="font-semibold mb-4 text-lg text-purple-900 capitalize">{tier.toLowerCase()}</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {tierLimits.parent && Object.entries(tierLimits.parent).map(([limitKey, limitValue]: [string, any]) => (
+                            <div key={limitKey}>
+                              <Label htmlFor={`${tier}-parent-${limitKey}`} className="text-sm">
+                                {limitKey.replace(/([A-Z])/g, ' $1').trim()}
+                              </Label>
+                              <Input
+                                id={`${tier}-parent-${limitKey}`}
+                                type="number"
+                                min="0"
+                                value={editedLimits?.[tier]?.parent?.[limitKey] ?? limitValue}
+                                onChange={(e) => {
+                                  const parsedValue = parseInt(e.target.value);
+                                  const value = isNaN(parsedValue) ? 0 : parsedValue;
 
-                    {/* Parent Mode Limits */}
-                    <div className="mb-6">
-                      <h4 className="font-semibold mb-3 text-md text-purple-700 flex items-center gap-2">
-                        <span className="w-2 h-2 bg-purple-700 rounded-full"></span>
-                        Parent Mode Limits
-                      </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-4">
-                        {tierLimits.parent && Object.entries(tierLimits.parent).map(([limitKey, limitValue]: [string, any]) => (
-                          <div key={limitKey}>
-                            <Label htmlFor={`${tier}-parent-${limitKey}`} className="text-sm">
-                              {limitKey.replace(/([A-Z])/g, ' $1').trim()}
-                            </Label>
-                            <Input
-                              id={`${tier}-parent-${limitKey}`}
-                              type="number"
-                              min="0"
-                              value={editedLimits?.[tier]?.parent?.[limitKey] ?? limitValue}
-                              onChange={(e) => {
-                                const newLimits = editedLimits || JSON.parse(JSON.stringify(limits));
-                                if (!newLimits[tier]) newLimits[tier] = JSON.parse(JSON.stringify(tierLimits));
-                                if (!newLimits[tier].parent) newLimits[tier].parent = {};
-                                const parsedValue = parseInt(e.target.value);
-                                newLimits[tier].parent[limitKey] = isNaN(parsedValue) ? 0 : parsedValue;
-                                setEditedLimits(newLimits);
-                              }}
-                              className="mt-1"
-                            />
-                          </div>
-                        ))}
+                                  setEditedLimits((prev: any) => {
+                                    const base = prev || JSON.parse(JSON.stringify(limits));
+                                    return {
+                                      ...base,
+                                      [tier]: {
+                                        ...base[tier],
+                                        parent: {
+                                          ...(base[tier]?.parent || {}),
+                                          [limitKey]: value,
+                                        },
+                                        teacher: base[tier]?.teacher || {},
+                                      },
+                                    };
+                                  });
+                                }}
+                                className="mt-1"
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Teacher Mode Limits */}
-                    <div>
-                      <h4 className="font-semibold mb-3 text-md text-blue-700 flex items-center gap-2">
-                        <span className="w-2 h-2 bg-blue-700 rounded-full"></span>
-                        Teacher Mode Limits
-                      </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-4">
-                        {tierLimits.teacher && Object.entries(tierLimits.teacher).map(([limitKey, limitValue]: [string, any]) => (
-                          <div key={limitKey}>
-                            <Label htmlFor={`${tier}-teacher-${limitKey}`} className="text-sm">
-                              {limitKey.replace(/([A-Z])/g, ' $1').trim()}
-                            </Label>
-                            <Input
-                              id={`${tier}-teacher-${limitKey}`}
-                              type="number"
-                              min="0"
-                              value={editedLimits?.[tier]?.teacher?.[limitKey] ?? limitValue}
-                              onChange={(e) => {
-                                const newLimits = editedLimits || JSON.parse(JSON.stringify(limits));
-                                if (!newLimits[tier]) newLimits[tier] = JSON.parse(JSON.stringify(tierLimits));
-                                if (!newLimits[tier].teacher) newLimits[tier].teacher = {};
-                                const parsedValue = parseInt(e.target.value);
-                                newLimits[tier].teacher[limitKey] = isNaN(parsedValue) ? 0 : parsedValue;
-                                setEditedLimits(newLimits);
-                              }}
-                              className="mt-1"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    );})}
                   </div>
-                ))}
+                </div>
+
+                {/* Teacher Mode Limits - Blue Box */}
+                <div className="border-2 border-blue-300 bg-blue-50 rounded-lg p-6">
+                  <h3 className="font-bold mb-6 text-xl text-blue-800 flex items-center gap-2">
+                    <span className="w-3 h-3 bg-blue-700 rounded-full"></span>
+                    Teacher Mode Limits
+                  </h3>
+                  <div className="space-y-6">
+                    {['FREE', 'BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                      const tierLimits = limits[tier];
+                      if (!tierLimits) return null;
+                      return (
+                      <div key={`teacher-${tier}`} className="bg-white border border-blue-200 rounded-lg p-5">
+                        <h4 className="font-semibold mb-4 text-lg text-blue-900 capitalize">{tier.toLowerCase()}</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {tierLimits.teacher && Object.entries(tierLimits.teacher).map(([limitKey, limitValue]: [string, any]) => (
+                            <div key={limitKey}>
+                              <Label htmlFor={`${tier}-teacher-${limitKey}`} className="text-sm">
+                                {limitKey.replace(/([A-Z])/g, ' $1').trim()}
+                              </Label>
+                              <Input
+                                id={`${tier}-teacher-${limitKey}`}
+                                type="number"
+                                min="0"
+                                value={editedLimits?.[tier]?.teacher?.[limitKey] ?? limitValue}
+                                onChange={(e) => {
+                                  const parsedValue = parseInt(e.target.value);
+                                  const value = isNaN(parsedValue) ? 0 : parsedValue;
+
+                                  setEditedLimits((prev: any) => {
+                                    const base = prev || JSON.parse(JSON.stringify(limits));
+                                    return {
+                                      ...base,
+                                      [tier]: {
+                                        ...base[tier],
+                                        parent: base[tier]?.parent || {},
+                                        teacher: {
+                                          ...(base[tier]?.teacher || {}),
+                                          [limitKey]: value,
+                                        },
+                                      },
+                                    };
+                                  });
+                                }}
+                                className="mt-1"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );})}
+                  </div>
+                </div>
+
                 {editedLimits && (
                   <div className="flex gap-2">
                     <Button onClick={handleSaveLimits} disabled={updateLimitsMutation.isPending}>
@@ -204,33 +241,99 @@ function TiersContent() {
             {pricesLoading ? (
               <Skeleton className="h-48" />
             ) : prices ? (
-              <div className="space-y-4">
-                {Object.entries(prices).map(([tier, price]: [string, any]) => (
-                  <div key={tier} className="flex items-center gap-4">
-                    <Label htmlFor={`price-${tier}`} className="w-32 font-semibold">
-                      {tier}
-                    </Label>
-                    <Input
-                      id={`price-${tier}`}
-                      type="number"
-                      min="0"
-                      step="100"
-                      value={editedPrices?.[tier] ?? price}
-                      onChange={(e) => {
-                        const newPrices = editedPrices || { ...prices };
-                        const parsedValue = parseInt(e.target.value);
-                        newPrices[tier] = isNaN(parsedValue) ? 0 : parsedValue;
-                        setEditedPrices(newPrices);
-                      }}
-                      className="w-40"
-                    />
-                    <span className="text-muted-foreground">
-                      = ${((editedPrices?.[tier] ?? price) / 100).toFixed(2)}/month
+              <div className="space-y-6">
+                {/* Header row */}
+                <div className="grid grid-cols-12 gap-4 items-center font-semibold text-sm text-muted-foreground pb-2 border-b">
+                  <div className="col-span-2">Tier</div>
+                  <div className="col-span-5 text-center">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-3 h-3 bg-purple-500 rounded-full"></span>
+                      Parent Mode
                     </span>
                   </div>
-                ))}
+                  <div className="col-span-5 text-center">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                      Teacher Mode
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pricing rows */}
+                {['BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                  const tierPrices = prices[tier];
+                  if (!tierPrices) return null;
+                  return (
+                    <div key={tier} className="grid grid-cols-12 gap-4 items-center">
+                      <Label className="col-span-2 font-semibold capitalize text-base">
+                        {tier.toLowerCase()}
+                      </Label>
+
+                      {/* Parent Mode Price */}
+                      <div className="col-span-5 flex items-center gap-2">
+                        <Input
+                          id={`price-${tier}-parent`}
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={editedPrices?.[tier]?.parent ?? tierPrices.parent}
+                          onChange={(e) => {
+                            const parsedValue = parseInt(e.target.value);
+                            const value = isNaN(parsedValue) ? 0 : parsedValue;
+
+                            setEditedPrices((prev: any) => {
+                              const base = prev || JSON.parse(JSON.stringify(prices));
+                              return {
+                                ...base,
+                                [tier]: {
+                                  ...base[tier],
+                                  parent: value,
+                                },
+                              };
+                            });
+                          }}
+                          className="w-32"
+                        />
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          = ${((editedPrices?.[tier]?.parent ?? tierPrices.parent) / 100).toFixed(2)}/mo
+                        </span>
+                      </div>
+
+                      {/* Teacher Mode Price */}
+                      <div className="col-span-5 flex items-center gap-2">
+                        <Input
+                          id={`price-${tier}-teacher`}
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={editedPrices?.[tier]?.teacher ?? tierPrices.teacher}
+                          onChange={(e) => {
+                            const parsedValue = parseInt(e.target.value);
+                            const value = isNaN(parsedValue) ? 0 : parsedValue;
+
+                            setEditedPrices((prev: any) => {
+                              const base = prev || JSON.parse(JSON.stringify(prices));
+                              return {
+                                ...base,
+                                [tier]: {
+                                  ...base[tier],
+                                  teacher: value,
+                                },
+                              };
+                            });
+                          }}
+                          className="w-32"
+                        />
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          = ${((editedPrices?.[tier]?.teacher ?? tierPrices.teacher) / 100).toFixed(2)}/mo
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
                 {editedPrices && (
-                  <div className="flex gap-2 pt-4">
+                  <div className="flex gap-2 pt-4 border-t">
                     <Button onClick={handleSavePrices} disabled={updatePricesMutation.isPending}>
                       Save Prices
                     </Button>

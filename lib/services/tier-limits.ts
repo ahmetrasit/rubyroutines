@@ -18,7 +18,7 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     goals: 3,
     items_per_goal: 3,
   },
-  [Tier.BASIC]: {
+  [Tier.BRONZE]: {
     children_per_family: 5,
     students_per_classroom: 50,
     routines_per_person: 5,
@@ -26,7 +26,7 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     goals: 5,
     items_per_goal: 5,
   },
-  [Tier.PREMIUM]: {
+  [Tier.GOLD]: {
     children_per_family: 10,
     students_per_classroom: 100,
     routines_per_person: 10,
@@ -34,7 +34,7 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     goals: 10,
     items_per_goal: 10,
   },
-  [Tier.SCHOOL]: {
+  [Tier.PRO]: {
     children_per_family: 50,
     students_per_classroom: 500,
     routines_per_person: 50,
