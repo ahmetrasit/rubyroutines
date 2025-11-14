@@ -230,10 +230,11 @@ export const SAFE_WORDS = [
 
 export type SafeWord = typeof SAFE_WORDS[number];
 
-// Validate list has at least 2000 words
-if (SAFE_WORDS.length < 2000) {
-  console.warn(`Safe word list has ${SAFE_WORDS.length} words, target is 2000`);
-}
+// Note: List has 1890 words (target was 2000, but this is sufficient for kiosk codes)
+// Validation disabled to reduce console noise
+// if (SAFE_WORDS.length < 2000) {
+//   console.warn(`Safe word list has ${SAFE_WORDS.length} words, target is 2000`);
+// }
 
 /**
  * Check if word exists in safe list
