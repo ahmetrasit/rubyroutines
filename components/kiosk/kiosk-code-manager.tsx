@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
@@ -10,6 +10,7 @@ export function KioskCodeManager() {
   const [isRevealed, setIsRevealed] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
+  const hasAttemptedGeneration = useRef(false);
 
   // Get current role ID
   const { data: session } = trpc.auth.getSession.useQuery();
@@ -41,10 +42,11 @@ export function KioskCodeManager() {
 
   // Auto-generate default code if none exists
   useEffect(() => {
-    if (!isLoading && roleId && codes && codes.length === 0) {
+    if (!isLoading && roleId && codes && codes.length === 0 && !hasAttemptedGeneration.current && !generateMutation.isPending) {
+      hasAttemptedGeneration.current = true;
       generateMutation.mutate({ roleId, expiresInHours: 168 }); // 1 week expiration (max allowed)
     }
-  }, [isLoading, roleId, codes]);
+  }, [isLoading, roleId, codes, generateMutation]);
 
   const handleGenerateNew = () => {
     if (confirm('Are you sure you want to generate a new code? The current code will be revoked.')) {

@@ -19,10 +19,11 @@ import type { Person } from '@/lib/types/database';
 interface PersonFormProps {
   person?: Person;
   roleId?: string;
+  classroomId?: string;
   onClose: () => void;
 }
 
-export function PersonForm({ person, roleId, onClose }: PersonFormProps) {
+export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormProps) {
   // Parse existing avatar data if editing
   const initialAvatar = parseAvatar(person?.avatar, person?.name);
   const initialColor = initialAvatar.color;
@@ -46,7 +47,28 @@ export function PersonForm({ person, roleId, onClose }: PersonFormProps) {
     );
   }, [emojiSearch]);
 
-  const createMutationBase = trpc.person.create.useMutation();
+  const addMemberMutation = trpc.group.addMember.useMutation();
+
+  const createMutationBase = trpc.person.create.useMutation({
+    onSuccess: async (newPerson) => {
+      // If classroomId is provided, add the person to the classroom
+      if (classroomId && newPerson?.id) {
+        try {
+          await addMemberMutation.mutateAsync({
+            groupId: classroomId,
+            personId: newPerson.id,
+          });
+          // Invalidate both person list and group queries
+          utils.person.list.invalidate();
+          utils.group.getById.invalidate();
+          utils.group.list.invalidate();
+        } catch (error) {
+          console.error('Failed to add person to classroom:', error);
+        }
+      }
+    },
+  });
+
   const { mutate: createPerson, isLoading: isCreating } = useCreateMutation(
     createMutationBase,
     {

@@ -50,8 +50,8 @@ export const adminTiersRouter = router({
       await updateTierLimits(
         input.limits as any,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };
@@ -80,8 +80,8 @@ export const adminTiersRouter = router({
       await updateTierPrices(
         input.prices,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };
