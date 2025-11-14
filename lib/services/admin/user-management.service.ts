@@ -143,9 +143,6 @@ export async function getUserDetails(userId: string) {
       _count: {
         select: {
           roles: true,
-          marketplaceItems: true,
-          marketplaceRatings: true,
-          marketplaceComments: true,
         },
       },
     },
