@@ -12,10 +12,11 @@ import type { Person } from '@/lib/types/database';
 interface ClassroomMemberListProps {
   classroomId: string;
   roleId: string;
+  userName: string;
   onSelectPerson?: (person: Person) => void;
 }
 
-export function ClassroomMemberList({ classroomId, roleId, onSelectPerson }: ClassroomMemberListProps) {
+export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPerson }: ClassroomMemberListProps) {
   const [showForm, setShowForm] = useState(false);
   const [invisibleRoutineCollapsed, setInvisibleRoutineCollapsed] = useState(true);
   const [kioskCollapsed, setKioskCollapsed] = useState(true);
@@ -111,7 +112,7 @@ export function ClassroomMemberList({ classroomId, roleId, onSelectPerson }: Cla
 
           {!kioskCollapsed && (
             <div className="px-6 pb-6 border-t border-gray-100">
-              <KioskCodeManager roleId={roleId} />
+              <KioskCodeManager roleId={roleId} userName={userName} classroomName={classroom?.name} />
             </div>
           )}
         </div>

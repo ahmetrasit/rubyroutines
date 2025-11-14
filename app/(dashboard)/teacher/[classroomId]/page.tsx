@@ -86,6 +86,7 @@ export default function ClassroomDetailPage() {
         <ClassroomMemberList
           classroomId={classroomId}
           roleId={teacherRole.id}
+          userName={session.user.name || 'User'}
           onSelectPerson={handleSelectStudent}
         />
       </div>

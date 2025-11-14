@@ -18,6 +18,8 @@ export const kioskRouter = router({
   generateCode: authorizedProcedure
     .input(z.object({
       roleId: z.string().uuid(),
+      userName: z.string(),
+      classroomName: z.string().optional(),
       wordCount: z.enum(['2', '3']).optional(),
       expiresInHours: z.number().min(1).max(168).optional() // Max 1 week
     }))
@@ -33,6 +35,8 @@ export const kioskRouter = router({
 
       const code = await generateKioskCode({
         roleId: input.roleId,
+        userName: input.userName,
+        classroomName: input.classroomName,
         wordCount: input.wordCount === '3' ? 3 : 2,
         expiresInHours: input.expiresInHours
       });

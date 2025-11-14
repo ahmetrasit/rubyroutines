@@ -8,9 +8,11 @@ import { useToast } from '@/components/ui/toast';
 
 interface KioskCodeManagerProps {
   roleId: string;
+  userName: string; // User's first name
+  classroomName?: string; // Optional classroom name for teacher mode
 }
 
-export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
+export function KioskCodeManager({ roleId, userName, classroomName }: KioskCodeManagerProps) {
   const [isRevealed, setIsRevealed] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -68,9 +70,15 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
       !generateMutation.isPending
     ) {
       hasAttemptedGeneration.current = true;
-      generateMutation.mutate({ roleId, expiresInHours: 168 }); // 1 week expiration (max allowed)
+      generateMutation.mutate({
+        roleId,
+        userName,
+        classroomName,
+        wordCount: '3',
+        expiresInHours: 168
+      });
     }
-  }, [isLoading, error, roleId, codes?.length, generateMutation.isPending]);
+  }, [isLoading, error, roleId, codes?.length, generateMutation.isPending, userName, classroomName]);
 
   const handleGenerateNew = () => {
     if (confirm('Are you sure you want to generate a new code? The current code will be revoked.')) {
@@ -79,7 +87,13 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
         revokeMutation.mutate({ codeId: currentCode.id });
       }
       // Generate new code with 1 week expiration (max allowed)
-      generateMutation.mutate({ roleId, expiresInHours: 168 });
+      generateMutation.mutate({
+        roleId,
+        userName,
+        classroomName,
+        wordCount: '3',
+        expiresInHours: 168
+      });
     }
   };
 

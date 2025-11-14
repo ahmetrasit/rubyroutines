@@ -4,6 +4,8 @@ import { addHours } from 'date-fns';
 
 export interface GenerateCodeOptions {
   roleId: string;
+  userName: string; // User's first name
+  classroomName?: string; // Optional classroom name for teacher mode
   wordCount?: 2 | 3; // 2 words = ~4M combinations, 3 words = ~8B combinations
   expiresInHours?: number; // Default 24 hours
 }
@@ -22,11 +24,15 @@ export interface KioskCode {
  * Generate unique kiosk code
  * Uses safe words from 2000-word list
  * Checks for duplicates before returning
+ *
+ * Format:
+ * - Parent mode: <firstName>-<word1>-<word2>-<word3>
+ * - Teacher mode: <firstName>-<classroomName>-<word1>-<word2>-<word3>
  */
 export async function generateKioskCode(
   options: GenerateCodeOptions
 ): Promise<KioskCode> {
-  const { roleId, wordCount = 2, expiresInHours = 24 } = options;
+  const { roleId, userName, classroomName, wordCount = 2, expiresInHours = 24 } = options;
 
   // Verify role exists and user has permission
   const role = await prisma.role.findUnique({
@@ -38,13 +44,28 @@ export async function generateKioskCode(
     throw new Error('Role not found');
   }
 
+  // Extract first name and format it (lowercase, no spaces)
+  const firstName = userName.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Format classroom name if provided (lowercase, spaces to dashes)
+  const formattedClassroomName = classroomName
+    ? classroomName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    : null;
+
   let attempts = 0;
   const maxAttempts = 10;
 
   while (attempts < maxAttempts) {
     // Generate random words
     const words = getRandomSafeWords(wordCount);
-    const code = words.join('-').toUpperCase();
+    const wordsPart = words.join('-').toUpperCase();
+
+    // Build the full code based on mode
+    // Parent mode: firstName-WORD1-WORD2-WORD3
+    // Teacher mode: firstName-classroomName-WORD1-WORD2-WORD3
+    const code = formattedClassroomName
+      ? `${firstName}-${formattedClassroomName}-${wordsPart}`
+      : `${firstName}-${wordsPart}`;
 
     // Check if code already exists and is active
     const existing = await prisma.code.findFirst({
