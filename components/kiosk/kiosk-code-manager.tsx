@@ -22,11 +22,18 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
     {
       enabled: !!roleId && roleId.length > 0,
       retry: false,
+      onError: (err) => {
+        console.error('Error fetching kiosk codes:', err);
+      },
+      onSuccess: (data) => {
+        console.log('Kiosk codes loaded:', data);
+      }
     }
   );
 
   const generateMutation = trpc.kiosk.generateCode.useMutation({
     onSuccess: async (data) => {
+      console.log('Kiosk code generated successfully:', data);
       // Refetch immediately to update UI
       await refetch();
       toast({
@@ -37,7 +44,12 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
       setIsRevealed(true);
     },
     onError: (error) => {
-      console.error('Failed to generate kiosk code:', error);
+      console.error('Failed to generate kiosk code:', {
+        error,
+        message: error.message,
+        cause: error.cause,
+        shape: error.shape
+      });
       toast({
         title: 'Error',
         description: error.message || 'Failed to generate kiosk code',
@@ -57,6 +69,16 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
 
   // Auto-generate default code if none exists
   useEffect(() => {
+    console.log('Auto-generation check:', {
+      isLoading,
+      error: error?.message,
+      roleId,
+      roleIdLength: roleId?.length,
+      codesLength: codes?.length,
+      hasAttemptedGeneration: hasAttemptedGeneration.current,
+      isPending: generateMutation.isPending
+    });
+
     if (
       !isLoading &&
       !error &&
