@@ -29,14 +29,16 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${redirectBase}/login?error=auth_failed`);
       }
 
-      if (!error && data.user) {
-      // Check if user exists by email with different ID
-      const existingUserByEmail = await prisma.user.findUnique({
-        where: { email: data.user.email! },
-        include: { roles: true },
-      });
+      if (data.user) {
+        console.log('OAuth user authenticated:', data.user.email);
 
-      let user;
+        // Check if user exists by email with different ID
+        const existingUserByEmail = await prisma.user.findUnique({
+          where: { email: data.user.email! },
+          include: { roles: true },
+        });
+
+        let user;
 
       if (existingUserByEmail && existingUserByEmail.id !== data.user.id) {
         // User exists with different ID - migrate to new Supabase Auth ID
@@ -83,10 +85,13 @@ export async function GET(request: Request) {
         });
       }
 
-      // Ensure user has both PARENT and TEACHER roles
-      if (user.roles.length === 0) {
-        // Create both roles for new users
-        const parentRole = await prisma.role.create({
+        // Ensure user has both PARENT and TEACHER roles
+        console.log('User roles count:', user.roles.length);
+
+        if (user.roles.length === 0) {
+          console.log('Creating both roles for new user');
+          // Create both roles for new users
+          const parentRole = await prisma.role.create({
           data: {
             userId: user.id,
             type: 'PARENT',
@@ -116,36 +121,40 @@ export async function GET(request: Request) {
             status: 'ACTIVE',
           },
         });
-      } else {
-        // Ensure existing users have both roles
-        const hasParentRole = user.roles.some((role: any) => role.type === 'PARENT');
-        const hasTeacherRole = user.roles.some((role: any) => role.type === 'TEACHER');
+        } else {
+          console.log('User has existing roles, checking for missing roles');
+          // Ensure existing users have both roles
+          const hasParentRole = user.roles.some((role: any) => role.type === 'PARENT');
+          const hasTeacherRole = user.roles.some((role: any) => role.type === 'TEACHER');
+          console.log('Has PARENT role:', hasParentRole, '| Has TEACHER role:', hasTeacherRole);
 
         let parentRole = user.roles.find((role: any) => role.type === 'PARENT');
 
-        // Create missing PARENT role
-        if (!hasParentRole) {
-          parentRole = await prisma.role.create({
-            data: {
-              userId: user.id,
-              type: 'PARENT',
-              tier: 'FREE',
-              color: '#9333ea',
-            },
-          });
-        }
+          // Create missing PARENT role
+          if (!hasParentRole) {
+            console.log('Creating missing PARENT role');
+            parentRole = await prisma.role.create({
+              data: {
+                userId: user.id,
+                type: 'PARENT',
+                tier: 'FREE',
+                color: '#9333ea',
+              },
+            });
+          }
 
-        // Create missing TEACHER role
-        if (!hasTeacherRole) {
-          await prisma.role.create({
-            data: {
-              userId: user.id,
-              type: 'TEACHER',
-              tier: 'FREE',
-              color: '#3b82f6',
-            },
-          });
-        }
+          // Create missing TEACHER role
+          if (!hasTeacherRole) {
+            console.log('Creating missing TEACHER role');
+            await prisma.role.create({
+              data: {
+                userId: user.id,
+                type: 'TEACHER',
+                tier: 'FREE',
+                color: '#3b82f6',
+              },
+            });
+          }
 
         // Ensure "Me" person exists for parent role
         if (parentRole) {
@@ -170,7 +179,9 @@ export async function GET(request: Request) {
             });
           }
         }
-      }
+        }
+
+        console.log('✓ OAuth callback completed successfully for user:', data.user.email);
       }
     } catch (err) {
       console.error('Error in OAuth callback:', err);
