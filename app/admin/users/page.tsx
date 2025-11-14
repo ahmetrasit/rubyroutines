@@ -154,9 +154,9 @@ function UsersContent() {
                 <SelectContent>
                   <SelectItem value="">All tiers</SelectItem>
                   <SelectItem value="FREE">Free</SelectItem>
-                  <SelectItem value="BASIC">Basic</SelectItem>
-                  <SelectItem value="PREMIUM">Premium</SelectItem>
-                  <SelectItem value="SCHOOL">School</SelectItem>
+                  <SelectItem value="BRONZE">Bronze</SelectItem>
+                  <SelectItem value="GOLD">Gold</SelectItem>
+                  <SelectItem value="PRO">Pro</SelectItem>
                 </SelectContent>
               </Select>
               <Button

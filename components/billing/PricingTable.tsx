@@ -33,7 +33,7 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: false,
     support: 'Community',
   },
-  BASIC: {
+  BRONZE: {
     persons: 10,
     groups: 3,
     routines: 20,
@@ -46,7 +46,7 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: false,
     support: 'Email',
   },
-  PREMIUM: {
+  GOLD: {
     persons: 25,
     groups: 10,
     routines: 50,
@@ -59,7 +59,7 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: true,
     support: 'Priority Email',
   },
-  SCHOOL: {
+  PRO: {
     persons: 100,
     groups: 50,
     routines: 200,
@@ -76,9 +76,9 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
 
 const TIER_PRICES: Record<string, number> = {
   FREE: 0,
-  BASIC: 5,
-  PREMIUM: 10,
-  SCHOOL: 25,
+  BRONZE: 5,
+  GOLD: 10,
+  PRO: 25,
 };
 
 interface PricingTableProps {
@@ -88,7 +88,7 @@ interface PricingTableProps {
 }
 
 export function PricingTable({ currentTier, onUpgrade, isLoading }: PricingTableProps) {
-  const tiers = ['FREE', 'BASIC', 'PREMIUM', 'SCHOOL'];
+  const tiers = ['FREE', 'BRONZE', 'GOLD', 'PRO'];
 
   const renderFeature = (label: string, value: string | number | boolean) => {
     if (typeof value === 'boolean') {
@@ -126,7 +126,7 @@ export function PricingTable({ currentTier, onUpgrade, isLoading }: PricingTable
             key={tier}
             className={`p-6 ${
               isCurrent ? 'ring-2 ring-blue-500 shadow-lg' : ''
-            } ${tier === 'PREMIUM' ? 'border-blue-300' : ''}`}
+            } ${tier === 'GOLD' ? 'border-blue-300' : ''}`}
           >
             <div className="space-y-4">
               {/* Header */}
@@ -134,7 +134,7 @@ export function PricingTable({ currentTier, onUpgrade, isLoading }: PricingTable
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <h3 className="text-xl font-bold text-gray-900">{tier}</h3>
                   {isCurrent && <Badge variant="default">Current</Badge>}
-                  {tier === 'PREMIUM' && !isCurrent && (
+                  {tier === 'GOLD' && !isCurrent && (
                     <Badge variant="outline">Popular</Badge>
                   )}
                 </div>

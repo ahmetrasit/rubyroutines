@@ -59,8 +59,8 @@ export const adminUsersRouter = router({
       await grantAdminAccess(
         input.userId,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };
@@ -80,8 +80,8 @@ export const adminUsersRouter = router({
       await revokeAdminAccess(
         input.userId,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };
@@ -103,8 +103,8 @@ export const adminUsersRouter = router({
         input.roleId,
         input.tier,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };
@@ -133,8 +133,8 @@ export const adminUsersRouter = router({
         input.roleId,
         input.limits,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };
@@ -154,8 +154,8 @@ export const adminUsersRouter = router({
       await removeTierOverride(
         input.roleId,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };
@@ -175,8 +175,8 @@ export const adminUsersRouter = router({
       await deleteUserAccount(
         input.userId,
         ctx.user.id,
-        ipAddress,
-        userAgent
+        undefined,
+        undefined
       );
 
       return { success: true };

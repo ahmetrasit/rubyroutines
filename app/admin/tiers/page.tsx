@@ -129,12 +129,23 @@ function TiersContent() {
                                 min="0"
                                 value={editedLimits?.[tier]?.parent?.[limitKey] ?? limitValue}
                                 onChange={(e) => {
-                                  const newLimits = editedLimits || JSON.parse(JSON.stringify(limits));
-                                  if (!newLimits[tier]) newLimits[tier] = JSON.parse(JSON.stringify(tierLimits));
-                                  if (!newLimits[tier].parent) newLimits[tier].parent = {};
                                   const parsedValue = parseInt(e.target.value);
-                                  newLimits[tier].parent[limitKey] = isNaN(parsedValue) ? 0 : parsedValue;
-                                  setEditedLimits(newLimits);
+                                  const value = isNaN(parsedValue) ? 0 : parsedValue;
+
+                                  setEditedLimits((prev: any) => {
+                                    const base = prev || JSON.parse(JSON.stringify(limits));
+                                    return {
+                                      ...base,
+                                      [tier]: {
+                                        ...base[tier],
+                                        parent: {
+                                          ...(base[tier]?.parent || {}),
+                                          [limitKey]: value,
+                                        },
+                                        teacher: base[tier]?.teacher || {},
+                                      },
+                                    };
+                                  });
                                 }}
                                 className="mt-1"
                               />
@@ -168,12 +179,23 @@ function TiersContent() {
                                 min="0"
                                 value={editedLimits?.[tier]?.teacher?.[limitKey] ?? limitValue}
                                 onChange={(e) => {
-                                  const newLimits = editedLimits || JSON.parse(JSON.stringify(limits));
-                                  if (!newLimits[tier]) newLimits[tier] = JSON.parse(JSON.stringify(tierLimits));
-                                  if (!newLimits[tier].teacher) newLimits[tier].teacher = {};
                                   const parsedValue = parseInt(e.target.value);
-                                  newLimits[tier].teacher[limitKey] = isNaN(parsedValue) ? 0 : parsedValue;
-                                  setEditedLimits(newLimits);
+                                  const value = isNaN(parsedValue) ? 0 : parsedValue;
+
+                                  setEditedLimits((prev: any) => {
+                                    const base = prev || JSON.parse(JSON.stringify(limits));
+                                    return {
+                                      ...base,
+                                      [tier]: {
+                                        ...base[tier],
+                                        parent: base[tier]?.parent || {},
+                                        teacher: {
+                                          ...(base[tier]?.teacher || {}),
+                                          [limitKey]: value,
+                                        },
+                                      },
+                                    };
+                                  });
                                 }}
                                 className="mt-1"
                               />
@@ -226,10 +248,13 @@ function TiersContent() {
                       step="100"
                       value={editedPrices?.[tier] ?? price}
                       onChange={(e) => {
-                        const newPrices = editedPrices || { ...prices };
                         const parsedValue = parseInt(e.target.value);
-                        newPrices[tier] = isNaN(parsedValue) ? 0 : parsedValue;
-                        setEditedPrices(newPrices);
+                        const value = isNaN(parsedValue) ? 0 : parsedValue;
+
+                        setEditedPrices((prev: any) => ({
+                          ...(prev || prices),
+                          [tier]: value,
+                        }));
                       }}
                       className="w-40"
                     />

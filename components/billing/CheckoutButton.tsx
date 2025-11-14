@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/toast';
 
 interface CheckoutButtonProps {
   roleId: string;
-  tier: 'BASIC' | 'PREMIUM' | 'SCHOOL';
+  tier: 'BRONZE' | 'GOLD' | 'PRO';
   label?: string;
   className?: string;
   variant?: 'default' | 'outline' | 'ghost';

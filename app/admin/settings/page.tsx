@@ -1,6 +1,7 @@
 'use client';
 
 import { AdminGuard } from '@/components/admin/AdminGuard';
+import { ModeSwitcher } from '@/components/mode-switcher';
 import { trpc } from '@/lib/trpc/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/button';
 export default function AdminSettingsPage() {
   return (
     <AdminGuard>
+      <ModeSwitcher currentMode="admin" />
       <SettingsContent />
     </AdminGuard>
   );

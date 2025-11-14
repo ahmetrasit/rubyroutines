@@ -91,9 +91,9 @@ enum RoleType {
 
 enum Tier {
   FREE
-  BASIC
-  PREMIUM
-  SCHOOL
+  BRONZE
+  GOLD
+  PRO
 }
 
 // ============================================================================

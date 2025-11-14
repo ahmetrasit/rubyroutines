@@ -15,17 +15,17 @@ const TIER_CONFIG = {
     color: 'bg-gray-100 text-gray-800 border-gray-300',
     icon: Gift,
   },
-  BASIC: {
+  BRONZE: {
     label: 'Basic',
     color: 'bg-blue-100 text-blue-800 border-blue-300',
     icon: Star,
   },
-  PREMIUM: {
+  GOLD: {
     label: 'Premium',
     color: 'bg-purple-100 text-purple-800 border-purple-300',
     icon: Crown,
   },
-  SCHOOL: {
+  PRO: {
     label: 'School',
     color: 'bg-green-100 text-green-800 border-green-300',
     icon: Building,
