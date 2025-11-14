@@ -5,17 +5,31 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
+  const error = requestUrl.searchParams.get('error');
+  const error_description = requestUrl.searchParams.get('error_description');
 
   // Get the host from the request headers (this will be the actual IP or localhost)
   const host = request.headers.get('host');
-  const protocol = requestUrl.protocol;
-  const redirectBase = host ? `${protocol}//${host}` : requestUrl.origin;
+  const protocol = process.env.NODE_ENV === 'production' ? 'https:' : 'http:';
+  const redirectBase = `${protocol}//${host || 'localhost:3000'}`;
+
+  // Handle OAuth errors
+  if (error) {
+    console.error('OAuth error:', error, error_description);
+    return NextResponse.redirect(`${redirectBase}/login?error=${encodeURIComponent(error_description || error)}`);
+  }
 
   if (code) {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error && data.user) {
+      if (error) {
+        console.error('Error exchanging code for session:', error);
+        return NextResponse.redirect(`${redirectBase}/login?error=auth_failed`);
+      }
+
+      if (!error && data.user) {
       // Check if user exists by email with different ID
       const existingUserByEmail = await prisma.user.findUnique({
         where: { email: data.user.email! },
@@ -157,6 +171,10 @@ export async function GET(request: Request) {
           }
         }
       }
+      }
+    } catch (err) {
+      console.error('Error in OAuth callback:', err);
+      return NextResponse.redirect(`${redirectBase}/login?error=callback_error`);
     }
   }
 
