@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { router } from '../init';
-import { adminProcedure } from '../middleware/auth';
+import { router, adminProcedure } from '../init';
 import {
   getAllSettings,
   getSettingsByCategory,

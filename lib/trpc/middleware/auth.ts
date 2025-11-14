@@ -1,5 +1,4 @@
 import { TRPCError } from '@trpc/server';
-import { protectedProcedure } from '../init';
 
 /**
  * Verify that the authenticated user owns the specified role
@@ -172,26 +171,6 @@ export async function verifyGoalOwnership(
 }
 
 /**
- * Middleware that automatically checks role ownership
- * Usage: .input(z.object({ roleId: z.string().cuid(), ... }))
- */
-export const authorizedProcedure = protectedProcedure.use(async (opts) => {
-  const { ctx, input } = opts;
-
-  // Check if input has roleId
-  if (input && typeof input === 'object' && 'roleId' in input) {
-    await verifyRoleOwnership(ctx.user.id, (input as any).roleId, ctx.prisma);
-  }
-
-  return opts.next({
-    ctx: {
-      ...ctx,
-      user: ctx.user,
-    },
-  });
-});
-
-/**
  * Verify that the user is an admin
  */
 export async function verifyAdminStatus(
@@ -212,21 +191,3 @@ export async function verifyAdminStatus(
 
   return true;
 }
-
-/**
- * Admin-only procedure
- * Only allows requests from users with isAdmin = true
- */
-export const adminProcedure = protectedProcedure.use(async (opts) => {
-  const { ctx } = opts;
-
-  await verifyAdminStatus(ctx.user.id, ctx.prisma);
-
-  return opts.next({
-    ctx: {
-      ...ctx,
-      user: ctx.user,
-      isAdmin: true,
-    },
-  });
-});
