@@ -76,7 +76,7 @@ export default function ClassroomDetailPage() {
             </div>
           </div>
 
-          {classroom.description && (
+          {classroom.description && classroom.name !== 'Teacher-Only' && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg">
               <p className="text-gray-700">{classroom.description}</p>
             </div>

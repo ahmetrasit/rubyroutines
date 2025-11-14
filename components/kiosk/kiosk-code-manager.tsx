@@ -15,8 +15,9 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const hasAttemptedGeneration = useRef(false);
+  const currentRoleId = useRef(roleId);
 
-  const { data: codes, isLoading, error } = trpc.kiosk.listCodes.useQuery(
+  const { data: codes, isLoading, error, refetch } = trpc.kiosk.listCodes.useQuery(
     { roleId },
     {
       enabled: !!roleId && roleId.length > 0,
@@ -25,15 +26,15 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
   );
 
   const generateMutation = trpc.kiosk.generateCode.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Refetch immediately to update UI
+      await refetch();
       toast({
         title: 'Success',
         description: 'New kiosk code generated',
         variant: 'success',
       });
-      utils.kiosk.listCodes.invalidate();
       setIsRevealed(true);
-      hasAttemptedGeneration.current = false; // Reset to allow future auto-generations
     },
     onError: (error) => {
       console.error('Failed to generate kiosk code:', error);
@@ -45,6 +46,14 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
       hasAttemptedGeneration.current = false; // Reset on error to allow retry
     },
   });
+
+  // Reset generation flag when roleId changes
+  useEffect(() => {
+    if (currentRoleId.current !== roleId) {
+      currentRoleId.current = roleId;
+      hasAttemptedGeneration.current = false;
+    }
+  }, [roleId]);
 
   // Auto-generate default code if none exists
   useEffect(() => {
@@ -62,7 +71,7 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
       hasAttemptedGeneration.current = true;
       generateMutation.mutate({ roleId, expiresInHours: 168 }); // 1 week expiration (max allowed)
     }
-  }, [isLoading, error, roleId, codes, generateMutation]);
+  }, [isLoading, error, roleId, codes?.length, generateMutation.isPending]);
 
   const handleGenerateNew = () => {
     if (confirm('Are you sure you want to generate a new code? The current code will be revoked.')) {
@@ -77,8 +86,8 @@ export function KioskCodeManager({ roleId }: KioskCodeManagerProps) {
   };
 
   const revokeMutation = trpc.kiosk.revokeCode.useMutation({
-    onSuccess: () => {
-      utils.kiosk.listCodes.invalidate();
+    onSuccess: async () => {
+      await refetch();
     },
   });
 

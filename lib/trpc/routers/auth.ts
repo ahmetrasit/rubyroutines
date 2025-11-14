@@ -180,7 +180,6 @@ export const authRouter = router({
             data: {
               roleId: teacherRole.id,
               name: 'Teacher-Only',
-              description: 'For teachers and co-teachers only',
               type: 'CLASSROOM',
               isClassroom: true,
               status: 'ACTIVE',
@@ -285,7 +284,6 @@ export const authRouter = router({
             data: {
               roleId: teacherRole.id,
               name: 'Teacher-Only',
-              description: 'For teachers and co-teachers only',
               type: 'CLASSROOM',
               isClassroom: true,
               status: 'ACTIVE',
@@ -467,7 +465,6 @@ export const authRouter = router({
           data: {
             roleId: teacherRole.id,
             name: 'Teacher-Only',
-            description: 'For teachers and co-teachers only',
             type: 'CLASSROOM',
             isClassroom: true,
             status: 'ACTIVE',

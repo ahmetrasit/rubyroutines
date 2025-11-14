@@ -86,7 +86,7 @@ export function GroupCard({ group, onSelect, hideSubtitle = false }: GroupCardPr
           </div>
         </div>
 
-        {group.description && (
+        {group.description && group.name !== 'Teacher-Only' && (
           <p className="text-sm text-gray-600 mb-4 line-clamp-2">{group.description}</p>
         )}
 

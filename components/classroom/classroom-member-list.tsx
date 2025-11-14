@@ -86,34 +86,36 @@ export function ClassroomMemberList({ classroomId, roleId, onSelectPerson }: Cla
         )}
       </div>
 
-      {/* Row 2: Classroom Kiosk Code - Collapsible */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <button
-          onClick={() => setKioskCollapsed(!kioskCollapsed)}
-          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🔐</span>
+      {/* Row 2: Classroom Kiosk Code - Collapsible (hidden for Teacher-Only classroom) */}
+      {!isTeacherOnlyClassroom && (
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setKioskCollapsed(!kioskCollapsed)}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <span className="text-2xl">🔐</span>
+              </div>
+              <div className="text-left">
+                <h3 className="font-semibold text-gray-900">Classroom Kiosk Code</h3>
+                <p className="text-sm text-gray-500">for all students in one screen</p>
+              </div>
             </div>
-            <div className="text-left">
-              <h3 className="font-semibold text-gray-900">Classroom Kiosk Code</h3>
-              <p className="text-sm text-gray-500">for all students in one screen</p>
-            </div>
-          </div>
-          {kioskCollapsed ? (
-            <ChevronDown className="h-5 w-5 text-gray-400" />
-          ) : (
-            <ChevronUp className="h-5 w-5 text-gray-400" />
-          )}
-        </button>
+            {kioskCollapsed ? (
+              <ChevronDown className="h-5 w-5 text-gray-400" />
+            ) : (
+              <ChevronUp className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
 
-        {!kioskCollapsed && (
-          <div className="px-6 pb-6 border-t border-gray-100">
-            <KioskCodeManager roleId={roleId} />
-          </div>
-        )}
-      </div>
+          {!kioskCollapsed && (
+            <div className="px-6 pb-6 border-t border-gray-100">
+              <KioskCodeManager roleId={roleId} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Row 3: Teachers and Co-Teachers */}
       <div className="space-y-4">
