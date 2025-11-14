@@ -33,20 +33,30 @@ export async function GET(request: Request) {
         },
       });
 
-      // Auto-create PARENT role for first-time OAuth users
+      // Auto-create both PARENT and TEACHER roles for first-time OAuth users
       if (user.roles.length === 0) {
-        const newRole = await prisma.role.create({
+        const parentRole = await prisma.role.create({
           data: {
             userId: user.id,
             type: 'PARENT',
             tier: 'FREE',
+            color: '#9333ea', // Purple for parent mode
           },
         });
 
-        // Auto-create "Me" person for new role
+        await prisma.role.create({
+          data: {
+            userId: user.id,
+            type: 'TEACHER',
+            tier: 'FREE',
+            color: '#3b82f6', // Blue for teacher mode
+          },
+        });
+
+        // Auto-create "Me" person for parent role
         await prisma.person.create({
           data: {
-            roleId: newRole.id,
+            roleId: parentRole.id,
             name: 'Me',
             avatar: JSON.stringify({
               color: '#BAE1FF',

@@ -72,10 +72,18 @@ export const authRouter = router({
             email: input.email,
             name: input.name,
             roles: {
-              create: {
-                type: 'PARENT',
-                tier: 'FREE',
-              },
+              create: [
+                {
+                  type: 'PARENT',
+                  tier: 'FREE',
+                  color: '#9333ea', // Purple for parent mode
+                },
+                {
+                  type: 'TEACHER',
+                  tier: 'FREE',
+                  color: '#3b82f6', // Blue for teacher mode
+                },
+              ],
             },
           },
           include: {
@@ -84,8 +92,8 @@ export const authRouter = router({
         });
 
         // Auto-create "Me" person for the parent role
-        if (newUser.roles.length > 0) {
-          const parentRole = newUser.roles[0];
+        const parentRole = newUser.roles.find((role) => role.type === 'PARENT');
+        if (parentRole) {
           await ctx.prisma.person.create({
             data: {
               roleId: parentRole.id,
@@ -99,28 +107,38 @@ export const authRouter = router({
           });
         }
       } catch (dbError) {
-        // User already exists in DB, ensure they have a role
+        // User already exists in DB, ensure they have roles
         logger.debug('User already exists in database', { userId: data.user.id, error: dbError });
 
-        // Check if user has any roles, create PARENT role if not
+        // Check if user has any roles, create both if not
         const existingUser = await ctx.prisma.user.findUnique({
           where: { id: data.user.id },
           include: { roles: true },
         });
 
         if (existingUser && existingUser.roles.length === 0) {
-          const newRole = await ctx.prisma.role.create({
+          const parentRole = await ctx.prisma.role.create({
             data: {
               userId: data.user.id,
               type: 'PARENT',
               tier: 'FREE',
+              color: '#9333ea', // Purple for parent mode
+            },
+          });
+
+          await ctx.prisma.role.create({
+            data: {
+              userId: data.user.id,
+              type: 'TEACHER',
+              tier: 'FREE',
+              color: '#3b82f6', // Blue for teacher mode
             },
           });
 
           // Auto-create "Me" person
           await ctx.prisma.person.create({
             data: {
-              roleId: newRole.id,
+              roleId: parentRole.id,
               name: 'Me',
               avatar: JSON.stringify({
                 color: '#BAE1FF',
@@ -216,20 +234,30 @@ export const authRouter = router({
         });
       }
 
-      // Auto-create PARENT role for first-time users
+      // Auto-create both PARENT and TEACHER roles for first-time users
       if (user.roles.length === 0) {
-        const newRole = await ctx.prisma.role.create({
+        const parentRole = await ctx.prisma.role.create({
           data: {
             userId: user.id,
             type: 'PARENT',
             tier: 'FREE',
+            color: '#9333ea', // Purple for parent mode
           },
         });
 
-        // Auto-create "Me" person for new role
+        await ctx.prisma.role.create({
+          data: {
+            userId: user.id,
+            type: 'TEACHER',
+            tier: 'FREE',
+            color: '#3b82f6', // Blue for teacher mode
+          },
+        });
+
+        // Auto-create "Me" person for parent role
         await ctx.prisma.person.create({
           data: {
-            roleId: newRole.id,
+            roleId: parentRole.id,
             name: 'Me',
             avatar: JSON.stringify({
               color: '#BAE1FF',

@@ -49,6 +49,7 @@ model Role {
   userId               String
   type                 RoleType
   tier                 Tier     @default(FREE)
+  color                String?  // UI color for this role mode (hex code)
   tierOverride         Json?    // Admin-set tier limits override
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique

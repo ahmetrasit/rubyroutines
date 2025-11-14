@@ -8,6 +8,18 @@ import {
   deleteSetting,
   SettingCategory,
 } from '@/lib/services/admin/system-settings.service';
+import { RoleType } from '@/lib/types/prisma-enums';
+
+// Helper function to get default colors for role types
+function getDefaultColor(roleType: string): string {
+  const defaultColors: Record<string, string> = {
+    PARENT: '#9333ea', // Purple
+    TEACHER: '#3b82f6', // Blue
+    PRINCIPAL: '#f59e0b', // Amber
+    SUPPORT: '#10b981', // Green
+  };
+  return defaultColors[roleType] || '#6b7280'; // Gray as fallback
+}
 
 export const adminSettingsRouter = router({
   // Get all settings
@@ -81,6 +93,50 @@ export const adminSettingsRouter = router({
         ipAddress,
         userAgent
       );
+
+      return { success: true };
+    }),
+
+  // Get role colors
+  getRoleColors: adminProcedure.query(async ({ ctx }) => {
+    const roles = await ctx.prisma.role.findMany({
+      select: {
+        type: true,
+        color: true,
+      },
+      distinct: ['type'],
+    });
+
+    // Create a map of role types to their colors
+    const roleColors = roles.reduce((acc, role) => {
+      acc[role.type] = role.color || getDefaultColor(role.type);
+      return acc;
+    }, {} as Record<string, string>);
+
+    // Ensure all role types are present
+    Object.values(RoleType).forEach((type) => {
+      if (!roleColors[type]) {
+        roleColors[type] = getDefaultColor(type);
+      }
+    });
+
+    return roleColors;
+  }),
+
+  // Update role color
+  updateRoleColor: adminProcedure
+    .input(
+      z.object({
+        roleType: z.nativeEnum(RoleType),
+        color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Invalid hex color'),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Update all roles of this type with the new color
+      await ctx.prisma.role.updateMany({
+        where: { type: input.roleType },
+        data: { color: input.color },
+      });
 
       return { success: true };
     }),
