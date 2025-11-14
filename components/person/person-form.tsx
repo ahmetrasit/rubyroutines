@@ -11,9 +11,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { PASTEL_COLORS, COMMON_EMOJIS, parseAvatar, serializeAvatar } from '@/lib/utils/avatar';
 import { useCreateMutation, useUpdateMutation } from '@/lib/hooks';
+import { EntityStatus } from '@/lib/types/prisma-enums';
+import { useToast } from '@/components/ui/toast';
 import type { Person } from '@/lib/types/database';
 
 interface PersonFormProps {
@@ -24,6 +26,7 @@ interface PersonFormProps {
 }
 
 export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormProps) {
+  const [activeTab, setActiveTab] = useState<'create' | 'restore'>('create');
   // Parse existing avatar data if editing
   const initialAvatar = parseAvatar(person?.avatar, person?.name);
   const initialColor = initialAvatar.color;
@@ -35,6 +38,17 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
   const [emojiSearch, setEmojiSearch] = useState('');
 
   const utils = trpc.useUtils();
+  const { toast } = useToast();
+
+  // Query for inactive persons (only when roleId is provided and not editing)
+  const { data: allPersons } = trpc.person.list.useQuery(
+    { roleId: roleId!, includeInactive: true },
+    { enabled: !!roleId && !person }
+  );
+
+  const inactivePersons = useMemo(() => {
+    return allPersons?.filter((p: any) => p.status === EntityStatus.INACTIVE) || [];
+  }, [allPersons]);
 
   const filteredEmojis = useMemo(() => {
     if (!emojiSearch) return COMMON_EMOJIS;
@@ -48,6 +62,39 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
   }, [emojiSearch]);
 
   const addMemberMutation = trpc.group.addMember.useMutation();
+
+  const restoreMutation = trpc.person.restore.useMutation({
+    onSuccess: async (restoredPerson) => {
+      // If classroomId is provided, add the person to the classroom
+      if (classroomId && restoredPerson?.id) {
+        try {
+          await addMemberMutation.mutateAsync({
+            groupId: classroomId,
+            personId: restoredPerson.id,
+          });
+          utils.group.getById.invalidate();
+          utils.group.list.invalidate();
+        } catch (error) {
+          console.error('Failed to add restored person to classroom:', error);
+        }
+      }
+
+      toast({
+        title: 'Success',
+        description: `${restoredPerson.name} has been restored`,
+        variant: 'success',
+      });
+      utils.person.list.invalidate();
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   const createMutationBase = trpc.person.create.useMutation({
     onSuccess: async (newPerson) => {
@@ -117,10 +164,41 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{person ? 'Edit Person' : 'Add New Child'}</DialogTitle>
+          <DialogTitle>{person ? 'Edit Person' : 'Add New Member'}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Tabs - only show when adding new (not editing) and has inactive persons */}
+        {!person && inactivePersons.length > 0 && (
+          <div className="flex gap-2 border-b">
+            <button
+              type="button"
+              onClick={() => setActiveTab('create')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeTab === 'create'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Create New
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('restore')}
+              className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+                activeTab === 'restore'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <RotateCcw className="h-4 w-4" />
+              Restore ({inactivePersons.length})
+            </button>
+          </div>
+        )}
+
+        {/* Create New Tab */}
+        {activeTab === 'create' && (
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name Field */}
           <div>
             <Label htmlFor="name">Name *</Label>
@@ -231,6 +309,54 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
             </Button>
           </div>
         </form>
+        )}
+
+        {/* Restore Tab */}
+        {activeTab === 'restore' && (
+          <div className="space-y-4">
+            {inactivePersons.length === 0 ? (
+              <p className="text-center py-8 text-gray-500">No archived persons to restore</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {inactivePersons.map((inactivePerson: any) => {
+                  const avatar = parseAvatar(inactivePerson.avatar, inactivePerson.name);
+                  return (
+                    <div
+                      key={inactivePerson.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
+                          style={{ backgroundColor: avatar.color }}
+                        >
+                          {avatar.emoji}
+                        </div>
+                        <div>
+                          <p className="font-medium">{inactivePerson.name}</p>
+                          {inactivePerson.archivedAt && (
+                            <p className="text-sm text-gray-500">
+                              Archived {new Date(inactivePerson.archivedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => restoreMutation.mutate({ id: inactivePerson.id })}
+                        disabled={restoreMutation.isPending}
+                        className="gap-2"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Restore
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
