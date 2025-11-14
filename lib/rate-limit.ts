@@ -94,11 +94,11 @@ const rateLimiter = new RateLimiter();
 
 // Rate limit configurations
 export const RATE_LIMITS = {
-  // Auth endpoints: 5 attempts per 15 minutes
-  AUTH: { limit: 5, windowMs: 15 * 60 * 1000 },
+  // Auth endpoints: 5 attempts per 2 minutes (reduced for better UX)
+  AUTH: { limit: 5, windowMs: 2 * 60 * 1000 },
 
-  // Verification code: 3 attempts per hour
-  VERIFICATION: { limit: 3, windowMs: 60 * 60 * 1000 },
+  // Verification code: 5 attempts per 5 minutes (increased attempts, reduced window)
+  VERIFICATION: { limit: 5, windowMs: 5 * 60 * 1000 },
 
   // Kiosk code validation: 10 attempts per hour
   KIOSK: { limit: 10, windowMs: 60 * 60 * 1000 },

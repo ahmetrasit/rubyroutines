@@ -65,23 +65,25 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protected routes
-  const protectedRoutes = ['/dashboard', '/parent', '/teacher'];
+  const protectedRoutes = ['/dashboard', '/parent', '/teacher', '/admin'];
   const authRoutes = ['/login', '/signup'];
+  const verifyRoute = '/verify';
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
   const isAuthRoute = authRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
+  const isVerifyRoute = request.nextUrl.pathname.startsWith(verifyRoute);
 
   // Redirect to login if accessing protected route without auth
   if (isProtectedRoute && !user) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirect to dashboard if accessing auth routes while authenticated
+  // Redirect authenticated users away from auth routes
   if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/parent', request.url));
   }
 
   return response;

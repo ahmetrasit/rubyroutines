@@ -6,71 +6,121 @@ import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 
-export function KioskCodeManager() {
+interface KioskCodeManagerProps {
+  roleId: string;
+  userName: string; // User's first name
+  classroomName?: string; // Optional classroom name for teacher mode
+}
+
+export function KioskCodeManager({ roleId, userName, classroomName }: KioskCodeManagerProps) {
   const [isRevealed, setIsRevealed] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const hasAttemptedGeneration = useRef(false);
+  const currentRoleId = useRef(roleId);
 
-  // Get current role ID
-  const { data: session } = trpc.auth.getSession.useQuery();
-  const roleId = session?.user?.roles?.[0]?.id || '';
-
-  const { data: codes, isLoading } = trpc.kiosk.listCodes.useQuery(
+  const { data: codes, isLoading, error, refetch } = trpc.kiosk.listCodes.useQuery(
     { roleId },
-    { enabled: !!roleId }
+    {
+      enabled: !!roleId && roleId.length > 0,
+      retry: false,
+    }
   );
 
   const generateMutation = trpc.kiosk.generateCode.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Refetch immediately to update UI
+      await refetch();
       toast({
         title: 'Success',
         description: 'New kiosk code generated',
         variant: 'success',
       });
-      utils.kiosk.listCodes.invalidate();
       setIsRevealed(true);
     },
     onError: (error) => {
+      console.error('Failed to generate kiosk code:', error.message);
       toast({
         title: 'Error',
-        description: error.message,
+        description: error.message || 'Failed to generate kiosk code',
         variant: 'destructive',
       });
+      hasAttemptedGeneration.current = false; // Reset on error to allow retry
     },
   });
 
+  // Reset generation flag when roleId changes
+  useEffect(() => {
+    if (currentRoleId.current !== roleId) {
+      currentRoleId.current = roleId;
+      hasAttemptedGeneration.current = false;
+    }
+  }, [roleId]);
+
   // Auto-generate default code if none exists
   useEffect(() => {
-    if (!isLoading && roleId && codes && codes.length === 0 && !hasAttemptedGeneration.current && !generateMutation.isPending) {
+    if (
+      !isLoading &&
+      !error &&
+      roleId &&
+      roleId.length > 0 &&
+      codes &&
+      codes.length === 0 &&
+      !hasAttemptedGeneration.current &&
+      !generateMutation.isPending
+    ) {
       hasAttemptedGeneration.current = true;
-      generateMutation.mutate({ roleId, expiresInHours: 168 }); // 1 week expiration (max allowed)
+      generateMutation.mutate({
+        roleId,
+        userName,
+        classroomName,
+        wordCount: '3',
+        expiresInHours: 168
+      });
     }
-  }, [isLoading, roleId, codes, generateMutation]);
+  }, [isLoading, error, roleId, codes?.length, generateMutation.isPending, userName, classroomName]);
 
   const handleGenerateNew = () => {
     if (confirm('Are you sure you want to generate a new code? The current code will be revoked.')) {
-      // Revoke all existing codes first
-      const activeCode = activeCodes[0];
-      if (activeCode) {
-        revokeMutation.mutate({ codeId: activeCode.id });
+      // Revoke existing code first if it exists
+      if (currentCode) {
+        revokeMutation.mutate({ codeId: currentCode.id });
       }
       // Generate new code with 1 week expiration (max allowed)
-      generateMutation.mutate({ roleId, expiresInHours: 168 });
+      generateMutation.mutate({
+        roleId,
+        userName,
+        classroomName,
+        wordCount: '3',
+        expiresInHours: 168
+      });
     }
   };
 
   const revokeMutation = trpc.kiosk.revokeCode.useMutation({
-    onSuccess: () => {
-      utils.kiosk.listCodes.invalidate();
+    onSuccess: async () => {
+      await refetch();
     },
   });
 
-  const activeCodes = codes?.filter((c: any) => c.status === 'ACTIVE') || [];
-  const currentCode = activeCodes[0];
+  // getActiveCodesForRole already filters for ACTIVE codes server-side
+  // The returned KioskCode objects have isActive: boolean, not status field
+  const currentCode = codes?.[0]; // Take the first code (most recent)
+
+  if (!roleId || roleId.length === 0) {
+    return <div className="text-center py-4 text-gray-500">Loading role...</div>;
+  }
 
   if (isLoading) {
     return <div className="text-center py-4 text-gray-500">Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-4 text-red-500">
+        Error loading kiosk codes: {error.message}
+      </div>
+    );
   }
 
   return (

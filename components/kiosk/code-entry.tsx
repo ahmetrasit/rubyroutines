@@ -39,8 +39,8 @@ export function CodeEntry({ onSubmit, isLoading = false, error }: CodeEntryProps
               placeholder="Enter code"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              className="text-center text-2xl font-bold h-16 tracking-widest"
-              maxLength={10}
+              className="text-center text-lg font-bold h-16"
+              maxLength={99}
               autoFocus
               disabled={isLoading}
             />

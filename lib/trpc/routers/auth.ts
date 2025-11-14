@@ -34,7 +34,8 @@ export const authRouter = router({
           data: {
             name: input.name,
           },
-          emailRedirectTo: undefined, // Disable email confirmation for local development
+          // Supabase will send email confirmation automatically
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
         },
       });
 
@@ -61,6 +62,26 @@ export const authRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to create account. Please try again.',
+        });
+      }
+
+      // Check if user exists by email with different ID (seed data or old signup scenario)
+      const existingUserByEmail = await ctx.prisma.user.findUnique({
+        where: { email: input.email },
+        include: { roles: true },
+      });
+
+      if (existingUserByEmail && existingUserByEmail.id !== data.user.id) {
+        // User exists with different ID - this shouldn't happen in normal flow
+        // Delete the old user and create with new Supabase ID
+        logger.debug('User exists with different ID, migrating to new Supabase ID', {
+          oldId: existingUserByEmail.id,
+          newId: data.user.id,
+          email: input.email,
+        });
+
+        await ctx.prisma.user.delete({
+          where: { id: existingUserByEmail.id },
         });
       }
 
@@ -159,7 +180,6 @@ export const authRouter = router({
             data: {
               roleId: teacherRole.id,
               name: 'Teacher-Only',
-              description: 'For teachers and co-teachers only',
               type: 'CLASSROOM',
               isClassroom: true,
               status: 'ACTIVE',
@@ -264,7 +284,6 @@ export const authRouter = router({
             data: {
               roleId: teacherRole.id,
               name: 'Teacher-Only',
-              description: 'For teachers and co-teachers only',
               type: 'CLASSROOM',
               isClassroom: true,
               status: 'ACTIVE',
@@ -445,8 +464,7 @@ export const authRouter = router({
         await ctx.prisma.group.create({
           data: {
             roleId: teacherRole.id,
-            name: 'My Classroom',
-            description: 'Default classroom',
+            name: 'Teacher-Only',
             type: 'CLASSROOM',
             isClassroom: true,
             status: 'ACTIVE',
@@ -582,8 +600,8 @@ export const authRouter = router({
               await ctx.prisma.group.create({
                 data: {
                   roleId: teacherRole.id,
-                  name: 'My Classroom',
-                  description: 'Default classroom',
+                  name: 'Teacher-Only',
+                  description: 'For teachers and co-teachers only',
                   type: 'CLASSROOM',
                   isClassroom: true,
                   status: 'ACTIVE',
@@ -647,7 +665,7 @@ export const authRouter = router({
         CodeType.EMAIL_VERIFICATION
       );
 
-      // TODO: Send email with code using Resend
+      // TODO: Send email with code using your email service
       // For development only - DO NOT log codes in production
       if (process.env.NODE_ENV === 'development') {
         logger.debug('Verification code generated', { email: input.email, code });
@@ -675,10 +693,17 @@ export const authRouter = router({
         });
       }
 
-      // Update user's emailVerified status
+      // Update user's emailVerified status in database
       await ctx.prisma.user.update({
         where: { id: input.userId },
         data: { emailVerified: new Date() },
+      });
+
+      // Update Supabase user metadata for middleware checks (Edge Runtime compatible)
+      await ctx.supabase.auth.updateUser({
+        data: {
+          emailVerified: true,
+        },
       });
 
       // Log email verification
@@ -713,7 +738,7 @@ export const authRouter = router({
         CodeType.EMAIL_VERIFICATION
       );
 
-      // TODO: Send email with code using Resend
+      // TODO: Send email with code using your email service
       // For development only - DO NOT log codes in production
       if (process.env.NODE_ENV === 'development') {
         logger.debug('Verification code resent', { email: input.email, code });

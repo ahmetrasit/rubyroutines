@@ -80,7 +80,11 @@ export default function ParentDashboard() {
             </div>
 
             <div className="mb-8">
-              <PersonList roleId={parentRole.id} onSelectPerson={handleSelectPerson} />
+              <PersonList
+                roleId={parentRole.id}
+                userName={session.user.name || 'User'}
+                onSelectPerson={handleSelectPerson}
+              />
             </div>
           </div>
         </div>

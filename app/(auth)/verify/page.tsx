@@ -1,166 +1,78 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { trpc } from '@/lib/trpc/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 export default function VerifyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [code, setCode] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [canResend, setCanResend] = useState(true);
-  const [resendCooldown, setResendCooldown] = useState(0);
 
-  const userId = searchParams.get('userId');
   const email = searchParams.get('email');
 
   useEffect(() => {
-    if (!userId || !email) {
+    if (!email) {
       router.push('/signup');
     }
-  }, [userId, email, router]);
+  }, [email, router]);
 
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => {
-        setResendCooldown(resendCooldown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else {
-      setCanResend(true);
-      return undefined;
-    }
-  }, [resendCooldown]);
-
-  const verifyMutation = trpc.auth.verifyEmailCode.useMutation({
-    onSuccess: () => {
-      setSuccess('Email verified successfully! Redirecting...');
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
-    },
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
-  const resendMutation = trpc.auth.resendVerificationCode.useMutation({
-    onSuccess: () => {
-      setSuccess('Verification code resent! Please check your email.');
-      setError('');
-      setResendCooldown(60);
-      setCanResend(false);
-    },
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!userId) {
-      setError('Invalid verification link');
-      return;
-    }
-
-    if (code.length !== 6) {
-      setError('Code must be 6 digits');
-      return;
-    }
-
-    verifyMutation.mutate({ userId, code });
-  };
-
-  const handleResend = () => {
-    if (!userId || !email || !canResend) return;
-
-    setError('');
-    setSuccess('');
-    resendMutation.mutate({ userId, email });
-  };
-
-  if (!userId || !email) {
+  if (!email) {
     return null;
   }
 
   return (
     <div>
       <div className="text-center">
-        <h1 className="text-3xl font-bold">Verify your email</h1>
+        <h1 className="text-3xl font-bold">Check your email</h1>
         <p className="mt-2 text-gray-600">
-          We sent a 6-digit code to <span className="font-medium">{email}</span>
+          We sent a verification link to <span className="font-medium">{email}</span>
         </p>
       </div>
 
-      <div className="mt-8">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="code">Verification Code</Label>
-            <Input
-              id="code"
-              type="text"
-              required
-              value={code}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 6);
-                setCode(val);
-              }}
-              placeholder="Enter 6-digit code"
-              className="mt-1 text-center text-2xl tracking-widest"
-              maxLength={6}
-              autoComplete="off"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Code expires in 15 minutes
-            </p>
-          </div>
-
-          {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-800">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
-              {success}
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={verifyMutation.isPending || code.length !== 6 || !!success}
-          >
-            {verifyMutation.isPending ? 'Verifying...' : 'Verify Email'}
-          </Button>
-        </form>
-
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600">
-            Didn&apos;t receive the code?{' '}
-            <Button
-              type="button"
-              variant="ghost"
-              className="p-0 h-auto font-normal text-blue-600 hover:text-blue-700"
-              onClick={handleResend}
-              disabled={!canResend || resendMutation.isPending}
+      <div className="mt-8 space-y-4">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+          <div className="flex items-start space-x-3">
+            <svg
+              className="h-6 w-6 flex-shrink-0 text-blue-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              {resendMutation.isPending
-                ? 'Sending...'
-                : resendCooldown > 0
-                ? `Resend in ${resendCooldown}s`
-                : 'Resend code'}
-            </Button>
-          </p>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-blue-900">
+                Verify your account through the verification link sent to you
+              </h3>
+              <p className="mt-2 text-sm text-blue-700">
+                Click the link in the email to verify your account and get started.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-md bg-gray-50 p-4">
+          <h4 className="text-sm font-medium text-gray-900 mb-2">
+            Didn&apos;t receive the email?
+          </h4>
+          <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
+            <li>Check your spam or junk folder</li>
+            <li>Make sure you entered the correct email address</li>
+            <li>Wait a few minutes for the email to arrive</li>
+          </ul>
+        </div>
+
+        <div className="text-center pt-4">
+          <a
+            href="/signup"
+            className="text-sm text-blue-600 hover:text-blue-700 underline"
+          >
+            Back to signup
+          </a>
         </div>
       </div>
     </div>

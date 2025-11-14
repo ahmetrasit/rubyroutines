@@ -12,10 +12,11 @@ import type { Person } from '@/lib/types/database';
 
 interface PersonListProps {
   roleId: string;
+  userName: string;
   onSelectPerson?: (person: Person) => void;
 }
 
-export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
+export function PersonList({ roleId, userName, onSelectPerson }: PersonListProps) {
   const [showForm, setShowForm] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
   const [kioskCollapsed, setKioskCollapsed] = useState(true); // Collapsed by default
@@ -69,7 +70,7 @@ export function PersonList({ roleId, onSelectPerson }: PersonListProps) {
 
         {!kioskCollapsed && (
           <div className="px-6 pb-6 border-t border-gray-100">
-            <KioskCodeManager />
+            <KioskCodeManager roleId={roleId} userName={userName} />
           </div>
         )}
       </div>
