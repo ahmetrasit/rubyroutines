@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BarChart3, DollarSign } from 'lucide-react';
 import Link from 'next/link';
@@ -122,7 +122,8 @@ function TiersContent() {
                             onChange={(e) => {
                               const newLimits = editedLimits || { ...limits };
                               if (!newLimits[tier]) newLimits[tier] = { ...tierLimits };
-                              newLimits[tier][limitKey] = parseInt(e.target.value);
+                              const parsedValue = parseInt(e.target.value);
+                              newLimits[tier][limitKey] = isNaN(parsedValue) ? 0 : parsedValue;
                               setEditedLimits(newLimits);
                             }}
                             className="mt-1"
@@ -174,7 +175,8 @@ function TiersContent() {
                       value={editedPrices?.[tier] ?? price}
                       onChange={(e) => {
                         const newPrices = editedPrices || { ...prices };
-                        newPrices[tier] = parseInt(e.target.value);
+                        const parsedValue = parseInt(e.target.value);
+                        newPrices[tier] = isNaN(parsedValue) ? 0 : parsedValue;
                         setEditedPrices(newPrices);
                       }}
                       className="w-40"
