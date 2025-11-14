@@ -50,6 +50,9 @@ export function ClassroomMemberList({ classroomId, roleId, onSelectPerson }: Cla
   const teachers = members.filter((person) => person.name === 'Me');
   const students = members.filter((person) => person.name !== 'Me');
 
+  // Check if this is the Teacher-Only classroom (should not allow adding students)
+  const isTeacherOnlyClassroom = classroom?.name === 'Teacher-Only';
+
   return (
     <div className="space-y-8">
       {/* Row 1: Invisible Routine List - Collapsible */}
@@ -147,19 +150,21 @@ export function ClassroomMemberList({ classroomId, roleId, onSelectPerson }: Cla
             <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
           ))}
 
-          {/* Add Student placeholder card */}
-          <button
-            onClick={() => setShowForm(true)}
-            className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-blue-400 hover:bg-blue-50/50 transition-all flex flex-col items-center justify-center min-h-[200px] group"
-          >
-            <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 transition-colors">
-              <Plus className="h-8 w-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
-            </div>
-            <span className="text-gray-600 group-hover:text-blue-600 font-medium transition-colors">
-              Add Student
-            </span>
-            <span className="text-sm text-gray-400 mt-1">add a student to this classroom</span>
-          </button>
+          {/* Add Student placeholder card - only show if not Teacher-Only classroom */}
+          {!isTeacherOnlyClassroom && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-blue-400 hover:bg-blue-50/50 transition-all flex flex-col items-center justify-center min-h-[200px] group"
+            >
+              <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 transition-colors">
+                <Plus className="h-8 w-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
+              </div>
+              <span className="text-gray-600 group-hover:text-blue-600 font-medium transition-colors">
+                Add Student
+              </span>
+              <span className="text-sm text-gray-400 mt-1">add a student to this classroom</span>
+            </button>
+          )}
         </div>
       </div>
 

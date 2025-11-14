@@ -35,7 +35,12 @@ export function GroupList({ roleId, roleType, onSelectGroup }: GroupListProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Existing classroom cards */}
         {groups && groups.map((group: any) => (
-          <GroupCard key={group.id} group={group} onSelect={onSelectGroup} />
+          <GroupCard
+            key={group.id}
+            group={group}
+            onSelect={onSelectGroup}
+            hideSubtitle={isTeacherMode}
+          />
         ))}
 
         {/* Add Classroom placeholder card */}

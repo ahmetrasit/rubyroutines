@@ -10,9 +10,10 @@ import { useToast } from '@/components/ui/toast';
 interface GroupCardProps {
   group: any;
   onSelect?: (group: any) => void;
+  hideSubtitle?: boolean;
 }
 
-export function GroupCard({ group, onSelect }: GroupCardProps) {
+export function GroupCard({ group, onSelect, hideSubtitle = false }: GroupCardProps) {
   const [showEdit, setShowEdit] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -52,9 +53,11 @@ export function GroupCard({ group, onSelect }: GroupCardProps) {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-xl text-gray-900 truncate">{group.name}</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              {group.type.charAt(0) + group.type.slice(1).toLowerCase()}
-            </p>
+            {!hideSubtitle && (
+              <p className="text-sm text-gray-600 mt-1">
+                {group.type.charAt(0) + group.type.slice(1).toLowerCase()}
+              </p>
+            )}
           </div>
 
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
