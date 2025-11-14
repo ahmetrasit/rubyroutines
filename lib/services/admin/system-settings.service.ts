@@ -164,39 +164,83 @@ export async function getTierLimits() {
   const setting = await getSetting('tier_limits');
 
   if (!setting) {
-    // Return default limits
+    // Return default limits with separate parent and teacher sections
     return {
       [Tier.FREE]: {
-        persons: 3,
-        groups: 0,
-        routines: 10,
-        tasksPerRoutine: 10,
-        goals: 3,
-        kioskCodes: 1,
+        parent: {
+          persons: 3,
+          maxCoParents: 0,
+          routines: 10,
+          tasksPerRoutine: 10,
+          goals: 3,
+          kioskCodes: 1,
+        },
+        teacher: {
+          classrooms: 1,
+          studentsPerClassroom: 5,
+          maxCoTeachers: 0,
+          routines: 10,
+          tasksPerRoutine: 10,
+          goals: 3,
+          kioskCodes: 1,
+        },
       },
       [Tier.BASIC]: {
-        persons: 10,
-        groups: 3,
-        routines: 50,
-        tasksPerRoutine: 20,
-        goals: 10,
-        kioskCodes: 5,
+        parent: {
+          persons: 10,
+          maxCoParents: 1,
+          routines: 50,
+          tasksPerRoutine: 20,
+          goals: 10,
+          kioskCodes: 5,
+        },
+        teacher: {
+          classrooms: 3,
+          studentsPerClassroom: 20,
+          maxCoTeachers: 2,
+          routines: 50,
+          tasksPerRoutine: 20,
+          goals: 10,
+          kioskCodes: 5,
+        },
       },
       [Tier.PREMIUM]: {
-        persons: 50,
-        groups: 10,
-        routines: 200,
-        tasksPerRoutine: 50,
-        goals: 50,
-        kioskCodes: 20,
+        parent: {
+          persons: 50,
+          maxCoParents: 3,
+          routines: 200,
+          tasksPerRoutine: 50,
+          goals: 50,
+          kioskCodes: 20,
+        },
+        teacher: {
+          classrooms: 10,
+          studentsPerClassroom: 50,
+          maxCoTeachers: 5,
+          routines: 200,
+          tasksPerRoutine: 50,
+          goals: 50,
+          kioskCodes: 20,
+        },
       },
       [Tier.SCHOOL]: {
-        persons: 500,
-        groups: 50,
-        routines: 1000,
-        tasksPerRoutine: 100,
-        goals: 200,
-        kioskCodes: 100,
+        parent: {
+          persons: 100,
+          maxCoParents: 5,
+          routines: 500,
+          tasksPerRoutine: 100,
+          goals: 200,
+          kioskCodes: 50,
+        },
+        teacher: {
+          classrooms: 50,
+          studentsPerClassroom: 100,
+          maxCoTeachers: 10,
+          routines: 1000,
+          tasksPerRoutine: 100,
+          goals: 200,
+          kioskCodes: 100,
+        },
       },
     };
   }
