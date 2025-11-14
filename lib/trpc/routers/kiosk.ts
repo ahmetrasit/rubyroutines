@@ -17,7 +17,7 @@ export const kioskRouter = router({
    */
   generateCode: authorizedProcedure
     .input(z.object({
-      roleId: z.string().cuid(),
+      roleId: z.string().uuid(),
       wordCount: z.enum(['2', '3']).optional(),
       expiresInHours: z.number().min(1).max(168).optional() // Max 1 week
     }))
@@ -45,7 +45,7 @@ export const kioskRouter = router({
    */
   listCodes: authorizedProcedure
     .input(z.object({
-      roleId: z.string().cuid()
+      roleId: z.string().uuid()
     }))
     .query(async ({ ctx, input }) => {
       // Verify user owns this role
