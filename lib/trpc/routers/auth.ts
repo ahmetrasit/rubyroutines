@@ -65,6 +65,26 @@ export const authRouter = router({
         });
       }
 
+      // Check if user exists by email with different ID (seed data or old signup scenario)
+      const existingUserByEmail = await ctx.prisma.user.findUnique({
+        where: { email: input.email },
+        include: { roles: true },
+      });
+
+      if (existingUserByEmail && existingUserByEmail.id !== data.user.id) {
+        // User exists with different ID - this shouldn't happen in normal flow
+        // Delete the old user and create with new Supabase ID
+        logger.debug('User exists with different ID, migrating to new Supabase ID', {
+          oldId: existingUserByEmail.id,
+          newId: data.user.id,
+          email: input.email,
+        });
+
+        await ctx.prisma.user.delete({
+          where: { id: existingUserByEmail.id },
+        });
+      }
+
       // Create user in database
       try {
         const newUser = await ctx.prisma.user.create({
