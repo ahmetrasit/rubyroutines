@@ -165,6 +165,24 @@ export async function GET(request: Request) {
             },
           },
         });
+
+        // Create default classroom group for teacher
+        const defaultClassroom = await prisma.group.create({
+          data: {
+            roleId: teacherRole.id,
+            name: 'My Classroom',
+            description: 'Default classroom',
+            type: 'CLASSROOM',
+            isClassroom: true,
+            status: 'ACTIVE',
+            members: {
+              create: {
+                personId: teacherMePerson.id,
+                role: 'member',
+              },
+            },
+          },
+        });
         } else {
           console.log('User has existing roles, checking for missing roles');
           // Ensure existing users have both roles
@@ -278,6 +296,33 @@ export async function GET(request: Request) {
                 },
               },
             });
+
+            // Create default classroom group for teacher if it doesn't exist
+            const classroomExists = await prisma.group.findFirst({
+              where: {
+                roleId: teacherRole.id,
+                type: 'CLASSROOM',
+              },
+            });
+
+            if (!classroomExists) {
+              await prisma.group.create({
+                data: {
+                  roleId: teacherRole.id,
+                  name: 'My Classroom',
+                  description: 'Default classroom',
+                  type: 'CLASSROOM',
+                  isClassroom: true,
+                  status: 'ACTIVE',
+                  members: {
+                    create: {
+                      personId: teacherMePerson.id,
+                      role: 'member',
+                    },
+                  },
+                },
+              });
+            }
           }
         }
         }

@@ -153,6 +153,24 @@ export const authRouter = router({
               },
             },
           });
+
+          // Create default classroom group for teacher
+          await ctx.prisma.group.create({
+            data: {
+              roleId: teacherRole.id,
+              name: 'My Classroom',
+              description: 'Default classroom',
+              type: 'CLASSROOM',
+              isClassroom: true,
+              status: 'ACTIVE',
+              members: {
+                create: {
+                  personId: teacherMePerson.id,
+                  role: 'member',
+                },
+              },
+            },
+          });
         }
       } catch (dbError) {
         // User already exists in DB, ensure they have roles
@@ -174,7 +192,7 @@ export const authRouter = router({
             },
           });
 
-          await ctx.prisma.role.create({
+          const teacherRole = await ctx.prisma.role.create({
             data: {
               userId: data.user.id,
               type: 'TEACHER',
@@ -207,6 +225,53 @@ export const authRouter = router({
               assignments: {
                 create: {
                   personId: parentMePerson.id,
+                },
+              },
+            },
+          });
+
+          // Auto-create "Me" person for teacher
+          const teacherMePerson = await ctx.prisma.person.create({
+            data: {
+              roleId: teacherRole.id,
+              name: 'Me',
+              avatar: JSON.stringify({
+                color: '#BAE1FF',
+                emoji: '👤',
+              }),
+              status: 'ACTIVE',
+            },
+          });
+
+          // Create default "Daily Routine" for teacher "Me"
+          await ctx.prisma.routine.create({
+            data: {
+              roleId: teacherRole.id,
+              name: 'Daily Routine',
+              description: 'Default routine for daily tasks',
+              resetPeriod: 'DAILY',
+              status: 'ACTIVE',
+              assignments: {
+                create: {
+                  personId: teacherMePerson.id,
+                },
+              },
+            },
+          });
+
+          // Create default classroom group for teacher
+          await ctx.prisma.group.create({
+            data: {
+              roleId: teacherRole.id,
+              name: 'My Classroom',
+              description: 'Default classroom',
+              type: 'CLASSROOM',
+              isClassroom: true,
+              status: 'ACTIVE',
+              members: {
+                create: {
+                  personId: teacherMePerson.id,
+                  role: 'member',
                 },
               },
             },
@@ -375,6 +440,24 @@ export const authRouter = router({
             },
           },
         });
+
+        // Create default classroom group for teacher
+        await ctx.prisma.group.create({
+          data: {
+            roleId: teacherRole.id,
+            name: 'My Classroom',
+            description: 'Default classroom',
+            type: 'CLASSROOM',
+            isClassroom: true,
+            status: 'ACTIVE',
+            members: {
+              create: {
+                personId: teacherMePerson.id,
+                role: 'member',
+              },
+            },
+          },
+        });
       } else {
         // Ensure user has both PARENT and TEACHER roles
         const hasParentRole = user.roles.some((role: any) => role.type === 'PARENT');
@@ -486,6 +569,33 @@ export const authRouter = router({
                 },
               },
             });
+
+            // Create default classroom group for teacher if it doesn't exist
+            const classroomExists = await ctx.prisma.group.findFirst({
+              where: {
+                roleId: teacherRole.id,
+                type: 'CLASSROOM',
+              },
+            });
+
+            if (!classroomExists) {
+              await ctx.prisma.group.create({
+                data: {
+                  roleId: teacherRole.id,
+                  name: 'My Classroom',
+                  description: 'Default classroom',
+                  type: 'CLASSROOM',
+                  isClassroom: true,
+                  status: 'ACTIVE',
+                  members: {
+                    create: {
+                      personId: teacherMePerson.id,
+                      role: 'member',
+                    },
+                  },
+                },
+              });
+            }
           }
         }
       }
