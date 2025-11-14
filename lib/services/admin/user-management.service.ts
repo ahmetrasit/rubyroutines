@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { Tier } from '@prisma/client';
 import { createAuditLog, AdminAction } from './audit.service';
 import { logger } from '@/lib/utils/logger';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export interface UserSearchFilters {
   email?: string;
@@ -488,10 +489,26 @@ export async function deleteUserAccount(
     userAgent,
   });
 
-  // Delete user (cascade will handle related records)
+  // Delete from Supabase Auth first
+  try {
+    const supabaseAdmin = createAdminClient();
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+    if (authError) {
+      logger.warn(`Failed to delete user ${userId} from Supabase Auth: ${authError.message}`);
+      // Continue with database deletion even if Supabase Auth deletion fails
+    } else {
+      logger.info(`User ${userId} deleted from Supabase Auth`);
+    }
+  } catch (error) {
+    logger.error(`Error deleting user ${userId} from Supabase Auth:`, error);
+    // Continue with database deletion even if Supabase Auth deletion fails
+  }
+
+  // Delete user from database (cascade will handle related records)
   await prisma.user.delete({
     where: { id: userId },
   });
 
-  logger.info(`User ${userId} deleted by admin ${deletedByAdminId}`);
+  logger.info(`User ${userId} deleted from database by admin ${deletedByAdminId}`);
 }
