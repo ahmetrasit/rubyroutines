@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AdminGuard } from '@/components/admin/AdminGuard';
+import { ModeSwitcher } from '@/components/mode-switcher';
 import { trpc } from '@/lib/trpc/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import Link from 'next/link';
 export default function AdminTiersPage() {
   return (
     <AdminGuard>
+      <ModeSwitcher currentMode="admin" />
       <TiersContent />
     </AdminGuard>
   );
