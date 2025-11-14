@@ -158,7 +158,7 @@ export const authRouter = router({
           await ctx.prisma.group.create({
             data: {
               roleId: teacherRole.id,
-              name: 'Teacher Only',
+              name: 'Teacher-Only',
               description: 'For teachers and co-teachers only',
               type: 'CLASSROOM',
               isClassroom: true,
@@ -263,7 +263,7 @@ export const authRouter = router({
           await ctx.prisma.group.create({
             data: {
               roleId: teacherRole.id,
-              name: 'Teacher Only',
+              name: 'Teacher-Only',
               description: 'For teachers and co-teachers only',
               type: 'CLASSROOM',
               isClassroom: true,

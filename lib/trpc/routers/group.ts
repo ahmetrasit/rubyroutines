@@ -36,7 +36,7 @@ export const groupRouter = router({
           },
         },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { createdAt: 'asc' },
     });
 
     return groups;
@@ -66,6 +66,52 @@ export const groupRouter = router({
   }),
 
   create: protectedProcedure.input(createGroupSchema).mutation(async ({ ctx, input }) => {
+    // Check for duplicate classroom name within the same role
+    const existingGroup = await ctx.prisma.group.findFirst({
+      where: {
+        roleId: input.roleId,
+        name: input.name,
+        status: EntityStatus.ACTIVE,
+      },
+    });
+
+    if (existingGroup) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'A classroom with this name already exists',
+      });
+    }
+
+    // For classrooms, ensure a "Me" person exists
+    let mePerson = null;
+    if (input.type === 'CLASSROOM') {
+      // Find or create "Me" person for this role
+      mePerson = await ctx.prisma.person.findFirst({
+        where: {
+          roleId: input.roleId,
+          name: 'Me',
+        },
+      });
+
+      if (!mePerson) {
+        // Create "Me" person with default avatar
+        const defaultAvatar = JSON.stringify({
+          color: '#FFB3BA',
+          emoji: '👤',
+        });
+
+        mePerson = await ctx.prisma.person.create({
+          data: {
+            roleId: input.roleId,
+            name: 'Me',
+            avatar: defaultAvatar,
+            status: EntityStatus.ACTIVE,
+            isProtected: true,
+          },
+        });
+      }
+    }
+
     const group = await ctx.prisma.group.create({
       data: {
         roleId: input.roleId,
@@ -73,6 +119,13 @@ export const groupRouter = router({
         type: input.type,
         description: input.description,
         status: EntityStatus.ACTIVE,
+        // Add "Me" person as member if this is a classroom
+        members: mePerson ? {
+          create: {
+            personId: mePerson.id,
+            role: 'member',
+          },
+        } : undefined,
       },
       include: {
         members: {
@@ -88,6 +141,18 @@ export const groupRouter = router({
 
   update: protectedProcedure.input(updateGroupSchema).mutation(async ({ ctx, input }) => {
     const { id, ...data } = input;
+
+    // Check if this is the protected default classroom
+    const existingGroup = await ctx.prisma.group.findUnique({
+      where: { id },
+    });
+
+    if (existingGroup && existingGroup.name === 'Teacher-Only') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'The default Teacher-Only classroom cannot be modified',
+      });
+    }
 
     const group = await ctx.prisma.group.update({
       where: { id },
@@ -105,6 +170,18 @@ export const groupRouter = router({
   }),
 
   delete: protectedProcedure.input(deleteGroupSchema).mutation(async ({ ctx, input }) => {
+    // Check if this is the protected default classroom
+    const existingGroup = await ctx.prisma.group.findUnique({
+      where: { id: input.id },
+    });
+
+    if (existingGroup && existingGroup.name === 'Teacher-Only') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'The default Teacher-Only classroom cannot be removed',
+      });
+    }
+
     // Soft delete
     const group = await ctx.prisma.group.update({
       where: { id: input.id },
