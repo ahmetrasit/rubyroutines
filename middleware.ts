@@ -1,6 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -84,14 +83,12 @@ export async function middleware(request: NextRequest) {
 
   // Check email verification for authenticated users
   if (user) {
-    // Get user's email verification status from database
-    const dbUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { emailVerified: true },
-    });
+    // Check email verification status from Supabase user metadata
+    // This is set to true when user verifies their email, or for OAuth users
+    const isEmailVerified = user.user_metadata?.emailVerified === true;
 
     // If user is not verified
-    if (!dbUser?.emailVerified) {
+    if (!isEmailVerified) {
       // Allow access to verify page
       if (isVerifyRoute) {
         return response;

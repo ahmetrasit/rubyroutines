@@ -85,6 +85,13 @@ export async function GET(request: Request) {
         });
       }
 
+        // Update Supabase user metadata to mark email as verified (for middleware checks)
+        await supabase.auth.updateUser({
+          data: {
+            emailVerified: true,
+          },
+        });
+
         // Ensure user has both PARENT and TEACHER roles
         console.log('User roles count:', user.roles.length);
 

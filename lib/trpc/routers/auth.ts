@@ -34,6 +34,7 @@ export const authRouter = router({
         options: {
           data: {
             name: input.name,
+            emailVerified: false, // Set initial verification status
           },
           emailRedirectTo: undefined, // Disable email confirmation for local development
         },
@@ -701,10 +702,17 @@ export const authRouter = router({
         });
       }
 
-      // Update user's emailVerified status
+      // Update user's emailVerified status in database
       await ctx.prisma.user.update({
         where: { id: input.userId },
         data: { emailVerified: new Date() },
+      });
+
+      // Update Supabase user metadata for middleware checks (Edge Runtime compatible)
+      await ctx.supabase.auth.updateUser({
+        data: {
+          emailVerified: true,
+        },
       });
 
       // Log email verification
