@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
     if (!error && data.user) {
       // Create or update user in database
-      await prisma.user.upsert({
+      const user = await prisma.user.upsert({
         where: { id: data.user.id },
         create: {
           id: data.user.id,
@@ -28,7 +28,34 @@ export async function GET(request: Request) {
         update: {
           emailVerified: new Date(),
         },
+        include: {
+          roles: true,
+        },
       });
+
+      // Auto-create PARENT role for first-time OAuth users
+      if (user.roles.length === 0) {
+        const newRole = await prisma.role.create({
+          data: {
+            userId: user.id,
+            type: 'PARENT',
+            tier: 'FREE',
+          },
+        });
+
+        // Auto-create "Me" person for new role
+        await prisma.person.create({
+          data: {
+            roleId: newRole.id,
+            name: 'Me',
+            avatar: JSON.stringify({
+              color: '#BAE1FF',
+              emoji: '👤',
+            }),
+            status: 'ACTIVE',
+          },
+        });
+      }
     }
   }
 
