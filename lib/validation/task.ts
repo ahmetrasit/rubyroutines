@@ -1,9 +1,10 @@
+import { idValidator } from './id-validator';
 import { z } from 'zod';
 import { TaskType, EntityStatus } from '@/lib/types/prisma-enums';
 
 // Base task input schema
 export const createTaskSchema = z.object({
-  routineId: z.string().cuid(),
+  routineId: idValidator,
   name: z.string().min(1, 'Task name is required').max(200),
   description: z.string().max(500).optional(),
   type: z.nativeEnum(TaskType).default(TaskType.SIMPLE),
@@ -23,7 +24,7 @@ export const createTaskSchema = z.object({
 
 // Update task schema
 export const updateTaskSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(500).optional().nullable(),
   type: z.nativeEnum(TaskType).optional(),
@@ -34,48 +35,48 @@ export const updateTaskSchema = z.object({
 
 // Delete task schema
 export const deleteTaskSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 // Restore task schema
 export const restoreTaskSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 // Reorder tasks schema
 export const reorderTasksSchema = z.object({
-  routineId: z.string().cuid(),
-  taskIds: z.array(z.string().cuid()),
+  routineId: idValidator,
+  taskIds: z.array(idValidator),
 });
 
 // List tasks schema
 export const listTasksSchema = z.object({
-  routineId: z.string().cuid(),
+  routineId: idValidator,
   includeInactive: z.boolean().optional().default(false),
 });
 
 // Get task by ID schema
 export const getTaskByIdSchema = z.object({
-  id: z.string().cuid(),
+  id: idValidator,
 });
 
 // Complete task schema
 export const completeTaskSchema = z.object({
-  taskId: z.string().cuid(),
-  personId: z.string().cuid(),
+  taskId: idValidator,
+  personId: idValidator,
   value: z.string().optional(), // For PROGRESS type
   notes: z.string().max(500).optional(),
 });
 
 // Undo completion schema
 export const undoCompletionSchema = z.object({
-  completionId: z.string().cuid(),
+  completionId: idValidator,
 });
 
 // Get task completions schema
 export const getTaskCompletionsSchema = z.object({
-  taskId: z.string().cuid(),
-  personId: z.string().cuid().optional(),
+  taskId: idValidator,
+  personId: idValidator.optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
 });

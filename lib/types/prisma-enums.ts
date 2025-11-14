@@ -7,6 +7,7 @@ export enum RoleType {
   PRINCIPAL = 'PRINCIPAL',
 }
 
+// Note: This file is deprecated. Use Tier from '@prisma/client' instead.
 export enum Tier {
   FREE = 'FREE',
   BRONZE = 'BRONZE',
