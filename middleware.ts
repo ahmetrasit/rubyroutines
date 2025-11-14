@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -65,23 +66,56 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Protected routes
-  const protectedRoutes = ['/dashboard', '/parent', '/teacher'];
+  const protectedRoutes = ['/dashboard', '/parent', '/teacher', '/admin'];
   const authRoutes = ['/login', '/signup'];
+  const verifyRoute = '/verify';
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
   const isAuthRoute = authRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
+  const isVerifyRoute = request.nextUrl.pathname.startsWith(verifyRoute);
 
   // Redirect to login if accessing protected route without auth
   if (isProtectedRoute && !user) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirect to dashboard if accessing auth routes while authenticated
-  if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Check email verification for authenticated users
+  if (user) {
+    // Get user's email verification status from database
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { emailVerified: true },
+    });
+
+    // If user is not verified
+    if (!dbUser?.emailVerified) {
+      // Allow access to verify page
+      if (isVerifyRoute) {
+        return response;
+      }
+
+      // Redirect to verify if trying to access protected routes or auth routes
+      if (isProtectedRoute || isAuthRoute) {
+        // Get email from Supabase user
+        const email = user.email || '';
+        return NextResponse.redirect(
+          new URL(`/verify?userId=${user.id}&email=${encodeURIComponent(email)}`, request.url)
+        );
+      }
+    } else {
+      // User is verified, redirect away from auth routes to parent dashboard
+      if (isAuthRoute) {
+        return NextResponse.redirect(new URL('/parent', request.url));
+      }
+
+      // Redirect away from verify route to parent dashboard if already verified
+      if (isVerifyRoute) {
+        return NextResponse.redirect(new URL('/parent', request.url));
+      }
+    }
   }
 
   return response;

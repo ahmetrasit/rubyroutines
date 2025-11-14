@@ -18,12 +18,20 @@ export default function VerifyPage() {
 
   const userId = searchParams.get('userId');
   const email = searchParams.get('email');
+  const urlCode = searchParams.get('code');
 
   useEffect(() => {
     if (!userId || !email) {
       router.push('/signup');
     }
   }, [userId, email, router]);
+
+  // Auto-fill code from URL if present
+  useEffect(() => {
+    if (urlCode && urlCode.length === 6) {
+      setCode(urlCode);
+    }
+  }, [urlCode]);
 
   useEffect(() => {
     if (resendCooldown > 0) {
@@ -39,9 +47,9 @@ export default function VerifyPage() {
 
   const verifyMutation = trpc.auth.verifyEmailCode.useMutation({
     onSuccess: () => {
-      setSuccess('Email verified successfully! Redirecting...');
+      setSuccess('Email verified successfully! Redirecting to your dashboard...');
       setTimeout(() => {
-        router.push('/login');
+        router.push('/parent');
       }, 2000);
     },
     onError: (err) => {

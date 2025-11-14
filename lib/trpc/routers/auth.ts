@@ -18,6 +18,7 @@ import {
   logDataChange,
   AUDIT_ACTIONS,
 } from '@/lib/services/audit-log';
+import { sendVerificationEmail } from '@/lib/email/resend';
 
 export const authRouter = router({
   signUp: authRateLimitedProcedure
@@ -641,16 +642,41 @@ export const authRouter = router({
       email: z.string().email(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Get user's name from database
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { name: true },
+      });
+
       const code = await createVerificationCode(
         input.userId,
         input.email,
         CodeType.EMAIL_VERIFICATION
       );
 
-      // TODO: Send email with code using Resend
+      // Send email with code using Resend
+      const emailResult = await sendVerificationEmail(
+        input.email,
+        user?.name || 'there',
+        code,
+        input.userId
+      );
+
+      if (!emailResult.success) {
+        logger.error('Failed to send verification email', {
+          email: input.email,
+          error: emailResult.error
+        });
+        // Still return success even if email fails - user can resend
+        // But log the code in development for testing
+        if (process.env.NODE_ENV === 'development') {
+          logger.debug('Verification code (email failed)', { email: input.email, code });
+        }
+      }
+
       // For development only - DO NOT log codes in production
       if (process.env.NODE_ENV === 'development') {
-        logger.debug('Verification code generated', { email: input.email, code });
+        logger.debug('Verification code sent', { email: input.email, code });
       }
 
       return { success: true };
@@ -707,13 +733,38 @@ export const authRouter = router({
 
       await incrementResendCount(input.userId, CodeType.EMAIL_VERIFICATION);
 
+      // Get user's name from database
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { name: true },
+      });
+
       const code = await createVerificationCode(
         input.userId,
         input.email,
         CodeType.EMAIL_VERIFICATION
       );
 
-      // TODO: Send email with code using Resend
+      // Send email with code using Resend
+      const emailResult = await sendVerificationEmail(
+        input.email,
+        user?.name || 'there',
+        code,
+        input.userId
+      );
+
+      if (!emailResult.success) {
+        logger.error('Failed to resend verification email', {
+          email: input.email,
+          error: emailResult.error
+        });
+        // Still return success even if email fails - user can try again
+        // But log the code in development for testing
+        if (process.env.NODE_ENV === 'development') {
+          logger.debug('Verification code (email failed)', { email: input.email, code });
+        }
+      }
+
       // For development only - DO NOT log codes in production
       if (process.env.NODE_ENV === 'development') {
         logger.debug('Verification code resent', { email: input.email, code });

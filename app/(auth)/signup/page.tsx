@@ -21,6 +21,17 @@ export default function SignUpPage() {
 
   const signUpMutation = trpc.auth.signUp.useMutation({
     onSuccess: async (data) => {
+      // Auto-login the user after successful signup
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (signInError) {
+        setError('Account created but failed to log in. Please log in manually.');
+        return;
+      }
+
       // Send verification code
       await sendCodeMutation.mutateAsync({
         userId: data.userId,
