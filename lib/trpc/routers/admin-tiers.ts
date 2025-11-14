@@ -22,12 +22,23 @@ export const adminTiersRouter = router({
         limits: z.record(
           z.nativeEnum(Tier),
           z.object({
-            persons: z.number().int().min(0),
-            groups: z.number().int().min(0),
-            routines: z.number().int().min(0),
-            tasksPerRoutine: z.number().int().min(0),
-            goals: z.number().int().min(0),
-            kioskCodes: z.number().int().min(0),
+            parent: z.object({
+              persons: z.number().int().min(0),
+              maxCoParents: z.number().int().min(0),
+              routines: z.number().int().min(0),
+              tasksPerRoutine: z.number().int().min(0),
+              goals: z.number().int().min(0),
+              kioskCodes: z.number().int().min(0),
+            }),
+            teacher: z.object({
+              classrooms: z.number().int().min(0),
+              studentsPerClassroom: z.number().int().min(0),
+              maxCoTeachers: z.number().int().min(0),
+              routines: z.number().int().min(0),
+              tasksPerRoutine: z.number().int().min(0),
+              goals: z.number().int().min(0),
+              kioskCodes: z.number().int().min(0),
+            }),
           })
         ),
       })

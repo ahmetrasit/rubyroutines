@@ -107,75 +107,84 @@ function TiersContent() {
               <Skeleton className="h-96" />
             ) : limits ? (
               <div className="space-y-6">
-                {Object.entries(limits).map(([tier, tierLimits]: [string, any]) => (
-                  <div key={tier} className="border rounded-lg p-6">
-                    <h3 className="font-bold mb-6 text-xl">{tier}</h3>
-
-                    {/* Parent Mode Limits */}
-                    <div className="mb-6">
-                      <h4 className="font-semibold mb-3 text-md text-purple-700 flex items-center gap-2">
-                        <span className="w-2 h-2 bg-purple-700 rounded-full"></span>
-                        Parent Mode Limits
-                      </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-4">
-                        {tierLimits.parent && Object.entries(tierLimits.parent).map(([limitKey, limitValue]: [string, any]) => (
-                          <div key={limitKey}>
-                            <Label htmlFor={`${tier}-parent-${limitKey}`} className="text-sm">
-                              {limitKey.replace(/([A-Z])/g, ' $1').trim()}
-                            </Label>
-                            <Input
-                              id={`${tier}-parent-${limitKey}`}
-                              type="number"
-                              min="0"
-                              value={editedLimits?.[tier]?.parent?.[limitKey] ?? limitValue}
-                              onChange={(e) => {
-                                const newLimits = editedLimits || JSON.parse(JSON.stringify(limits));
-                                if (!newLimits[tier]) newLimits[tier] = JSON.parse(JSON.stringify(tierLimits));
-                                if (!newLimits[tier].parent) newLimits[tier].parent = {};
-                                const parsedValue = parseInt(e.target.value);
-                                newLimits[tier].parent[limitKey] = isNaN(parsedValue) ? 0 : parsedValue;
-                                setEditedLimits(newLimits);
-                              }}
-                              className="mt-1"
-                            />
-                          </div>
-                        ))}
+                {/* Parent Mode Limits - Purple Box */}
+                <div className="border-2 border-purple-300 bg-purple-50 rounded-lg p-6">
+                  <h3 className="font-bold mb-6 text-xl text-purple-800 flex items-center gap-2">
+                    <span className="w-3 h-3 bg-purple-700 rounded-full"></span>
+                    Parent Mode Limits
+                  </h3>
+                  <div className="space-y-6">
+                    {Object.entries(limits).map(([tier, tierLimits]: [string, any]) => (
+                      <div key={`parent-${tier}`} className="bg-white border border-purple-200 rounded-lg p-5">
+                        <h4 className="font-semibold mb-4 text-lg text-purple-900">{tier}</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {tierLimits.parent && Object.entries(tierLimits.parent).map(([limitKey, limitValue]: [string, any]) => (
+                            <div key={limitKey}>
+                              <Label htmlFor={`${tier}-parent-${limitKey}`} className="text-sm">
+                                {limitKey.replace(/([A-Z])/g, ' $1').trim()}
+                              </Label>
+                              <Input
+                                id={`${tier}-parent-${limitKey}`}
+                                type="number"
+                                min="0"
+                                value={editedLimits?.[tier]?.parent?.[limitKey] ?? limitValue}
+                                onChange={(e) => {
+                                  const newLimits = editedLimits || JSON.parse(JSON.stringify(limits));
+                                  if (!newLimits[tier]) newLimits[tier] = JSON.parse(JSON.stringify(tierLimits));
+                                  if (!newLimits[tier].parent) newLimits[tier].parent = {};
+                                  const parsedValue = parseInt(e.target.value);
+                                  newLimits[tier].parent[limitKey] = isNaN(parsedValue) ? 0 : parsedValue;
+                                  setEditedLimits(newLimits);
+                                }}
+                                className="mt-1"
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Teacher Mode Limits */}
-                    <div>
-                      <h4 className="font-semibold mb-3 text-md text-blue-700 flex items-center gap-2">
-                        <span className="w-2 h-2 bg-blue-700 rounded-full"></span>
-                        Teacher Mode Limits
-                      </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-4">
-                        {tierLimits.teacher && Object.entries(tierLimits.teacher).map(([limitKey, limitValue]: [string, any]) => (
-                          <div key={limitKey}>
-                            <Label htmlFor={`${tier}-teacher-${limitKey}`} className="text-sm">
-                              {limitKey.replace(/([A-Z])/g, ' $1').trim()}
-                            </Label>
-                            <Input
-                              id={`${tier}-teacher-${limitKey}`}
-                              type="number"
-                              min="0"
-                              value={editedLimits?.[tier]?.teacher?.[limitKey] ?? limitValue}
-                              onChange={(e) => {
-                                const newLimits = editedLimits || JSON.parse(JSON.stringify(limits));
-                                if (!newLimits[tier]) newLimits[tier] = JSON.parse(JSON.stringify(tierLimits));
-                                if (!newLimits[tier].teacher) newLimits[tier].teacher = {};
-                                const parsedValue = parseInt(e.target.value);
-                                newLimits[tier].teacher[limitKey] = isNaN(parsedValue) ? 0 : parsedValue;
-                                setEditedLimits(newLimits);
-                              }}
-                              className="mt-1"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+
+                {/* Teacher Mode Limits - Blue Box */}
+                <div className="border-2 border-blue-300 bg-blue-50 rounded-lg p-6">
+                  <h3 className="font-bold mb-6 text-xl text-blue-800 flex items-center gap-2">
+                    <span className="w-3 h-3 bg-blue-700 rounded-full"></span>
+                    Teacher Mode Limits
+                  </h3>
+                  <div className="space-y-6">
+                    {Object.entries(limits).map(([tier, tierLimits]: [string, any]) => (
+                      <div key={`teacher-${tier}`} className="bg-white border border-blue-200 rounded-lg p-5">
+                        <h4 className="font-semibold mb-4 text-lg text-blue-900">{tier}</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {tierLimits.teacher && Object.entries(tierLimits.teacher).map(([limitKey, limitValue]: [string, any]) => (
+                            <div key={limitKey}>
+                              <Label htmlFor={`${tier}-teacher-${limitKey}`} className="text-sm">
+                                {limitKey.replace(/([A-Z])/g, ' $1').trim()}
+                              </Label>
+                              <Input
+                                id={`${tier}-teacher-${limitKey}`}
+                                type="number"
+                                min="0"
+                                value={editedLimits?.[tier]?.teacher?.[limitKey] ?? limitValue}
+                                onChange={(e) => {
+                                  const newLimits = editedLimits || JSON.parse(JSON.stringify(limits));
+                                  if (!newLimits[tier]) newLimits[tier] = JSON.parse(JSON.stringify(tierLimits));
+                                  if (!newLimits[tier].teacher) newLimits[tier].teacher = {};
+                                  const parsedValue = parseInt(e.target.value);
+                                  newLimits[tier].teacher[limitKey] = isNaN(parsedValue) ? 0 : parsedValue;
+                                  setEditedLimits(newLimits);
+                                }}
+                                className="mt-1"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {editedLimits && (
                   <div className="flex gap-2">
                     <Button onClick={handleSaveLimits} disabled={updateLimitsMutation.isPending}>
