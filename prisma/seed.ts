@@ -59,7 +59,7 @@ async function main() {
     create: {
       userId: teacherUser.id,
       type: RoleType.TEACHER,
-      tier: Tier.BASIC,
+      tier: Tier.BRONZE,
     },
   });
 
@@ -69,7 +69,7 @@ async function main() {
     create: {
       userId: principalUser.id,
       type: RoleType.PRINCIPAL,
-      tier: Tier.SCHOOL,
+      tier: Tier.PRO,
     },
   });
 

@@ -60,9 +60,9 @@ export const billingRouter = router({
     return {
       prices: {
         [Tier.FREE]: 0,
-        [Tier.BASIC]: TIER_PRICES[Tier.BASIC] / 100, // Convert cents to dollars
-        [Tier.PREMIUM]: TIER_PRICES[Tier.PREMIUM] / 100,
-        [Tier.SCHOOL]: TIER_PRICES[Tier.SCHOOL] / 100,
+        [Tier.BRONZE]: TIER_PRICES[Tier.BRONZE] / 100, // Convert cents to dollars
+        [Tier.GOLD]: TIER_PRICES[Tier.GOLD] / 100,
+        [Tier.PRO]: TIER_PRICES[Tier.PRO] / 100,
       },
     };
   }),

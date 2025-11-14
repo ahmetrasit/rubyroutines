@@ -40,7 +40,7 @@ const TEST_USERS = [
     password: 'teacher123',
     name: 'Test Teacher',
     roleType: RoleType.TEACHER,
-    tier: Tier.BASIC,
+    tier: Tier.BRONZE,
   },
   {
     id: 'test-principal-user-id',
@@ -48,7 +48,7 @@ const TEST_USERS = [
     password: 'principal123',
     name: 'Test Principal',
     roleType: RoleType.PRINCIPAL,
-    tier: Tier.SCHOOL,
+    tier: Tier.PRO,
   },
 ];
 

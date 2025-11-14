@@ -185,7 +185,7 @@ export async function getTierLimits() {
           kioskCodes: 1,
         },
       },
-      [Tier.BASIC]: {
+      [Tier.BRONZE]: {
         parent: {
           persons: 10,
           maxCoParents: 1,
@@ -204,7 +204,7 @@ export async function getTierLimits() {
           kioskCodes: 5,
         },
       },
-      [Tier.PREMIUM]: {
+      [Tier.GOLD]: {
         parent: {
           persons: 50,
           maxCoParents: 3,
@@ -223,7 +223,7 @@ export async function getTierLimits() {
           kioskCodes: 20,
         },
       },
-      [Tier.SCHOOL]: {
+      [Tier.PRO]: {
         parent: {
           persons: 100,
           maxCoParents: 5,
@@ -295,9 +295,9 @@ export async function getTierPrices() {
   if (!setting) {
     // Return default prices (in cents)
     return {
-      [Tier.BASIC]: 500, // $5.00
-      [Tier.PREMIUM]: 1000, // $10.00
-      [Tier.SCHOOL]: 2500, // $25.00
+      [Tier.BRONZE]: 500, // $5.00
+      [Tier.GOLD]: 1000, // $10.00
+      [Tier.PRO]: 2500, // $25.00
     };
   }
 
