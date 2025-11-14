@@ -88,47 +88,45 @@ export const PersonCard = memo(function PersonCard({ person, onSelect }: PersonC
         {/* Progress Bars */}
         <div className="space-y-2 mb-4">
           {/* Daily Tasks Progress */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-gray-600">Daily Tasks</span>
-              <span className="text-xs text-gray-500">
-                {dailyTasksTotal > 0 ? `${dailyTasksCompleted}/${dailyTasksTotal}` : 'None'}
-              </span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              {dailyTasksTotal > 0 ? (
+          <div className="h-6 bg-gray-200 rounded-full overflow-hidden relative">
+            {dailyTasksTotal > 0 ? (
+              <>
                 <div
                   className="h-full bg-green-500 transition-all"
                   style={{ width: `${taskProgress}%` }}
                 />
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <span className="text-[8px] text-gray-400">No daily routine</span>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-medium text-gray-700">
+                    Daily Tasks: {dailyTasksCompleted}/{dailyTasksTotal}
+                  </span>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <span className="text-xs text-gray-500">no daily tasks</span>
+              </div>
+            )}
           </div>
 
           {/* Daily Goals Progress */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-gray-600">Daily Goals</span>
-              <span className="text-xs text-gray-500">
-                {dailyGoalsTotal > 0 ? `${dailyGoalsAccomplished}/${dailyGoalsTotal}` : 'None'}
-              </span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              {dailyGoalsTotal > 0 ? (
+          <div className="h-6 bg-gray-200 rounded-full overflow-hidden relative">
+            {dailyGoalsTotal > 0 ? (
+              <>
                 <div
                   className="h-full bg-blue-500 transition-all"
                   style={{ width: `${goalProgress}%` }}
                 />
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <span className="text-[8px] text-gray-400">No daily goal</span>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-medium text-gray-700">
+                    Daily Goals: {dailyGoalsAccomplished}/{dailyGoalsTotal}
+                  </span>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <span className="text-xs text-gray-500">no daily goals</span>
+              </div>
+            )}
           </div>
         </div>
 

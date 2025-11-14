@@ -42,7 +42,7 @@ export function KioskCodeManager() {
   // Auto-generate default code if none exists
   useEffect(() => {
     if (!isLoading && roleId && codes && codes.length === 0) {
-      generateMutation.mutate({ roleId, expiresInHours: 24 * 365 }); // 1 year expiration
+      generateMutation.mutate({ roleId, expiresInHours: 168 }); // 1 week expiration (max allowed)
     }
   }, [isLoading, roleId, codes]);
 
@@ -53,8 +53,8 @@ export function KioskCodeManager() {
       if (activeCode) {
         revokeMutation.mutate({ codeId: activeCode.id });
       }
-      // Generate new code with 1 year expiration
-      generateMutation.mutate({ roleId, expiresInHours: 24 * 365 });
+      // Generate new code with 1 week expiration (max allowed)
+      generateMutation.mutate({ roleId, expiresInHours: 168 });
     }
   };
 
@@ -77,7 +77,7 @@ export function KioskCodeManager() {
         <div className="flex-1">
           <div className="text-sm font-medium text-gray-700 mb-2">Current Code</div>
           <div className="font-mono text-2xl font-bold text-gray-900">
-            {isRevealed && currentCode ? currentCode.code : '••••••'}
+            {currentCode ? (isRevealed ? currentCode.code : '••••••') : 'Generating...'}
           </div>
         </div>
         <div className="flex gap-2">
@@ -85,6 +85,7 @@ export function KioskCodeManager() {
             size="sm"
             variant="outline"
             onClick={() => setIsRevealed(!isRevealed)}
+            disabled={!currentCode}
           >
             {isRevealed ? (
               <>
@@ -102,7 +103,7 @@ export function KioskCodeManager() {
             size="sm"
             variant="outline"
             onClick={handleGenerateNew}
-            disabled={generateMutation.isPending}
+            disabled={generateMutation.isPending || !currentCode}
           >
             {generateMutation.isPending ? (
               <>
