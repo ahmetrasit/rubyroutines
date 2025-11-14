@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { AdminGuard } from '@/components/admin/AdminGuard';
+import { ModeSwitcher } from '@/components/mode-switcher';
 import { trpc } from '@/lib/trpc/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,12 +26,13 @@ import {
 import { Search, Shield, ShieldCheck, Trash2, Edit2, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/toast';
 import Link from 'next/link';
 
 export default function AdminUsersPage() {
   return (
     <AdminGuard>
+      <ModeSwitcher currentMode="admin" />
       <UsersContent />
     </AdminGuard>
   );

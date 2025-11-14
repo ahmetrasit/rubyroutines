@@ -117,7 +117,7 @@ export default function StudentDetailPage() {
             />
           </div>
           <div>
-            <GoalList personId={studentId} />
+            <GoalList roleId={teacherRole.id} personId={studentId} />
           </div>
         </div>
       </div>

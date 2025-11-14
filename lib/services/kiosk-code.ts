@@ -38,11 +38,6 @@ export async function generateKioskCode(
     throw new Error('Role not found');
   }
 
-  // Check if user tier allows kiosk mode
-  if (role.tier === 'FREE') {
-    throw new Error('Kiosk mode requires BASIC tier or higher');
-  }
-
   let attempts = 0;
   const maxAttempts = 10;
 

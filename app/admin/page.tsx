@@ -2,6 +2,7 @@
 
 import { AdminGuard } from '@/components/admin/AdminGuard';
 import { StatCard } from '@/components/admin/StatCard';
+import { ModeSwitcher } from '@/components/mode-switcher';
 import { trpc } from '@/lib/trpc/client';
 import { Users, UserCheck, Shield, BarChart3, Activity, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import Link from 'next/link';
 export default function AdminDashboard() {
   return (
     <AdminGuard>
+      <ModeSwitcher currentMode="admin" />
       <DashboardContent />
     </AdminGuard>
   );

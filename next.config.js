@@ -59,6 +59,25 @@ const nextConfig = {
   },
   // Security Headers
   async headers() {
+    const cspDirectives = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://*.supabase.co https://api.stripe.com wss://*.supabase.co",
+      "frame-src 'self' https://js.stripe.com",
+      "object-src 'none' data:",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ];
+
+    // Only upgrade to HTTPS in production
+    if (process.env.NODE_ENV === 'production') {
+      cspDirectives.push("upgrade-insecure-requests");
+    }
+
     return [
       {
         source: '/:path*',
@@ -66,20 +85,7 @@ const nextConfig = {
           // Content Security Policy
           {
             key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https: blob:",
-              "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co https://api.stripe.com wss://*.supabase.co",
-              "frame-src 'self' https://js.stripe.com",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-              "upgrade-insecure-requests"
-            ].join('; ')
+            value: cspDirectives.join('; ')
           },
           // Prevent clickjacking
           {

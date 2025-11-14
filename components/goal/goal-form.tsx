@@ -12,12 +12,13 @@ import { Loader2 } from 'lucide-react';
 import { ResetPeriod } from '@/lib/types/prisma-enums';
 
 interface GoalFormProps {
+  roleId: string;
   goal?: any;
   personId?: string;
   onClose: () => void;
 }
 
-export function GoalForm({ goal, personId, onClose }: GoalFormProps) {
+export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
@@ -26,10 +27,6 @@ export function GoalForm({ goal, personId, onClose }: GoalFormProps) {
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
-
-  // Get current user's role
-  const { data: session } = trpc.auth.getSession.useQuery();
-  const roleId = session?.user?.roles?.[0]?.id || '';
 
   useEffect(() => {
     if (goal) {

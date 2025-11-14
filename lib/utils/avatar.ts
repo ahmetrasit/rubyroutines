@@ -12,7 +12,7 @@ export const PASTEL_COLORS = [
   '#E0BBE4', '#FFDFD3', '#FEC8D8', '#D4F1F4', '#C9E4DE',
   '#F7D9C4', '#FAACA8', '#DFE7FD', '#B4F8C8', '#FBE7C6',
   '#A0E7E5', '#FFAEBC', '#FBE4D8', '#D5AAFF', '#85E3FF',
-  '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#FFDFD3',
+  '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#FFE4CC',
   '#E6E6FA', '#FFE5B4', '#F0E68C', '#D8BFD8', '#FFE4E1',
   '#E0FFFF', '#F5DEB3'
 ] as const;

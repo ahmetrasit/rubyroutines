@@ -19,6 +19,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isLoading && !session?.user) {
       router.push('/login');
+    } else if (!isLoading && session?.user) {
+      // Redirect to parent mode by default
+      router.push('/parent');
     }
   }, [isLoading, session, router]);
 

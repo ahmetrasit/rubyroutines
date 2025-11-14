@@ -9,13 +9,18 @@ import { GroupForm } from './group-form';
 
 interface GroupListProps {
   roleId: string;
+  roleType: 'PARENT' | 'TEACHER';
   onSelectGroup?: (group: any) => void;
 }
 
-export function GroupList({ roleId, onSelectGroup }: GroupListProps) {
+export function GroupList({ roleId, roleType, onSelectGroup }: GroupListProps) {
   const [showForm, setShowForm] = useState(false);
 
   const { data: groups, isLoading } = trpc.group.list.useQuery({ roleId });
+
+  const isTeacherMode = roleType === 'TEACHER';
+  const entityName = isTeacherMode ? 'Classroom' : 'Group';
+  const entityNamePlural = isTeacherMode ? 'Classrooms' : 'Groups';
 
   if (isLoading) {
     return (
@@ -27,31 +32,30 @@ export function GroupList({ roleId, onSelectGroup }: GroupListProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Groups</h2>
-        <Button size="md" onClick={() => setShowForm(true)}>
-          <Plus className="h-5 w-5 mr-2" />
-          Add Group
-        </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Existing classroom cards */}
+        {groups && groups.map((group: any) => (
+          <GroupCard key={group.id} group={group} onSelect={onSelectGroup} />
+        ))}
+
+        {/* Add Classroom placeholder card */}
+        <button
+          onClick={() => setShowForm(true)}
+          className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-blue-400 hover:bg-blue-50/50 transition-all flex flex-col items-center justify-center min-h-[200px] group"
+        >
+          <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 transition-colors">
+            <Plus className="h-8 w-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
+          </div>
+          <span className="text-gray-600 group-hover:text-blue-600 font-medium transition-colors">
+            Add {entityName}
+          </span>
+          <span className="text-sm text-gray-400 mt-1">
+            {isTeacherMode ? 'create a new classroom' : 'create a new group'}
+          </span>
+        </button>
       </div>
 
-      {groups && groups.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {groups.map((group: any) => (
-            <GroupCard key={group.id} group={group} onSelect={onSelectGroup} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
-          <p className="text-gray-600 mb-4 text-lg">No groups yet</p>
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Your First Group
-          </Button>
-        </div>
-      )}
-
-      {showForm && <GroupForm roleId={roleId} onClose={() => setShowForm(false)} />}
+      {showForm && <GroupForm roleId={roleId} roleType={roleType} onClose={() => setShowForm(false)} />}
     </div>
   );
 }

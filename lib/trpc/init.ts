@@ -59,12 +59,59 @@ export const verifiedProcedure = protectedProcedure.use(async (opts) => {
   });
 });
 
-// Re-export authorization utilities from middleware
-export { authorizedProcedure } from './middleware/auth';
+// Import authorization helper functions from middleware
+import {
+  verifyRoleOwnership,
+  verifyPersonOwnership,
+  verifyRoutineOwnership,
+  verifyTaskOwnership,
+  verifyGoalOwnership,
+  verifyAdminStatus,
+} from './middleware/auth';
+
+/**
+ * Middleware that automatically checks role ownership
+ * Usage: .input(z.object({ roleId: z.string().cuid(), ... }))
+ */
+export const authorizedProcedure = protectedProcedure.use(async (opts) => {
+  const { ctx, input } = opts;
+
+  // Check if input has roleId
+  if (input && typeof input === 'object' && 'roleId' in input) {
+    await verifyRoleOwnership(ctx.user.id, (input as any).roleId, ctx.prisma);
+  }
+
+  return opts.next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+    },
+  });
+});
+
+/**
+ * Admin-only procedure
+ * Only allows requests from users with isAdmin = true
+ */
+export const adminProcedure = protectedProcedure.use(async (opts) => {
+  const { ctx } = opts;
+
+  await verifyAdminStatus(ctx.user.id, ctx.prisma);
+
+  return opts.next({
+    ctx: {
+      ...ctx,
+      user: ctx.user,
+      isAdmin: true,
+    },
+  });
+});
+
+// Re-export authorization helper functions
 export {
   verifyRoleOwnership,
   verifyPersonOwnership,
   verifyRoutineOwnership,
   verifyTaskOwnership,
   verifyGoalOwnership,
-} from './middleware/auth';
+};
