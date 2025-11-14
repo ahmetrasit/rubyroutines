@@ -9,13 +9,18 @@ import { GroupForm } from './group-form';
 
 interface GroupListProps {
   roleId: string;
+  roleType: 'PARENT' | 'TEACHER';
   onSelectGroup?: (group: any) => void;
 }
 
-export function GroupList({ roleId, onSelectGroup }: GroupListProps) {
+export function GroupList({ roleId, roleType, onSelectGroup }: GroupListProps) {
   const [showForm, setShowForm] = useState(false);
 
   const { data: groups, isLoading } = trpc.group.list.useQuery({ roleId });
+
+  const isTeacherMode = roleType === 'TEACHER';
+  const entityName = isTeacherMode ? 'Classroom' : 'Group';
+  const entityNamePlural = isTeacherMode ? 'Classrooms' : 'Groups';
 
   if (isLoading) {
     return (
@@ -28,10 +33,10 @@ export function GroupList({ roleId, onSelectGroup }: GroupListProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Groups</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{entityNamePlural}</h2>
         <Button size="md" onClick={() => setShowForm(true)}>
           <Plus className="h-5 w-5 mr-2" />
-          Add Group
+          Add {entityName}
         </Button>
       </div>
 
@@ -43,15 +48,15 @@ export function GroupList({ roleId, onSelectGroup }: GroupListProps) {
         </div>
       ) : (
         <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
-          <p className="text-gray-600 mb-4 text-lg">No groups yet</p>
+          <p className="text-gray-600 mb-4 text-lg">No {entityNamePlural.toLowerCase()} yet</p>
           <Button onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Create Your First Group
+            Create Your First {entityName}
           </Button>
         </div>
       )}
 
-      {showForm && <GroupForm roleId={roleId} onClose={() => setShowForm(false)} />}
+      {showForm && <GroupForm roleId={roleId} roleType={roleType} onClose={() => setShowForm(false)} />}
     </div>
   );
 }

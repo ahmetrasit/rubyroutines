@@ -18,12 +18,16 @@ import { Label } from '@/components/ui/label';
 interface GroupFormProps {
   group?: any;
   roleId?: string;
+  roleType?: 'PARENT' | 'TEACHER';
   onClose: () => void;
 }
 
-export function GroupForm({ group, roleId, onClose }: GroupFormProps) {
+export function GroupForm({ group, roleId, roleType, onClose }: GroupFormProps) {
+  const isTeacherMode = roleType === 'TEACHER';
+  const defaultType = isTeacherMode ? GroupType.CLASSROOM : GroupType.FAMILY;
+
   const [name, setName] = useState(group?.name || '');
-  const [type, setType] = useState<GroupType>(group?.type || GroupType.FAMILY);
+  const [type, setType] = useState<GroupType>(group?.type || defaultType);
   const [description, setDescription] = useState(group?.description || '');
 
   const { toast } = useToast();
@@ -109,7 +113,7 @@ export function GroupForm({ group, roleId, onClose }: GroupFormProps) {
             />
           </div>
 
-          {!group && (
+          {!group && !isTeacherMode && (
             <div>
               <Label htmlFor="type">Type *</Label>
               <select

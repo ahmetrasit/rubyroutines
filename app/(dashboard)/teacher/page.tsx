@@ -82,7 +82,7 @@ export default function TeacherDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
               <div className="lg:col-span-2">
-                <GroupList roleId={teacherRole.id} onSelectGroup={handleSelectGroup} />
+                <GroupList roleId={teacherRole.id} roleType="TEACHER" onSelectGroup={handleSelectGroup} />
               </div>
               <div>
                 <KioskCodeManager />
