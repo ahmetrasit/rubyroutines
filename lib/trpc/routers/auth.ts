@@ -209,6 +209,7 @@ export const authRouter = router({
               create: existingRoles.map((role: any) => ({
                 type: role.type,
                 tier: role.tier,
+                color: role.color || (role.type === 'PARENT' ? '#9333ea' : role.type === 'TEACHER' ? '#3b82f6' : role.type === 'PRINCIPAL' ? '#f59e0b' : '#10b981'),
               })),
             },
           },
@@ -267,8 +268,37 @@ export const authRouter = router({
           },
         });
       } else {
-        // Check if "Me" person exists for this role
-        const parentRole = user.roles.find((role: any) => role.type === 'PARENT');
+        // Ensure user has both PARENT and TEACHER roles
+        const hasParentRole = user.roles.some((role: any) => role.type === 'PARENT');
+        const hasTeacherRole = user.roles.some((role: any) => role.type === 'TEACHER');
+
+        let parentRole = user.roles.find((role: any) => role.type === 'PARENT');
+
+        // Create missing PARENT role
+        if (!hasParentRole) {
+          parentRole = await ctx.prisma.role.create({
+            data: {
+              userId: user.id,
+              type: 'PARENT',
+              tier: 'FREE',
+              color: '#9333ea',
+            },
+          });
+        }
+
+        // Create missing TEACHER role
+        if (!hasTeacherRole) {
+          await ctx.prisma.role.create({
+            data: {
+              userId: user.id,
+              type: 'TEACHER',
+              tier: 'FREE',
+              color: '#3b82f6',
+            },
+          });
+        }
+
+        // Check if "Me" person exists for parent role
         if (parentRole) {
           const mePersonExists = await ctx.prisma.person.findFirst({
             where: {
