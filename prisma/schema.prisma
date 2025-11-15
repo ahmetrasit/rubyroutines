@@ -202,6 +202,7 @@ model Routine {
   endDate                 DateTime?      // For DATE_RANGE visibility
   startTime               String?        // For limited daily routines (HH:MM format)
   endTime                 String?        // For limited daily routines (HH:MM format)
+  color                   String?        // Hex color for routine border
   status                  EntityStatus   @default(ACTIVE)
   archivedAt              DateTime?
   sourceMarketplaceItemId String?

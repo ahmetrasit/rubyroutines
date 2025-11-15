@@ -99,11 +99,12 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                   return (
                     <div
                       key={routine.id}
-                      className={`group bg-white rounded-lg border-2 p-3 cursor-pointer transition-all hover:shadow-md relative ${
-                        visible
-                          ? 'border-gray-200 hover:border-primary-300'
-                          : 'border-gray-100 opacity-40'
+                      className={`group bg-white rounded-lg border-4 p-3 cursor-pointer transition-all hover:shadow-md relative ${
+                        visible ? 'hover:shadow-lg' : 'opacity-40'
                       }`}
+                      style={{
+                        borderColor: routine.color || '#E5E7EB',
+                      }}
                     >
                       <div
                         onClick={() => onSelectRoutine?.(routine)}

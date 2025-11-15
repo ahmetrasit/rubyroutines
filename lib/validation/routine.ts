@@ -4,6 +4,8 @@ import { RoutineType, ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
 
 // Time format validator (HH:MM in 24-hour format)
 const timeValidator = z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format (HH:MM)').optional().nullable();
+// Hex color validator
+const colorValidator = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color').optional().nullable();
 
 export const createRoutineSchema = z.object({
   roleId: idValidator,
@@ -18,6 +20,7 @@ export const createRoutineSchema = z.object({
   endDate: z.coerce.date().optional().nullable(),
   startTime: timeValidator,
   endTime: timeValidator,
+  color: colorValidator,
   personIds: z.array(idValidator).optional().default([]),
 }).refine((data) => {
   // If both times are provided, validate that start is before end
@@ -42,6 +45,7 @@ export const updateRoutineSchema = z.object({
   endDate: z.coerce.date().optional().nullable(),
   startTime: timeValidator,
   endTime: timeValidator,
+  color: colorValidator,
 }).refine((data) => {
   // If both times are provided, validate that start is before end
   if (data.startTime && data.endTime) {

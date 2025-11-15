@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import { HexColorPicker } from 'react-colorful';
+import { PASTEL_COLORS } from '@/lib/utils/avatar';
 
 interface RoutineFormProps {
   routine?: Routine;
@@ -49,8 +51,11 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   );
   const [startTime, setStartTime] = useState<string>(routine?.startTime || '08:00');
   const [endTime, setEndTime] = useState<string>(routine?.endTime || '17:00');
+  const [color, setColor] = useState<string>(routine?.color || '#3B82F6');
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -61,22 +66,25 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
     }
   }, [resetPeriod, visibility]);
 
-  // Close emoji picker when clicking outside
+  // Close pickers when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
         setShowEmojiPicker(false);
       }
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
+        setShowColorPicker(false);
+      }
     };
 
-    if (showEmojiPicker) {
+    if (showEmojiPicker || showColorPicker) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showEmojiPicker]);
+  }, [showEmojiPicker, showColorPicker]);
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setEmoji(emojiData.emoji);
@@ -143,6 +151,18 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
     // Only include time fields for Daily routines with Limited visibility
     const shouldIncludeTime = resetPeriod === ResetPeriod.DAILY && visibility === Visibility.DAYS_OF_WEEK;
 
+    // Validate time fields
+    if (shouldIncludeTime && startTime && endTime) {
+      if (startTime >= endTime) {
+        toast({
+          title: 'Invalid Time Range',
+          description: 'End time must be later than start time.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     if (routine) {
       updateMutation.mutate({
         id: routine.id,
@@ -153,6 +173,7 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
         visibility,
         startTime: shouldIncludeTime ? startTime : null,
         endTime: shouldIncludeTime ? endTime : null,
+        color: color || null,
       });
     } else if (roleId) {
       createMutation.mutate({
@@ -166,6 +187,7 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
         personIds,
         startTime: shouldIncludeTime ? startTime : null,
         endTime: shouldIncludeTime ? endTime : null,
+        color: color || null,
       });
     }
   };
@@ -229,6 +251,44 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
               maxLength={200}
               placeholder="Get ready for school..."
             />
+          </div>
+
+          {/* Color Picker */}
+          <div className="relative">
+            <Label>Border Color</Label>
+            <button
+              type="button"
+              onClick={() => setShowColorPicker(!showColorPicker)}
+              className="mt-2 w-full h-10 rounded-md border border-gray-300 flex items-center gap-3 px-3 hover:bg-gray-50 transition-colors"
+            >
+              <div
+                className="w-6 h-6 rounded-full border-2 border-gray-300"
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-sm text-gray-700">{color}</span>
+            </button>
+            {showColorPicker && (
+              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border">
+                <HexColorPicker color={color} onChange={setColor} />
+                <div className="mt-3 pt-3 border-t">
+                  <Label className="text-xs mb-2 block">Quick Colors</Label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {PASTEL_COLORS.map((presetColor) => (
+                      <button
+                        key={presetColor}
+                        type="button"
+                        onClick={() => {
+                          setColor(presetColor);
+                          setShowColorPicker(false);
+                        }}
+                        className="w-8 h-8 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
+                        style={{ backgroundColor: presetColor }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
