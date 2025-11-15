@@ -287,6 +287,22 @@ export default function KioskModePage() {
     return { avatarColor, avatarEmoji };
   };
 
+  const darkenColor = (color: string, amount: number = 0.3): string => {
+    // Convert hex to RGB
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    // Darken by reducing each component
+    const darkR = Math.round(r * (1 - amount));
+    const darkG = Math.round(g * (1 - amount));
+    const darkB = Math.round(b * (1 - amount));
+
+    // Convert back to hex
+    return `#${darkR.toString(16).padStart(2, '0')}${darkG.toString(16).padStart(2, '0')}${darkB.toString(16).padStart(2, '0')}`;
+  };
+
   const getPersonProgress = (personId: string) => {
     const personIndex = activePersons.findIndex((p: Person) => p.id === personId);
     if (personIndex === -1) return { completed: 0, total: 0, percentage: 100 };
@@ -470,7 +486,10 @@ export default function KioskModePage() {
                         </div>
 
                         {/* Progress bar */}
-                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="w-full h-2 bg-gray-200 rounded-full overflow-hidden border-2"
+                          style={{ borderColor: darkenColor(avatarColor) }}
+                        >
                           <div
                             className="h-full transition-all"
                             style={{
@@ -525,9 +544,8 @@ export default function KioskModePage() {
                   </div>
                 )}
                 {isGroupScope ? (
-                  <Button variant="default" onClick={handleDone} size="lg">
-                    <X className="h-5 w-5 mr-2" />
-                    Done
+                  <Button variant="default" onClick={handleDone} size="lg" className="px-4">
+                    <Check className="h-5 w-5" />
                   </Button>
                 ) : (
                   <Button variant="outline" onClick={handleExit} size="lg" className="px-4">
