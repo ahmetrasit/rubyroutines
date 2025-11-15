@@ -539,7 +539,6 @@ export default function KioskModePage() {
                     })()}
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">{selectedPerson.name}</h2>
-                      <p className="text-gray-600">Currently checking in</p>
                     </div>
                   </div>
                 ) : (
