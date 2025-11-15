@@ -8,6 +8,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useAvatar } from '@/lib/hooks';
 import { useDeleteMutation } from '@/lib/hooks';
 import type { Person } from '@/lib/types/database';
+import { RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 
 interface PersonCardProps {
   person: Person;
@@ -109,13 +110,13 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
               className="h-14 w-14 rounded-full flex items-center justify-center text-2xl border-4"
               style={{ backgroundColor, borderColor: color }}
             >
-              {emoji}
+              <RenderIconEmoji value={emoji} className="h-7 w-7" />
             </div>
           </div>
 
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-lg text-gray-900 truncate flex items-center gap-2">
-              <span className="text-2xl">{emoji}</span>
+              <RenderIconEmoji value={emoji} className="h-6 w-6" />
               {person.name}
             </h3>
             {isInClassroom && (

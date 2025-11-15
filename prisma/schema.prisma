@@ -136,6 +136,8 @@ model Group {
   description         String?
   type                GroupType    @default(FAMILY)
   isClassroom         Boolean      @default(false)
+  emoji               String?      // Emoji or icon for the group/classroom
+  color               String?      // Hex color for group/classroom border
   status              EntityStatus @default(ACTIVE)
   archivedAt          DateTime?
   createdAt           DateTime     @default(now())

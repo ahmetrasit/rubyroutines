@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 import { HexColorPicker } from 'react-colorful';
 import { PASTEL_COLORS } from '@/lib/utils/avatar';
 
@@ -85,11 +85,6 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showEmojiPicker, showColorPicker]);
-
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    setEmoji(emojiData.emoji);
-    setShowEmojiPicker(false);
-  };
 
   // Generate time options in 5-minute increments
   const generateTimeOptions = () => {
@@ -204,21 +199,20 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-12 gap-3">
             <div className="col-span-2 relative">
-              <Label htmlFor="emoji">Emoji</Label>
+              <Label htmlFor="emoji">Icon</Label>
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
               >
-                {emoji || '😊'}
+                <RenderIconEmoji value={emoji || '😊'} className="h-6 w-6" />
               </button>
               {showEmojiPicker && (
                 <div ref={emojiPickerRef} className="absolute z-50 top-full mt-2 left-0">
-                  <EmojiPicker
-                    onEmojiClick={handleEmojiClick}
-                    searchPlaceHolder="Search emoji..."
-                    width={320}
-                    height={400}
+                  <IconEmojiPicker
+                    selectedValue={emoji || '😊'}
+                    onSelect={setEmoji}
+                    onClose={() => setShowEmojiPicker(false)}
                   />
                 </div>
               )}

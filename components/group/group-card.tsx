@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { GroupForm } from './group-form';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
+import { RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 
 interface GroupCardProps {
   group: any;
@@ -53,12 +54,16 @@ export function GroupCard({ group, onSelect, hideSubtitle = false }: GroupCardPr
   return (
     <>
       <div
-        className="group relative rounded-xl bg-white p-6 shadow-md hover:shadow-lg transition-all cursor-pointer border-t-4 border-primary-500"
+        className="group relative rounded-xl bg-white p-6 shadow-md hover:shadow-lg transition-all cursor-pointer border-4"
+        style={{ borderColor: group.color || '#3B82F6' }}
         onClick={() => onSelect?.(group)}
       >
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-xl text-gray-900 truncate">{group.name}</h3>
+            <h3 className="font-bold text-xl text-gray-900 truncate flex items-center gap-2">
+              {group.emoji && <RenderIconEmoji value={group.emoji} className="h-6 w-6" />}
+              {group.name}
+            </h3>
             {!hideSubtitle && (
               <p className="text-sm text-gray-600 mt-1">
                 {group.type.charAt(0) + group.type.slice(1).toLowerCase()}

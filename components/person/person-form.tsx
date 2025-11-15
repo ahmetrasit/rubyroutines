@@ -17,8 +17,8 @@ import { useCreateMutation, useUpdateMutation } from '@/lib/hooks';
 import { EntityStatus } from '@/lib/types/prisma-enums';
 import { useToast } from '@/components/ui/toast';
 import type { Person } from '@/lib/types/database';
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { HexColorPicker } from 'react-colorful';
+import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 
 interface PersonFormProps {
   person?: Person;
@@ -92,10 +92,6 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     };
   }, [showEmojiPicker, showColorPicker]);
 
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    setSelectedEmoji(emojiData.emoji);
-    setShowEmojiPicker(false);
-  };
 
   const addMemberMutation = trpc.group.addMember.useMutation({
     onSuccess: async () => {
@@ -272,21 +268,20 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
           {/* Emoji and Name Row */}
           <div className="grid grid-cols-12 gap-3">
             <div className="col-span-2 relative">
-              <Label htmlFor="emoji">Emoji</Label>
+              <Label htmlFor="emoji">Icon</Label>
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
               >
-                {selectedEmoji}
+                <RenderIconEmoji value={selectedEmoji} className="h-6 w-6" />
               </button>
               {showEmojiPicker && (
                 <div ref={emojiPickerRef} className="absolute z-50 top-full mt-2 left-0">
-                  <EmojiPicker
-                    onEmojiClick={handleEmojiClick}
-                    searchPlaceHolder="Search emoji..."
-                    width={320}
-                    height={400}
+                  <IconEmojiPicker
+                    selectedValue={selectedEmoji}
+                    onSelect={setSelectedEmoji}
+                    onClose={() => setShowEmojiPicker(false)}
                   />
                 </div>
               )}

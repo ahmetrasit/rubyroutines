@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 
@@ -14,6 +14,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
+import { HexColorPicker } from 'react-colorful';
+import { PASTEL_COLORS } from '@/lib/utils/avatar';
 
 interface GroupFormProps {
   group?: any;
@@ -30,9 +33,36 @@ export function GroupForm({ group, roleId, roleType, onClose }: GroupFormProps) 
   const [name, setName] = useState(group?.name || '');
   const [type, setType] = useState<GroupType>(group?.type || defaultType);
   const [description, setDescription] = useState(group?.description || '');
+  const [emoji, setEmoji] = useState<string>(group?.emoji || '🏫');
+  const [color, setColor] = useState<string>(group?.color || '#3B82F6');
+  const [showIconEmojiPicker, setShowIconEmojiPicker] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  const iconEmojiPickerRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Close pickers when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (iconEmojiPickerRef.current && !iconEmojiPickerRef.current.contains(event.target as Node)) {
+        setShowIconEmojiPicker(false);
+      }
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
+        setShowColorPicker(false);
+      }
+    };
+
+    if (showIconEmojiPicker || showColorPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showIconEmojiPicker, showColorPicker]);
 
   const createMutation = trpc.group.create.useMutation({
     onSuccess: () => {
@@ -80,6 +110,8 @@ export function GroupForm({ group, roleId, roleType, onClose }: GroupFormProps) 
         id: group.id,
         name,
         description: description || undefined,
+        emoji: emoji || undefined,
+        color: color || undefined,
       });
     } else if (roleId) {
       createMutation.mutate({
@@ -87,6 +119,8 @@ export function GroupForm({ group, roleId, roleType, onClose }: GroupFormProps) 
         name,
         type,
         description: description || undefined,
+        emoji: emoji || undefined,
+        color: color || undefined,
       });
     }
   };
@@ -105,17 +139,80 @@ export function GroupForm({ group, roleId, roleType, onClose }: GroupFormProps) 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <Label htmlFor="name">{isTeacherMode ? 'Class Name' : 'Group Name'} *</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={100}
-              placeholder=""
-              className="mt-1"
-            />
+          {/* Emoji and Color Row */}
+          <div className="grid grid-cols-12 gap-3">
+            {/* Emoji/Icon Picker */}
+            <div className="col-span-3 relative">
+              <Label>Icon</Label>
+              <button
+                type="button"
+                onClick={() => setShowIconEmojiPicker(!showIconEmojiPicker)}
+                className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors mt-1"
+              >
+                <RenderIconEmoji value={emoji} className="h-6 w-6" />
+              </button>
+              {showIconEmojiPicker && (
+                <div ref={iconEmojiPickerRef} className="absolute z-50 top-full mt-2 left-0">
+                  <IconEmojiPicker
+                    selectedValue={emoji}
+                    onSelect={setEmoji}
+                    onClose={() => setShowIconEmojiPicker(false)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Name Field */}
+            <div className="col-span-9">
+              <Label htmlFor="name">{isTeacherMode ? 'Class Name' : 'Group Name'} *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                maxLength={100}
+                placeholder=""
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          {/* Color Picker */}
+          <div className="relative">
+            <Label>Border Color</Label>
+            <button
+              type="button"
+              onClick={() => setShowColorPicker(!showColorPicker)}
+              className="mt-1 w-full h-10 rounded-md border border-gray-300 flex items-center gap-3 px-3 hover:bg-gray-50 transition-colors"
+            >
+              <div
+                className="w-6 h-6 rounded-full border-2 border-gray-300"
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-sm text-gray-700">{color}</span>
+            </button>
+            {showColorPicker && (
+              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border">
+                <HexColorPicker color={color} onChange={setColor} />
+                <div className="mt-3 pt-3 border-t">
+                  <Label className="text-xs mb-2 block">Quick Colors</Label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {PASTEL_COLORS.map((presetColor) => (
+                      <button
+                        key={presetColor}
+                        type="button"
+                        onClick={() => {
+                          setColor(presetColor);
+                          setShowColorPicker(false);
+                        }}
+                        className="w-8 h-8 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
+                        style={{ backgroundColor: presetColor }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {!group && !isTeacherMode && (
