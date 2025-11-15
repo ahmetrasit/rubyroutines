@@ -102,16 +102,17 @@ enum Tier {
 // ============================================================================
 
 model Person {
-  id          String       @id @default(cuid())
-  roleId      String
-  name        String
-  birthDate   DateTime?
-  avatar      String?
-  notes       String?
-  status      EntityStatus @default(ACTIVE)
-  archivedAt  DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  roleId              String
+  name                String
+  birthDate           DateTime?
+  avatar              String?
+  notes               String?
+  status              EntityStatus @default(ACTIVE)
+  archivedAt          DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  kioskLastUpdatedAt  DateTime     @default(now())
 
   // Relations
   role                    Role                      @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -129,16 +130,17 @@ model Person {
 }
 
 model Group {
-  id          String       @id @default(cuid())
-  roleId      String
-  name        String
-  description String?
-  type        GroupType    @default(FAMILY)
-  isClassroom Boolean      @default(false)
-  status      EntityStatus @default(ACTIVE)
-  archivedAt  DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  roleId              String
+  name                String
+  description         String?
+  type                GroupType    @default(FAMILY)
+  isClassroom         Boolean      @default(false)
+  status              EntityStatus @default(ACTIVE)
+  archivedAt          DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  kioskLastUpdatedAt  DateTime     @default(now())
 
   // Relations
   role        Role          @relation(fields: [roleId], references: [id], onDelete: Cascade)

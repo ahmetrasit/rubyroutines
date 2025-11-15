@@ -162,11 +162,15 @@ export const groupRouter = router({
       });
     }
 
-    // Update group and role timestamp for kiosk polling
+    // Update group and role + group timestamps for kiosk polling
+    const now = new Date();
     const [group] = await ctx.prisma.$transaction([
       ctx.prisma.group.update({
         where: { id },
-        data,
+        data: {
+          ...data,
+          kioskLastUpdatedAt: now
+        },
         include: {
           members: {
             include: {
@@ -177,7 +181,7 @@ export const groupRouter = router({
       }),
       ctx.prisma.role.update({
         where: { id: existingGroup!.roleId },
-        data: { kioskLastUpdatedAt: new Date() }
+        data: { kioskLastUpdatedAt: now }
       })
     ]);
 
@@ -239,7 +243,8 @@ export const groupRouter = router({
       });
     }
 
-    // Add member and update role timestamp for kiosk polling
+    // Add member and update role + group timestamps for kiosk polling
+    const now = new Date();
     const [member] = await ctx.prisma.$transaction([
       ctx.prisma.groupMember.create({
         data: {
@@ -253,7 +258,11 @@ export const groupRouter = router({
       }),
       ctx.prisma.role.update({
         where: { id: group.roleId },
-        data: { kioskLastUpdatedAt: new Date() }
+        data: { kioskLastUpdatedAt: now }
+      }),
+      ctx.prisma.group.update({
+        where: { id: input.groupId },
+        data: { kioskLastUpdatedAt: now }
       })
     ]);
 
@@ -274,7 +283,8 @@ export const groupRouter = router({
       });
     }
 
-    // Remove member and update role timestamp for kiosk polling
+    // Remove member and update role + group timestamps for kiosk polling
+    const now = new Date();
     const [member] = await ctx.prisma.$transaction([
       ctx.prisma.groupMember.delete({
         where: {
@@ -286,7 +296,11 @@ export const groupRouter = router({
       }),
       ctx.prisma.role.update({
         where: { id: group.roleId },
-        data: { kioskLastUpdatedAt: new Date() }
+        data: { kioskLastUpdatedAt: now }
+      }),
+      ctx.prisma.group.update({
+        where: { id: input.groupId },
+        data: { kioskLastUpdatedAt: now }
       })
     ]);
 
