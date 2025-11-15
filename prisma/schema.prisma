@@ -207,13 +207,13 @@ model Routine {
   updatedAt               DateTime       @updatedAt
 
   // Relations
-  role                 Role                   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  tasks                Task[]
-  assignments          RoutineAssignment[]
-  conditions           Condition[]            @relation("RoutineConditions")
-  targetConditions     Condition[]            @relation("TargetRoutineConditions")
-  goalLinks            GoalRoutineLink[]
-  visibilityOverrides  VisibilityOverride[]
+  role                      Role                   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tasks                     Task[]
+  assignments               RoutineAssignment[]
+  conditions                Condition[]            @relation("RoutineConditions")
+  targetConditionChecks     ConditionCheck[]       @relation("TargetRoutineConditionChecks")
+  goalLinks                 GoalRoutineLink[]
+  visibilityOverrides       VisibilityOverride[]
 
   @@index([roleId])
   @@index([type])
@@ -265,8 +265,9 @@ model Task {
   name                    String
   description             String?
   type                    TaskType     @default(SIMPLE)
+  isSmart                 Boolean      @default(false)
+  conditionId             String?      // Links to shared or unique condition
   order                   Int          @default(0)
-  targetValue             Float?       // For PROGRESS type
   unit                    String?      // For PROGRESS type (e.g., "pages", "minutes")
   status                  EntityStatus @default(ACTIVE)
   archivedAt              DateTime?
@@ -274,13 +275,16 @@ model Task {
   updatedAt               DateTime     @updatedAt
 
   // Relations
-  routine         Routine           @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  completions     TaskCompletion[]
-  targetConditions Condition[]      @relation("TargetTaskConditions")
-  goalLinks       GoalTaskLink[]
+  routine              Routine           @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  condition            Condition?        @relation(fields: [conditionId], references: [id], onDelete: SetNull)
+  completions          TaskCompletion[]
+  targetConditionChecks ConditionCheck[] @relation("TargetTaskConditionChecks")
+  goalLinks            GoalTaskLink[]
 
   @@index([routineId])
   @@index([type])
+  @@index([isSmart])
+  @@index([conditionId])
   @@index([status])
   @@map("tasks")
 }
@@ -289,7 +293,6 @@ enum TaskType {
   SIMPLE
   MULTIPLE_CHECKIN
   PROGRESS
-  SMART
 }
 
 model TaskCompletion {
@@ -332,9 +335,10 @@ model Goal {
   updatedAt               DateTime     @updatedAt
 
   // Relations
-  role         Role              @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  taskLinks    GoalTaskLink[]
-  routineLinks GoalRoutineLink[]
+  role                  Role              @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  taskLinks             GoalTaskLink[]
+  routineLinks          GoalRoutineLink[]
+  targetConditionChecks ConditionCheck[]  @relation("TargetGoalConditionChecks")
 
   @@index([roleId])
   @@index([status])
@@ -376,43 +380,67 @@ model GoalRoutineLink {
 }
 
 model Condition {
-  id              String          @id @default(cuid())
+  id              String         @id @default(cuid())
   routineId       String
-  type            ConditionType
-  operator        ConditionOperator
-  value           String?
-  targetTaskId    String?
-  targetRoutineId String?
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  controlsRoutine Boolean        @default(false) // true = controls routine visibility, false = controls task(s)
+  logic           ConditionLogic @default(AND)   // AND or OR between checks
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   // Relations
-  routine        Routine  @relation("RoutineConditions", fields: [routineId], references: [id], onDelete: Cascade)
-  targetTask     Task?    @relation("TargetTaskConditions", fields: [targetTaskId], references: [id])
-  targetRoutine  Routine? @relation("TargetRoutineConditions", fields: [targetRoutineId], references: [id])
+  routine         Routine          @relation("RoutineConditions", fields: [routineId], references: [id], onDelete: Cascade)
+  controlledTasks Task[]           // Multiple tasks can share this condition (via Task.conditionId)
+  checks          ConditionCheck[] // Individual condition checks
 
   @@index([routineId])
-  @@index([targetTaskId])
-  @@index([targetRoutineId])
+  @@index([controlsRoutine])
   @@map("conditions")
 }
 
-enum ConditionType {
-  TASK_COMPLETED
-  ROUTINE_COMPLETED
-  TASK_COUNT
-  GOAL_ACHIEVED
-  DATE_RANGE
-  DAY_OF_WEEK
+enum ConditionLogic {
+  AND
+  OR
+}
+
+model ConditionCheck {
+  id              String            @id @default(cuid())
+  conditionId     String
+  negate          Boolean           @default(false) // NOT operator
+  operator        ConditionOperator
+  value           String?           // Comparison value (for count, percentage, etc.)
+  targetTaskId    String?
+  targetRoutineId String?
+  targetGoalId    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  condition      Condition @relation(fields: [conditionId], references: [id], onDelete: Cascade)
+  targetTask     Task?     @relation("TargetTaskConditionChecks", fields: [targetTaskId], references: [id], onDelete: Cascade)
+  targetRoutine  Routine?  @relation("TargetRoutineConditionChecks", fields: [targetRoutineId], references: [id], onDelete: Cascade)
+  targetGoal     Goal?     @relation("TargetGoalConditionChecks", fields: [targetGoalId], references: [id], onDelete: Cascade)
+
+  @@index([conditionId])
+  @@index([targetTaskId])
+  @@index([targetRoutineId])
+  @@index([targetGoalId])
+  @@map("condition_checks")
 }
 
 enum ConditionOperator {
-  EQUALS
-  GREATER_THAN
-  LESS_THAN
-  GREATER_THAN_OR_EQUAL
-  LESS_THAN_OR_EQUAL
-  BETWEEN
+  TASK_COMPLETED       // Check if task is completed
+  TASK_NOT_COMPLETED   // Check if task is not completed
+  TASK_COUNT_EQUALS    // Check task completion count
+  TASK_COUNT_GT        // Greater than
+  TASK_COUNT_LT        // Less than
+  TASK_VALUE_EQUALS    // For PROGRESS tasks
+  TASK_VALUE_GT
+  TASK_VALUE_LT
+  ROUTINE_PERCENT_EQUALS // Routine completion percentage
+  ROUTINE_PERCENT_GT
+  ROUTINE_PERCENT_LT
+  GOAL_ACHIEVED        // Check if goal is achieved
+  GOAL_NOT_ACHIEVED
 }
 
 // ============================================================================

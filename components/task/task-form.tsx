@@ -33,6 +33,8 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
   const [name, setName] = useState(task?.name || '');
   const [description, setDescription] = useState(task?.description || '');
   const [type, setType] = useState<TaskType>(task?.type || TaskType.SIMPLE);
+  const [unit, setUnit] = useState(task?.unit || '');
+  const [isSmart, setIsSmart] = useState(task?.isSmart || false);
   const [selectedIcon, setSelectedIcon] = useState('✅');
 
   const { toast } = useToast();
@@ -83,6 +85,8 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
       name,
       description: description || undefined,
       type,
+      unit: type === TaskType.PROGRESS && unit ? unit : undefined,
+      isSmart,
     };
 
     if (task) {
@@ -186,6 +190,44 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
               </p>
             </div>
           )}
+
+          {type === TaskType.PROGRESS && (
+            <div>
+              <Label htmlFor="unit">Unit (e.g., pages, minutes) *</Label>
+              <Input
+                id="unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                required
+                maxLength={50}
+                placeholder="pages"
+                className="mt-1"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                What unit are you tracking? (e.g., pages, minutes, cups)
+              </p>
+            </div>
+          )}
+
+          <div className="border-t pt-4">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="isSmart"
+                checked={isSmart}
+                onChange={(e) => setIsSmart(e.target.checked)}
+                className="mt-1 w-4 h-4 text-blue-500 rounded"
+              />
+              <div className="flex-1">
+                <Label htmlFor="isSmart" className="cursor-pointer">
+                  Make this a Smart Task
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Smart tasks only appear when conditions are met. You can set conditions after creating the task.
+                </p>
+              </div>
+            </div>
+          </div>
 
           <div className="border-t pt-4">
             <Label className="mb-3 block">Preview</Label>
