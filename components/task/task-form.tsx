@@ -33,10 +33,6 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
   const [name, setName] = useState(task?.name || '');
   const [description, setDescription] = useState(task?.description || '');
   const [type, setType] = useState<TaskType>(task?.type || TaskType.SIMPLE);
-  const [targetValue, setTargetValue] = useState<string>(
-    task?.targetValue?.toString() || ''
-  );
-  const [unit, setUnit] = useState(task?.unit || '');
   const [selectedIcon, setSelectedIcon] = useState('✅');
 
   const { toast } = useToast();
@@ -83,22 +79,10 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate PROGRESS task requirements
-    if (type === TaskType.PROGRESS && (!targetValue || !unit)) {
-      toast({
-        title: 'Validation Error',
-        description: 'Progress tasks must have a target value and unit',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     const taskData = {
       name,
       description: description || undefined,
       type,
-      targetValue: type === TaskType.PROGRESS ? parseFloat(targetValue) : undefined,
-      unit: type === TaskType.PROGRESS ? unit : undefined,
     };
 
     if (task) {
@@ -186,36 +170,6 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
               <option value={TaskType.PROGRESS}>Progress (Track value)</option>
             </select>
           </div>
-
-          {type === TaskType.PROGRESS && (
-            <>
-              <div>
-                <Label htmlFor="targetValue">Target Value *</Label>
-                <Input
-                  id="targetValue"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={targetValue}
-                  onChange={(e) => setTargetValue(e.target.value)}
-                  required={type === TaskType.PROGRESS}
-                  placeholder="10"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="unit">Unit *</Label>
-                <Input
-                  id="unit"
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  required={type === TaskType.PROGRESS}
-                  maxLength={50}
-                  placeholder="pages, minutes, cups, etc."
-                />
-              </div>
-            </>
-          )}
 
           {type === TaskType.SIMPLE && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">

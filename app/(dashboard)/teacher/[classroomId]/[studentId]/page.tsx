@@ -3,11 +3,10 @@
 import { useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import { RoutineList } from '@/components/routine/routine-list';
-import { GoalList } from '@/components/goal/goal-list';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { PersonKioskCodeManager } from '@/components/kiosk/person-kiosk-code-manager';
+import { PersonDetailSections } from '@/components/person/person-detail-sections';
 
 export default function StudentDetailPage() {
   const router = useRouter();
@@ -118,18 +117,11 @@ export default function StudentDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <RoutineList
-              roleId={teacherRole.id}
-              personId={studentId}
-              onSelectRoutine={handleSelectRoutine}
-            />
-          </div>
-          <div>
-            <GoalList roleId={teacherRole.id} personId={studentId} />
-          </div>
-        </div>
+        <PersonDetailSections
+          roleId={teacherRole.id}
+          personId={studentId}
+          onSelectRoutine={handleSelectRoutine}
+        />
       </div>
     </div>
   );

@@ -314,7 +314,7 @@ model TaskCompletion {
 // ============================================================================
 
 model Goal {
-  id                      String       @id @default(cuid())
+  id                      String       @id @default(uuid())
   roleId                  String
   name                    String
   description             String?
@@ -340,7 +340,7 @@ model Goal {
 }
 
 model GoalTaskLink {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   goalId    String
   taskId    String
   weight    Float    @default(1.0)
@@ -357,7 +357,7 @@ model GoalTaskLink {
 }
 
 model GoalRoutineLink {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   goalId    String
   routineId String
   weight    Float    @default(1.0)
