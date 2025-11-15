@@ -36,7 +36,7 @@ interface Person {
   avatar?: string | null;
 }
 
-const INACTIVITY_TIMEOUT = 30000; // 30 seconds
+const INACTIVITY_TIMEOUT = 60000; // 60 seconds (default, can be configured in admin settings)
 
 export default function KioskModePage() {
   const router = useRouter();
@@ -85,6 +85,10 @@ export default function KioskModePage() {
     { code },
     { enabled: !!sessionData }
   );
+
+  // Get kiosk settings (inactivity timeout)
+  const { data: kioskSettings } = trpc.kiosk.getSettings.useQuery();
+  const inactivityTimeout = kioskSettings?.inactivityTimeout || INACTIVITY_TIMEOUT;
 
   // Get persons to display: use group members if groups exist, otherwise use role persons
   // Filter out teachers/parents (named 'Me') to show only students/kids
@@ -219,13 +223,13 @@ export default function KioskModePage() {
 
     const interval = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityTime;
-      if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
+      if (timeSinceActivity >= inactivityTimeout) {
         setSelectedPersonId(null);
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [selectedPersonId, lastActivityTime, isGroupScope]);
+  }, [selectedPersonId, lastActivityTime, isGroupScope, inactivityTimeout]);
 
   const handleComplete = (task: Task) => {
     if (!selectedPersonId) return;

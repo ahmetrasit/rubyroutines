@@ -9,10 +9,11 @@ import { useToast } from '@/components/ui/toast';
 interface KioskCodeManagerProps {
   roleId: string;
   userName: string; // User's first name
+  classroomId?: string; // Optional classroom ID for teacher mode
   classroomName?: string; // Optional classroom name for teacher mode
 }
 
-export function KioskCodeManager({ roleId, userName, classroomName }: KioskCodeManagerProps) {
+export function KioskCodeManager({ roleId, userName, classroomId, classroomName }: KioskCodeManagerProps) {
   const [isRevealed, setIsRevealed] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -72,6 +73,7 @@ export function KioskCodeManager({ roleId, userName, classroomName }: KioskCodeM
       hasAttemptedGeneration.current = true;
       generateMutation.mutate({
         roleId,
+        groupId: classroomId, // Pass classroomId for classroom-specific codes
         userName,
         classroomName,
         wordCount: '3',
@@ -89,6 +91,7 @@ export function KioskCodeManager({ roleId, userName, classroomName }: KioskCodeM
       // Generate new code with 1 week expiration (max allowed)
       generateMutation.mutate({
         roleId,
+        groupId: classroomId, // Pass classroomId for classroom-specific codes
         userName,
         classroomName,
         wordCount: '3',

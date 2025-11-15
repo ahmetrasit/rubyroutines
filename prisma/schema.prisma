@@ -144,6 +144,7 @@ model Group {
   members     GroupMember[]
   assignments RoutineAssignment[]
   coTeachers  CoTeacher[]
+  codes       Code[]        // Kiosk codes for this specific group/classroom
 
   @@index([roleId])
   @@index([type])
@@ -437,6 +438,7 @@ model Code {
   id         String     @id @default(cuid())
   code       String     @unique
   roleId     String
+  groupId    String?    // Optional: links kiosk code to specific classroom/group
   type       CodeType   @default(KIOSK)
   expiresAt  DateTime
   usedAt     DateTime?
@@ -444,10 +446,12 @@ model Code {
   createdAt  DateTime   @default(now())
 
   // Relations
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role  Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@index([code])
   @@index([roleId])
+  @@index([groupId])
   @@index([status])
   @@index([expiresAt])
   @@map("codes")

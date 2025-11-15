@@ -13,11 +13,30 @@ import { kioskRateLimitedProcedure } from '../middleware/ratelimit';
 
 export const kioskRouter = router({
   /**
+   * Get kiosk settings (public - no auth required)
+   */
+  getSettings: publicProcedure.query(async ({ ctx }) => {
+    // Get inactivity timeout from system settings, default to 60 seconds
+    const timeoutSetting = await ctx.prisma.systemSettings.findUnique({
+      where: { key: 'kiosk_inactivity_timeout' }
+    });
+
+    const inactivityTimeout = timeoutSetting?.value
+      ? Number(timeoutSetting.value)
+      : 60000; // Default 60 seconds
+
+    return {
+      inactivityTimeout
+    };
+  }),
+
+  /**
    * Generate a new kiosk code (protected - requires authentication)
    */
   generateCode: authorizedProcedure
     .input(z.object({
       roleId: z.string().uuid(),
+      groupId: z.string().cuid().optional(), // Optional classroom/group ID
       userName: z.string(),
       classroomName: z.string().optional(),
       wordCount: z.enum(['2', '3']).optional(),
@@ -35,6 +54,7 @@ export const kioskRouter = router({
 
       const code = await generateKioskCode({
         roleId: input.roleId,
+        groupId: input.groupId, // Pass groupId for classroom-specific codes
         userName: input.userName,
         classroomName: input.classroomName,
         wordCount: input.wordCount === '3' ? 3 : 2,
@@ -119,7 +139,11 @@ export const kioskRouter = router({
                 orderBy: { name: 'asc' }
               },
               groups: {
-                where: { status: 'ACTIVE' },
+                where: {
+                  status: 'ACTIVE',
+                  // If code has groupId, only return that specific group
+                  ...(result.kioskCode!.groupId ? { id: result.kioskCode!.groupId } : {})
+                },
                 include: {
                   members: {
                     where: { person: { status: 'ACTIVE' } },
@@ -135,6 +159,7 @@ export const kioskRouter = router({
       return {
         codeId: code!.id,
         roleId: code!.roleId,
+        groupId: code!.groupId, // Include groupId in response
         persons: code!.role.persons,
         groups: code!.role.groups
       };

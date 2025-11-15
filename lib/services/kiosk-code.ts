@@ -4,8 +4,9 @@ import { addHours } from 'date-fns';
 
 export interface GenerateCodeOptions {
   roleId: string;
+  groupId?: string; // Optional: specific classroom/group ID
   userName: string; // User's first name
-  classroomName?: string; // Optional classroom name for teacher mode
+  classroomName?: string; // Optional classroom name for teacher mode (for code generation)
   wordCount?: 2 | 3; // 2 words = ~4M combinations, 3 words = ~8B combinations
   expiresInHours?: number; // Default 24 hours
 }
@@ -15,6 +16,7 @@ export interface KioskCode {
   code: string; // e.g., "OCEAN-TIGER" or "CLOUD-FOREST-MOON"
   words: string[];
   roleId: string;
+  groupId?: string | null; // Optional: specific classroom/group ID
   expiresAt: Date;
   usedAt: Date | null;
   isActive: boolean;
@@ -31,7 +33,7 @@ export interface KioskCode {
 export async function generateKioskCode(
   options: GenerateCodeOptions
 ): Promise<KioskCode> {
-  const { roleId, userName, classroomName, wordCount = 2, expiresInHours = 24 } = options;
+  const { roleId, groupId, userName, classroomName, wordCount = 2, expiresInHours = 24 } = options;
 
   // Verify role exists and user has permission
   const role = await prisma.role.findUnique({
@@ -77,6 +79,7 @@ export async function generateKioskCode(
         data: {
           code,
           roleId,
+          groupId, // Store groupId if provided
           type: 'KIOSK',
           expiresAt,
           status: 'ACTIVE'
@@ -88,6 +91,7 @@ export async function generateKioskCode(
         code,
         words,
         roleId,
+        groupId,
         expiresAt,
         usedAt: null,
         isActive: true
