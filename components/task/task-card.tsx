@@ -10,6 +10,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { TaskForm } from './task-form';
 import { TaskDeletionWarning } from './task-deletion-warning';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 
 type TaskWithAggregation = Task & {
   isComplete: boolean;
@@ -45,9 +46,17 @@ export function TaskCard({
 
   return (
     <>
-      <Card className="group hover:shadow-lg transition-all h-full flex flex-col">
+      <Card
+        className="group hover:shadow-lg transition-all h-full flex flex-col border-4"
+        style={{ borderColor: task.color || '#E5E7EB' }}
+      >
         <CardHeader className="p-3 pb-2">
           <div className="flex items-start gap-2">
+            {task.emoji && (
+              <div className="flex-shrink-0">
+                <RenderIconEmoji value={task.emoji} className="h-6 w-6" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold text-sm text-gray-900 line-clamp-2 mb-1">
                 {task.name}

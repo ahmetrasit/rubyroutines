@@ -2,7 +2,7 @@
 
 import { TaskType } from '@/lib/types/prisma-enums';
 type Task = any;
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -14,6 +14,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
+import { HexColorPicker } from 'react-colorful';
+import { PASTEL_COLORS } from '@/lib/utils/avatar';
 
 interface TaskFormProps {
   task?: Task;
@@ -22,23 +25,42 @@ interface TaskFormProps {
   onClose: () => void;
 }
 
-const TASK_ICONS = [
-  '✅', '📝', '🎯', '⏰', '📚', '🏃', '🍎', '💪', '🧘', '🎨',
-  '🎵', '🎮', '📱', '💻', '📖', '✏️', '🖍️', '🖊️', '📄', '📋',
-  '🗓️', '⏱️', '⏲️', '⌛', '🔔', '📣', '🎯', '🏆', '🥇', '⭐',
-  '💡', '🔍', '🔧', '🔨', '🎪', '🎭', '🎬', '🎤', '🎧', '🎸',
-];
-
 export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) {
   const [name, setName] = useState(task?.name || '');
   const [description, setDescription] = useState(task?.description || '');
   const [type, setType] = useState<TaskType>(task?.type || TaskType.SIMPLE);
   const [unit, setUnit] = useState(task?.unit || '');
   const [isSmart, setIsSmart] = useState(task?.isSmart || false);
-  const [selectedIcon, setSelectedIcon] = useState('✅');
+  const [emoji, setEmoji] = useState(task?.emoji || '✅');
+  const [color, setColor] = useState<string>(task?.color || '#3B82F6');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Close pickers when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
+        setShowColorPicker(false);
+      }
+    };
+
+    if (showEmojiPicker || showColorPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker, showColorPicker]);
 
   const createMutation = trpc.task.create.useMutation({
     onSuccess: () => {
@@ -87,6 +109,8 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
       type,
       unit: type === TaskType.PROGRESS && unit ? unit : undefined,
       isSmart,
+      emoji,
+      color,
     };
 
     if (task) {
@@ -112,60 +136,100 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Emoji and Name Row */}
+          <div className="grid grid-cols-12 gap-3">
+            <div className="col-span-2 relative">
+              <Label htmlFor="emoji">Icon</Label>
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
+              >
+                <RenderIconEmoji value={emoji || '✅'} className="h-6 w-6" />
+              </button>
+              {showEmojiPicker && (
+                <div ref={emojiPickerRef} className="absolute z-50 top-full mt-2 left-0">
+                  <IconEmojiPicker
+                    selectedValue={emoji || '✅'}
+                    onSelect={setEmoji}
+                    onClose={() => setShowEmojiPicker(false)}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="col-span-10">
+              <Label htmlFor="name">Task Name *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                maxLength={200}
+                placeholder="Brush teeth"
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          {/* Description - Single Line */}
           <div>
-            <Label htmlFor="name">Task Name *</Label>
+            <Label htmlFor="description">Description</Label>
             <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               maxLength={200}
-              placeholder="Brush teeth"
+              placeholder="Brush for at least 2 minutes..."
               className="mt-1"
             />
           </div>
 
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={500}
-              rows={3}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Brush for at least 2 minutes..."
-            />
+          {/* Color Picker */}
+          <div className="relative">
+            <Label>Color</Label>
+            <button
+              type="button"
+              onClick={() => setShowColorPicker(!showColorPicker)}
+              className="mt-2 w-full h-10 rounded-md border border-gray-300 flex items-center gap-3 px-3 hover:bg-gray-50 transition-colors"
+            >
+              <div
+                className="w-6 h-6 rounded-full border-2 border-gray-300"
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-sm text-gray-700">{color}</span>
+            </button>
+            {showColorPicker && (
+              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border">
+                <HexColorPicker color={color} onChange={setColor} />
+                <div className="mt-3 pt-3 border-t">
+                  <Label className="text-xs mb-2 block">Quick Colors</Label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {PASTEL_COLORS.map((presetColor) => (
+                      <button
+                        key={presetColor}
+                        type="button"
+                        onClick={() => {
+                          setColor(presetColor);
+                          setShowColorPicker(false);
+                        }}
+                        className="w-8 h-8 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
+                        style={{ backgroundColor: presetColor }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div>
-            <Label>Choose Icon</Label>
-            <div className="grid grid-cols-10 gap-2 mt-2 max-h-32 overflow-y-auto p-2 border border-gray-200 rounded-lg">
-              {TASK_ICONS.map((icon) => (
-                <button
-                  key={icon}
-                  type="button"
-                  onClick={() => setSelectedIcon(icon)}
-                  className={`text-2xl p-2 rounded-lg transition-all ${
-                    selectedIcon === icon
-                      ? 'bg-primary-100 ring-2 ring-primary-500 scale-110'
-                      : 'hover:bg-gray-100'
-                  }`}
-                  title={icon}
-                >
-                  {icon}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="type">Task Type *</Label>
+          {/* Task Type - Label and Select on Same Row */}
+          <div className="flex items-center gap-3">
+            <Label htmlFor="type" className="whitespace-nowrap">Task Type:</Label>
             <select
               id="type"
               value={type}
               onChange={(e) => setType(e.target.value as TaskType)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2"
             >
               <option value={TaskType.SIMPLE}>Simple (Once per period)</option>
               <option value={TaskType.MULTIPLE_CHECKIN}>
@@ -209,25 +273,19 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
             </div>
           )}
 
+          {/* Smart Task Checkbox - No Subtitle */}
           <div className="border-t pt-4">
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-3">
               <input
                 type="checkbox"
                 id="isSmart"
                 checked={isSmart}
                 onChange={(e) => setIsSmart(e.target.checked)}
-                className="mt-1 w-4 h-4 text-blue-500 rounded"
+                className="w-4 h-4 text-blue-500 rounded"
               />
-              <div className="flex-1">
-                <Label htmlFor="isSmart" className="cursor-pointer">
-                  Make this a Smart Task
-                </Label>
-                <p className="text-xs text-gray-500 mt-1">
-                  {task && isSmart
-                    ? 'Smart tasks only appear when conditions are met. Set conditions below.'
-                    : 'Smart tasks only appear when conditions are met. You can set conditions after creating the task.'}
-                </p>
-              </div>
+              <Label htmlFor="isSmart" className="cursor-pointer">
+                Make this a Smart Task
+              </Label>
             </div>
 
             {task && isSmart && (
@@ -257,11 +315,14 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
             )}
           </div>
 
+          {/* Preview */}
           <div className="border-t pt-4">
             <Label className="mb-3 block">Preview</Label>
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <div className="bg-gray-50 rounded-xl p-4 border-4" style={{ borderColor: color }}>
               <div className="flex items-center gap-3">
-                <div className="text-3xl">{selectedIcon}</div>
+                <div className="text-3xl">
+                  <RenderIconEmoji value={emoji} className="h-8 w-8" />
+                </div>
                 <div className="flex-1">
                   <p className="font-semibold text-gray-900">
                     {name || 'Task name'}

@@ -274,6 +274,8 @@ model Task {
   conditionId             String?      // Links to shared or unique condition
   order                   Int          @default(0)
   unit                    String?      // For PROGRESS type (e.g., "pages", "minutes")
+  emoji                   String?      // Emoji or icon identifier (e.g., "✅" or "icon:Star")
+  color                   String?      // Hex color code for task styling
   status                  EntityStatus @default(ACTIVE)
   archivedAt              DateTime?
   createdAt               DateTime     @default(now())
