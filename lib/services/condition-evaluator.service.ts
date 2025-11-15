@@ -4,7 +4,7 @@
  */
 
 import { ConditionLogic, ConditionOperator } from '@/lib/types/prisma-enums';
-import { getResetPeriodStart } from './reset-period.service';
+import { getResetPeriodStart } from './reset-period';
 import type { PrismaClient } from '@prisma/client';
 
 export interface ConditionEvaluation {
