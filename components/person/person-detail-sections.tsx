@@ -233,22 +233,34 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                 {Object.entries(tasksByRoutine).map(([routineName, routineTasks]: [string, any]) => (
                   <div key={routineName}>
                     <h3 className="font-semibold text-gray-700 mb-3">{routineName}</h3>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {routineTasks.map((task: any) => (
                         <div
                           key={task.id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                          className="flex flex-col gap-2 p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
                         >
-                          <div className="text-xl">✅</div>
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{task.name}</p>
-                            {task.description && (
-                              <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                          <div className="flex items-start gap-2">
+                            <div className="text-xl">✅</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 text-sm line-clamp-2">{task.name}</p>
+                            </div>
+                          </div>
+                          {task.description && (
+                            <p className="text-xs text-gray-600 line-clamp-2">{task.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-1 mt-auto">
+                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded">
+                              {task.type === 'SIMPLE' ? 'Simple' :
+                               task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                               task.type === 'PROGRESS' ? 'Progress' :
+                               task.type.toLowerCase().replace('_', ' ')}
+                            </span>
+                            {task.isSmart && (
+                              <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
+                                Smart
+                              </span>
                             )}
                           </div>
-                          <span className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded capitalize">
-                            {task.type.toLowerCase().replace('_', ' ')}
-                          </span>
                         </div>
                       ))}
                     </div>
