@@ -131,9 +131,10 @@ export const authRouter = router({
           await ctx.prisma.routine.create({
             data: {
               roleId: parentRole.id,
-              name: 'Daily Routine',
+              name: '☀️ Daily Routine',
               description: 'Default routine for daily tasks',
               resetPeriod: 'DAILY',
+              color: '#3B82F6',
               status: 'ACTIVE',
               assignments: {
                 create: {
@@ -163,9 +164,10 @@ export const authRouter = router({
           await ctx.prisma.routine.create({
             data: {
               roleId: teacherRole.id,
-              name: 'Daily Routine',
+              name: '☀️ Daily Routine',
               description: 'Default routine for daily tasks',
               resetPeriod: 'DAILY',
+              color: '#3B82F6',
               status: 'ACTIVE',
               assignments: {
                 create: {
@@ -238,9 +240,10 @@ export const authRouter = router({
           await ctx.prisma.routine.create({
             data: {
               roleId: parentRole.id,
-              name: 'Daily Routine',
+              name: '☀️ Daily Routine',
               description: 'Default routine for daily tasks',
               resetPeriod: 'DAILY',
+              color: '#3B82F6',
               status: 'ACTIVE',
               assignments: {
                 create: {
@@ -267,9 +270,10 @@ export const authRouter = router({
           await ctx.prisma.routine.create({
             data: {
               roleId: teacherRole.id,
-              name: 'Daily Routine',
+              name: '☀️ Daily Routine',
               description: 'Default routine for daily tasks',
               resetPeriod: 'DAILY',
+              color: '#3B82F6',
               status: 'ACTIVE',
               assignments: {
                 create: {
@@ -420,9 +424,10 @@ export const authRouter = router({
         await ctx.prisma.routine.create({
           data: {
             roleId: parentRole.id,
-            name: 'Daily Routine',
+            name: '☀️ Daily Routine',
             description: 'Default routine for daily tasks',
             resetPeriod: 'DAILY',
+            color: '#3B82F6',
             status: 'ACTIVE',
             assignments: {
               create: {
@@ -448,9 +453,10 @@ export const authRouter = router({
         await ctx.prisma.routine.create({
           data: {
             roleId: teacherRole.id,
-            name: 'Daily Routine',
+            name: '☀️ Daily Routine',
             description: 'Default routine for daily tasks',
             resetPeriod: 'DAILY',
+            color: '#3B82F6',
             status: 'ACTIVE',
             assignments: {
               create: {
@@ -535,9 +541,10 @@ export const authRouter = router({
             await ctx.prisma.routine.create({
               data: {
                 roleId: parentRole.id,
-                name: 'Daily Routine',
+                name: '☀️ Daily Routine',
                 description: 'Default routine for daily tasks',
                 resetPeriod: 'DAILY',
+                color: '#3B82F6',
                 status: 'ACTIVE',
                 assignments: {
                   create: {
@@ -576,9 +583,10 @@ export const authRouter = router({
             await ctx.prisma.routine.create({
               data: {
                 roleId: teacherRole.id,
-                name: 'Daily Routine',
+                name: '☀️ Daily Routine',
                 description: 'Default routine for daily tasks',
                 resetPeriod: 'DAILY',
+                color: '#3B82F6',
                 status: 'ACTIVE',
                 assignments: {
                   create: {

@@ -71,7 +71,7 @@ export default function RoutineDetailPage() {
     }
   }
 
-  const isDailyRoutine = routine.name === 'Daily Routine';
+  const isDailyRoutine = routine.name?.includes('Daily Routine');
 
   return (
     <div className="min-h-screen bg-gray-50">

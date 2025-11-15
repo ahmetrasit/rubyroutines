@@ -110,9 +110,10 @@ export const personRouter = router({
       const dailyRoutine = await ctx.prisma.routine.create({
         data: {
           roleId: input.roleId,
-          name: 'Daily Routine',
+          name: '☀️ Daily Routine',
           description: 'Default routine for daily tasks',
           resetPeriod: 'DAILY',
+          color: '#3B82F6',
           status: EntityStatus.ACTIVE,
           assignments: {
             create: {

@@ -100,7 +100,7 @@ export default function TeacherRoutineDetailPage() {
             <p className="text-gray-600 mb-4">{routine.description}</p>
           )}
 
-          {routine.name === 'Daily Routine' && (
+          {routine.name?.includes('Daily Routine') && (
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
               <p className="text-sm text-blue-700">
                 📌 This is the default Daily Routine. It cannot be deleted or renamed.

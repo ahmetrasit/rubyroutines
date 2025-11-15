@@ -134,7 +134,7 @@ export const routineRouter = router({
       where: { id },
     });
 
-    if (existingRoutine?.name === 'Daily Routine' && data.name && data.name !== 'Daily Routine') {
+    if (existingRoutine?.name?.includes('Daily Routine') && data.name && !data.name.includes('Daily Routine')) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Cannot rename the Daily Routine',
@@ -158,7 +158,7 @@ export const routineRouter = router({
       where: { id: input.id },
     });
 
-    if (existingRoutine?.name === 'Daily Routine') {
+    if (existingRoutine?.name?.includes('Daily Routine')) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'Cannot delete the Daily Routine',
