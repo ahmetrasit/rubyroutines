@@ -45,8 +45,15 @@ fi
 
 echo "Using psql: $PSQL_CMD"
 
+# Clean DATABASE_URL by removing Supabase-specific query parameters
+# psql doesn't recognize parameters like ?pgbouncer=true
+CLEAN_DATABASE_URL="${DATABASE_URL%%\?*}"
+if [[ "$DATABASE_URL" == *"?"* ]]; then
+    echo "Note: Removed query parameters from DATABASE_URL (not supported by psql)"
+fi
+
 echo "Applying all migrations to database..."
-echo "Database: ${DATABASE_URL%%@*}@***"  # Hide credentials in output
+echo "Database: ${CLEAN_DATABASE_URL%%@*}@***"  # Hide credentials in output
 
 # Apply migrations in order
 MIGRATIONS=(
@@ -63,7 +70,7 @@ for migration in "${MIGRATIONS[@]}"; do
 
     if [ -f "$migration_file" ]; then
         echo "Applying migration: $migration"
-        $PSQL_CMD "$DATABASE_URL" -f "$migration_file"
+        $PSQL_CMD "$CLEAN_DATABASE_URL" -f "$migration_file"
         echo "✓ $migration applied"
     else
         echo "⚠ Migration file not found: $migration_file"
@@ -74,5 +81,5 @@ echo ""
 echo "✓ All migrations applied successfully!"
 echo ""
 echo "Verifying database schema..."
-$PSQL_CMD "$DATABASE_URL" -c "\dt" | head -20
+$PSQL_CMD "$CLEAN_DATABASE_URL" -c "\dt" | head -20
 
