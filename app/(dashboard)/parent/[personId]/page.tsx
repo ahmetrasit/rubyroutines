@@ -7,6 +7,7 @@ import { RoutineList } from '@/components/routine/routine-list';
 import { GoalList } from '@/components/goal/goal-list';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { PersonKioskCodeManager } from '@/components/kiosk/person-kiosk-code-manager';
 
 export default function PersonDetailPage() {
   const router = useRouter();
@@ -106,6 +107,15 @@ export default function PersonDetailPage() {
               <p className="text-gray-700">{person.notes}</p>
             </div>
           )}
+
+          {/* Individual Kiosk Code Section */}
+          <div className="mt-6">
+            <PersonKioskCodeManager
+              roleId={parentRole.id}
+              personId={personId}
+              personName={person.name}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
