@@ -28,6 +28,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { useToast } from '@/components/ui/toast';
 import Link from 'next/link';
+import { TierBadgeSelect } from '@/components/admin/TierBadgeSelect';
+import { Tier } from '@/lib/types/prisma-enums';
 
 export default function AdminUsersPage() {
   return (
@@ -108,6 +110,24 @@ function UsersContent() {
     },
   });
 
+  const changeTierMutation = trpc.adminUsers.changeTier.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Tier updated successfully',
+      });
+      utils.adminUsers.search.invalidate();
+      utils.adminUsers.statistics.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleViewDetails = (user: any) => {
     setSelectedUser(user);
     setShowDetailsDialog(true);
@@ -124,6 +144,13 @@ function UsersContent() {
     }
     setSelectedUser(user);
     setShowDeleteDialog(true);
+  };
+
+  const handleTierChange = async (roleId: string, newTier: Tier) => {
+    await changeTierMutation.mutateAsync({
+      roleId,
+      tier: newTier,
+    });
   };
 
   return (
@@ -226,9 +253,13 @@ function UsersContent() {
                       {user.roles.length > 0 && (
                         <div className="flex gap-2 mt-2">
                           {user.roles.map((role) => (
-                            <Badge key={role.id} variant="secondary">
-                              {role.type} ({role.tier})
-                            </Badge>
+                            <TierBadgeSelect
+                              key={role.id}
+                              roleId={role.id}
+                              roleType={role.type}
+                              currentTier={role.tier as Tier}
+                              onTierChange={handleTierChange}
+                            />
                           ))}
                         </div>
                       )}

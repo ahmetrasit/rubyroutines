@@ -13,9 +13,10 @@ import {
   undoCompletionSchema,
   getTaskCompletionsSchema,
 } from '@/lib/validation/task';
-import { checkTierLimit } from '@/lib/services/tier-limits';
+import { checkTierLimit, mapDatabaseLimitsToComponentFormat } from '@/lib/services/tier-limits';
 import { canUndoCompletion, getTaskAggregation } from '@/lib/services/task-completion';
 import { calculateNextReset } from '@/lib/services/reset-period';
+import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
 
 export const taskRouter = router({
   // List tasks for a routine
@@ -126,8 +127,18 @@ export const taskRouter = router({
         });
       }
 
-      // Check tier limit
-      checkTierLimit(routine.role.tier, 'tasks_per_routine', routine.tasks.length);
+      // Get effective tier limits from database
+      const dbLimits = await getEffectiveTierLimits(routine.role.id);
+      const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, routine.role.type);
+
+      // Check tier limit for total tasks (only counting ACTIVE tasks)
+      checkTierLimit(effectiveLimits, 'tasks_per_routine', routine.tasks.length);
+
+      // Check tier limit for smart tasks if creating a smart task
+      if (input.isSmart) {
+        const smartTasksCount = routine.tasks.filter((t) => t.isSmart).length;
+        checkTierLimit(effectiveLimits, 'smart_tasks_per_routine', smartTasksCount);
+      }
 
       // If order not specified, put at end
       const order = input.order || routine.tasks.length;
@@ -153,6 +164,14 @@ export const taskRouter = router({
 
       const task = await ctx.prisma.task.findUnique({
         where: { id },
+        include: {
+          routine: {
+            include: {
+              role: true,
+              tasks: { where: { status: EntityStatus.ACTIVE } },
+            },
+          },
+        },
       });
 
       if (!task) {
@@ -162,15 +181,24 @@ export const taskRouter = router({
         });
       }
 
+      // If changing to smart task, check tier limit
+      if (updateData.isSmart === true && !task.isSmart) {
+        // Get effective tier limits from database
+        const dbLimits = await getEffectiveTierLimits(task.routine.role.id);
+        const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, task.routine.role.type);
+
+        const smartTasksCount = task.routine.tasks.filter((t) => t.isSmart).length;
+        checkTierLimit(effectiveLimits, 'smart_tasks_per_routine', smartTasksCount);
+      }
+
       // Validate type-specific requirements
       if (updateData.type === TaskType.PROGRESS) {
-        const targetValue = updateData.targetValue ?? task.targetValue;
         const unit = updateData.unit ?? task.unit;
 
-        if (!targetValue || !unit) {
+        if (!unit) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Progress tasks must have targetValue and unit',
+            message: 'Progress tasks must have a unit (e.g., "pages", "minutes")',
           });
         }
       }

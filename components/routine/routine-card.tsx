@@ -156,7 +156,7 @@ export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
             >
               <Pencil className="h-4 w-4" />
             </Button>
-            {routine.name !== 'Daily Routine' && (
+            {!routine.name?.includes('Daily Routine') && (
               <Button
                 size="sm"
                 variant="ghost"

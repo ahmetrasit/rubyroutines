@@ -33,6 +33,8 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
   const [name, setName] = useState(task?.name || '');
   const [description, setDescription] = useState(task?.description || '');
   const [type, setType] = useState<TaskType>(task?.type || TaskType.SIMPLE);
+  const [unit, setUnit] = useState(task?.unit || '');
+  const [isSmart, setIsSmart] = useState(task?.isSmart || false);
   const [selectedIcon, setSelectedIcon] = useState('✅');
 
   const { toast } = useToast();
@@ -83,6 +85,8 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
       name,
       description: description || undefined,
       type,
+      unit: type === TaskType.PROGRESS && unit ? unit : undefined,
+      isSmart,
     };
 
     if (task) {
@@ -186,6 +190,72 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
               </p>
             </div>
           )}
+
+          {type === TaskType.PROGRESS && (
+            <div>
+              <Label htmlFor="unit">Unit (e.g., pages, minutes) *</Label>
+              <Input
+                id="unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                required
+                maxLength={50}
+                placeholder="pages"
+                className="mt-1"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                What unit are you tracking? (e.g., pages, minutes, cups)
+              </p>
+            </div>
+          )}
+
+          <div className="border-t pt-4">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="isSmart"
+                checked={isSmart}
+                onChange={(e) => setIsSmart(e.target.checked)}
+                className="mt-1 w-4 h-4 text-blue-500 rounded"
+              />
+              <div className="flex-1">
+                <Label htmlFor="isSmart" className="cursor-pointer">
+                  Make this a Smart Task
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  {task && isSmart
+                    ? 'Smart tasks only appear when conditions are met. Set conditions below.'
+                    : 'Smart tasks only appear when conditions are met. You can set conditions after creating the task.'}
+                </p>
+              </div>
+            </div>
+
+            {task && isSmart && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800 mb-2">
+                  <strong>Condition Management</strong>
+                </p>
+                <p className="text-xs text-blue-700 mb-3">
+                  Define when this task should appear. Task will be visible when conditions are met.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                  onClick={() => {
+                    // TODO: Open condition builder dialog
+                    toast({
+                      title: 'Coming Soon',
+                      description: 'Condition builder UI will be available soon',
+                    });
+                  }}
+                >
+                  {task.conditionId ? 'Edit Conditions' : 'Set Conditions'}
+                </Button>
+              </div>
+            )}
+          </div>
 
           <div className="border-t pt-4">
             <Label className="mb-3 block">Preview</Label>

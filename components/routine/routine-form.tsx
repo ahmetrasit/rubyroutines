@@ -2,7 +2,7 @@
 
 import { ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
 type Routine = any;
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -14,6 +14,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
+import { HexColorPicker } from 'react-colorful';
+import { PASTEL_COLORS } from '@/lib/utils/avatar';
 
 interface RoutineFormProps {
   routine?: Routine;
@@ -23,7 +26,21 @@ interface RoutineFormProps {
 }
 
 export function RoutineForm({ routine, roleId, personIds = [], onClose }: RoutineFormProps) {
-  const [name, setName] = useState(routine?.name || '');
+  // Extract emoji from routine name if editing
+  const extractEmoji = (text: string): { emoji: string; name: string } => {
+    const emojiRegex = /^([\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F1E6}-\u{1F1FF}]+)\s*(.*)$/u;
+    const match = text.match(emojiRegex);
+    if (match) {
+      return { emoji: match[1], name: match[2] };
+    }
+    return { emoji: '', name: text };
+  };
+
+  const initialData = routine?.name ? extractEmoji(routine.name) : { emoji: '', name: '' };
+
+  const [name, setName] = useState(initialData.name || routine?.name || '');
+  const [emoji, setEmoji] = useState(initialData.emoji);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [description, setDescription] = useState(routine?.description || '');
   const [resetPeriod, setResetPeriod] = useState<ResetPeriod>(
     routine?.resetPeriod || ResetPeriod.DAILY
@@ -32,9 +49,56 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const [visibility, setVisibility] = useState<Visibility>(
     routine?.visibility || Visibility.ALWAYS
   );
+  const [startTime, setStartTime] = useState<string>(routine?.startTime || '08:00');
+  const [endTime, setEndTime] = useState<string>(routine?.endTime || '17:00');
+  const [color, setColor] = useState<string>(routine?.color || '#3B82F6');
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Reset visibility if it's invalid for Daily period
+  useEffect(() => {
+    if (resetPeriod === ResetPeriod.DAILY && visibility === Visibility.DATE_RANGE) {
+      setVisibility(Visibility.ALWAYS);
+    }
+  }, [resetPeriod, visibility]);
+
+  // Close pickers when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
+        setShowColorPicker(false);
+      }
+    };
+
+    if (showEmojiPicker || showColorPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker, showColorPicker]);
+
+  // Generate time options in 5-minute increments
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 5) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        options.push(timeString);
+      }
+    }
+    return options;
+  };
+
+  const timeOptions = generateTimeOptions();
 
   const createMutation = trpc.routine.create.useMutation({
     onSuccess: () => {
@@ -77,25 +141,48 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const finalName = emoji ? `${emoji} ${name}` : name;
+
+    // Only include time fields for Daily routines with Limited visibility
+    const shouldIncludeTime = resetPeriod === ResetPeriod.DAILY && visibility === Visibility.DAYS_OF_WEEK;
+
+    // Validate time fields
+    if (shouldIncludeTime && startTime && endTime) {
+      if (startTime >= endTime) {
+        toast({
+          title: 'Invalid Time Range',
+          description: 'End time must be later than start time.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     if (routine) {
       updateMutation.mutate({
         id: routine.id,
-        name: name || undefined,
+        name: finalName || undefined,
         description: description || null,
         resetPeriod,
         resetDay,
         visibility,
+        startTime: shouldIncludeTime ? startTime : null,
+        endTime: shouldIncludeTime ? endTime : null,
+        color: color || null,
       });
     } else if (roleId) {
       createMutation.mutate({
         roleId,
-        name,
+        name: finalName,
         description: description || undefined,
         resetPeriod,
         resetDay,
         visibility,
         visibleDays: [],
         personIds,
+        startTime: shouldIncludeTime ? startTime : null,
+        endTime: shouldIncludeTime ? endTime : null,
+        color: color || null,
       });
     }
   };
@@ -110,44 +197,101 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={100}
-              placeholder="Morning Routine"
-              disabled={routine?.name === 'Daily Routine'}
-            />
-            {routine?.name === 'Daily Routine' && (
-              <p className="text-xs text-gray-500 mt-1">
-                The Daily Routine name cannot be changed
-              </p>
-            )}
+          <div className="grid grid-cols-12 gap-3">
+            <div className="col-span-2 relative">
+              <Label htmlFor="emoji">Icon</Label>
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
+              >
+                <RenderIconEmoji value={emoji || '😊'} className="h-6 w-6" />
+              </button>
+              {showEmojiPicker && (
+                <div ref={emojiPickerRef} className="absolute z-50 top-full mt-2 left-0">
+                  <IconEmojiPicker
+                    selectedValue={emoji || '😊'}
+                    onSelect={setEmoji}
+                    onClose={() => setShowEmojiPicker(false)}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="col-span-10">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                maxLength={100}
+                placeholder="Morning Routine"
+                disabled={routine?.name?.includes('Daily Routine')}
+              />
+              {routine?.name?.includes('Daily Routine') && (
+                <p className="text-xs text-gray-500 mt-1">
+                  The Daily Routine name cannot be changed
+                </p>
+              )}
+            </div>
           </div>
 
           <div>
             <Label htmlFor="description">Description</Label>
-            <textarea
+            <Input
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              maxLength={500}
-              rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              maxLength={200}
               placeholder="Get ready for school..."
             />
           </div>
 
-          <div>
-            <Label htmlFor="resetPeriod">Reset Period *</Label>
+          {/* Color Picker */}
+          <div className="relative">
+            <Label>Border Color</Label>
+            <button
+              type="button"
+              onClick={() => setShowColorPicker(!showColorPicker)}
+              className="mt-2 w-full h-10 rounded-md border border-gray-300 flex items-center gap-3 px-3 hover:bg-gray-50 transition-colors"
+            >
+              <div
+                className="w-6 h-6 rounded-full border-2 border-gray-300"
+                style={{ backgroundColor: color }}
+              />
+              <span className="text-sm text-gray-700">{color}</span>
+            </button>
+            {showColorPicker && (
+              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border">
+                <HexColorPicker color={color} onChange={setColor} />
+                <div className="mt-3 pt-3 border-t">
+                  <Label className="text-xs mb-2 block">Quick Colors</Label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {PASTEL_COLORS.map((presetColor) => (
+                      <button
+                        key={presetColor}
+                        type="button"
+                        onClick={() => {
+                          setColor(presetColor);
+                          setShowColorPicker(false);
+                        }}
+                        className="w-8 h-8 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
+                        style={{ backgroundColor: presetColor }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Label htmlFor="resetPeriod" className="whitespace-nowrap">Period:</Label>
             <select
               id="resetPeriod"
               value={resetPeriod}
               onChange={(e) => setResetPeriod(e.target.value as ResetPeriod)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2"
             >
               <option value={ResetPeriod.DAILY}>Daily</option>
               <option value={ResetPeriod.WEEKLY}>Weekly</option>
@@ -191,19 +335,68 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
             </div>
           )}
 
-          <div>
-            <Label htmlFor="visibility">Visibility *</Label>
+          <div className="flex items-center gap-3">
+            <Label htmlFor="visibility" className="whitespace-nowrap">Visibility:</Label>
             <select
               id="visibility"
               value={visibility}
               onChange={(e) => setVisibility(e.target.value as Visibility)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2"
             >
-              <option value={Visibility.ALWAYS}>Always Visible</option>
-              <option value={Visibility.DAYS_OF_WEEK}>Specific Days</option>
-              <option value={Visibility.DATE_RANGE}>Date Range</option>
+              <option value={Visibility.ALWAYS}>Always</option>
+              {resetPeriod === ResetPeriod.DAILY && (
+                <option value={Visibility.DAYS_OF_WEEK}>Limited</option>
+              )}
+              {resetPeriod !== ResetPeriod.DAILY && (
+                <>
+                  <option value={Visibility.DAYS_OF_WEEK}>Specific Days</option>
+                  <option value={Visibility.DATE_RANGE}>Date Range</option>
+                </>
+              )}
             </select>
           </div>
+
+          {/* Time Period Selection for Daily Limited Routines */}
+          {resetPeriod === ResetPeriod.DAILY && visibility === Visibility.DAYS_OF_WEEK && (
+            <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-sm font-medium text-blue-900">Time Period</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="startTime" className="text-xs">Start Time</Label>
+                  <select
+                    id="startTime"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    {timeOptions.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="endTime" className="text-xs">End Time</Label>
+                  <select
+                    id="endTime"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    {timeOptions.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-blue-700">
+                Routine will be visible from {startTime} to {endTime} daily. Times are in 24-hour format.
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onClose}>

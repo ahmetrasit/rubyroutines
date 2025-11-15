@@ -2,6 +2,11 @@ import { idValidator } from './id-validator';
 import { z } from 'zod';
 import { RoutineType, ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
 
+// Time format validator (HH:MM in 24-hour format)
+const timeValidator = z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format (HH:MM)').optional().nullable();
+// Hex color validator
+const colorValidator = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color').optional().nullable();
+
 export const createRoutineSchema = z.object({
   roleId: idValidator,
   name: z.string().min(1, 'Name is required').max(100),
@@ -13,7 +18,19 @@ export const createRoutineSchema = z.object({
   visibleDays: z.array(z.number().int().min(0).max(6)).default([]),
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
+  startTime: timeValidator,
+  endTime: timeValidator,
+  color: colorValidator,
   personIds: z.array(idValidator).optional().default([]),
+}).refine((data) => {
+  // If both times are provided, validate that start is before end
+  if (data.startTime && data.endTime) {
+    return data.startTime < data.endTime;
+  }
+  return true;
+}, {
+  message: 'Start time must be earlier than end time',
+  path: ['startTime'],
 });
 
 export const updateRoutineSchema = z.object({
@@ -26,6 +43,18 @@ export const updateRoutineSchema = z.object({
   visibleDays: z.array(z.number().int().min(0).max(6)).optional(),
   startDate: z.coerce.date().optional().nullable(),
   endDate: z.coerce.date().optional().nullable(),
+  startTime: timeValidator,
+  endTime: timeValidator,
+  color: colorValidator,
+}).refine((data) => {
+  // If both times are provided, validate that start is before end
+  if (data.startTime && data.endTime) {
+    return data.startTime < data.endTime;
+  }
+  return true;
+}, {
+  message: 'Start time must be earlier than end time',
+  path: ['startTime'],
 });
 
 export const deleteRoutineSchema = z.object({

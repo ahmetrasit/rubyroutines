@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, ChevronDown } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface PersonKioskCodeManagerProps {
   roleId: string;
@@ -14,6 +15,7 @@ interface PersonKioskCodeManagerProps {
 
 export function PersonKioskCodeManager({ roleId, personId, personName }: PersonKioskCodeManagerProps) {
   const [isRevealed, setIsRevealed] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const hasAttemptedGeneration = useRef(false);
@@ -125,59 +127,73 @@ export function PersonKioskCodeManager({ roleId, personId, personName }: PersonK
   }
 
   return (
-    <div className="py-3 space-y-3 border-t border-gray-100 mt-3">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <div className="text-xs font-medium text-gray-600 mb-1">Individual Kiosk Code</div>
-          <div className="font-mono text-lg font-bold text-gray-900">
-            {currentCode ? (isRevealed ? currentCode.code : '••••••••••') : 'Generating...'}
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="border-t border-gray-100 mt-3">
+      <CollapsibleTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full flex items-center justify-between py-3 px-0 hover:bg-transparent"
+        >
+          <span className="text-xs font-medium text-gray-600">Individual Kiosk Code</span>
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </Button>
+      </CollapsibleTrigger>
+
+      <CollapsibleContent className="space-y-3 pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <div className="font-mono text-lg font-bold text-gray-900">
+              {currentCode ? (isRevealed ? currentCode.code : '••••••••••') : 'Generating...'}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsRevealed(!isRevealed)}
+              disabled={!currentCode}
+            >
+              {isRevealed ? (
+                <>
+                  <EyeOff className="h-3 w-3 mr-1" />
+                  Hide
+                </>
+              ) : (
+                <>
+                  <Eye className="h-3 w-3 mr-1" />
+                  Reveal
+                </>
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGenerateNew}
+              disabled={generateMutation.isPending || !currentCode}
+            >
+              {generateMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  New
+                </>
+              )}
+            </Button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIsRevealed(!isRevealed)}
-            disabled={!currentCode}
-          >
-            {isRevealed ? (
-              <>
-                <EyeOff className="h-3 w-3 mr-1" />
-                Hide
-              </>
-            ) : (
-              <>
-                <Eye className="h-3 w-3 mr-1" />
-                Reveal
-              </>
-            )}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGenerateNew}
-            disabled={generateMutation.isPending || !currentCode}
-          >
-            {generateMutation.isPending ? (
-              <>
-                <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-3 w-3 mr-1" />
-                New
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
 
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
-        <p className="text-xs text-purple-800">
-          <strong>Note:</strong> This code allows only {personName} to access their tasks in kiosk mode.
-        </p>
-      </div>
-    </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
+          <p className="text-xs text-purple-800">
+            <strong>Note:</strong> This code allows only {personName} to access their tasks in kiosk mode.
+          </p>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

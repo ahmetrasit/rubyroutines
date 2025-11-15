@@ -1,202 +1,155 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
-import { ConditionType, ConditionOperator, RoutineType } from '@/lib/types/prisma-enums';
-import { TRPCError } from '@trpc/server';
+import { prisma } from '@/lib/prisma';
 import {
-  detectCircularDependency,
-  getCyclePathString
-} from '@/lib/services/circular-dependency';
-import { evaluateRoutineConditions } from '@/lib/services/condition-eval';
+  createConditionSchema,
+  updateConditionSchema,
+  deleteConditionSchema,
+  getConditionByIdSchema,
+  listConditionsSchema,
+  evaluateConditionSchema,
+} from '@/lib/validation/condition';
+import { evaluateCondition } from '@/lib/services/condition-evaluator.service';
+import { TRPCError } from '@trpc/server';
 
 export const conditionRouter = router({
   /**
-   * List all conditions for a routine
-   */
-  list: protectedProcedure
-    .input(z.object({
-      routineId: z.string().cuid()
-    }))
-    .query(async ({ ctx, input }) => {
-      const routine = await ctx.prisma.routine.findUnique({
-        where: { id: input.routineId },
-        include: { role: true }
-      });
-
-      if (!routine) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Routine not found' });
-      }
-
-      if (routine.role.userId !== ctx.user.id) {
-        throw new TRPCError({ code: 'FORBIDDEN' });
-      }
-
-      const conditions = await ctx.prisma.condition.findMany({
-        where: { routineId: input.routineId },
-        include: {
-          targetTask: {
-            include: { routine: true }
-          },
-          targetRoutine: true
-        },
-        orderBy: { createdAt: 'asc' }
-      });
-
-      return conditions;
-    }),
-
-  /**
-   * Create a new condition
+   * Create a new condition with checks
    */
   create: protectedProcedure
-    .input(z.object({
-      routineId: z.string().cuid(),
-      type: z.nativeEnum(ConditionType),
-      operator: z.nativeEnum(ConditionOperator),
-      value: z.string().optional(),
-      targetTaskId: z.string().cuid().optional(),
-      targetRoutineId: z.string().cuid().optional()
-    }))
+    .input(createConditionSchema)
     .mutation(async ({ ctx, input }) => {
-      const routine = await ctx.prisma.routine.findUnique({
-        where: { id: input.routineId },
-        include: { role: true }
+      const { routineId, controlsRoutine, logic, checks } = input;
+
+      // Verify routine ownership
+      const routine = await prisma.routine.findUnique({
+        where: { id: routineId },
+        include: { role: true },
       });
 
-      if (!routine) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Routine not found' });
-      }
-
-      if (routine.role.userId !== ctx.user.id) {
-        throw new TRPCError({ code: 'FORBIDDEN' });
-      }
-
-      // Verify routine is SMART type
-      if (routine.type !== RoutineType.SMART) {
+      if (!routine || routine.role.userId !== ctx.user.id) {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Conditions can only be added to SMART routines'
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to add conditions to this routine',
         });
       }
 
-      // Check for circular dependencies if targeting a routine
-      if (input.targetRoutineId) {
-        const depCheck = await detectCircularDependency(
-          input.routineId,
-          [input.targetRoutineId]
-        );
-
-        if (depCheck.hasCycle) {
-          const pathStr = await getCyclePathString(depCheck.cyclePath || []);
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `Circular dependency detected: ${pathStr}`
-          });
-        }
-      }
-
-      // Check for circular dependencies if targeting a task
-      if (input.targetTaskId) {
-        const task = await ctx.prisma.task.findUnique({
-          where: { id: input.targetTaskId }
-        });
-
-        if (task) {
-          const depCheck = await detectCircularDependency(
-            input.routineId,
-            [task.routineId]
+      // Check for circular dependencies before creating
+      for (const check of checks) {
+        if (check.targetRoutineId) {
+          const hasCycle = await detectCircularDependency(
+            routineId,
+            check.targetRoutineId
           );
-
-          if (depCheck.hasCycle) {
-            const pathStr = await getCyclePathString(depCheck.cyclePath || []);
+          if (hasCycle) {
             throw new TRPCError({
               code: 'BAD_REQUEST',
-              message: `Circular dependency detected: ${pathStr}`
+              message: 'Circular dependency detected. This condition would create an infinite loop.',
             });
           }
         }
       }
 
-      const condition = await ctx.prisma.condition.create({
+      // Create condition with checks in a transaction
+      const condition = await prisma.condition.create({
         data: {
-          routineId: input.routineId,
-          type: input.type,
-          operator: input.operator,
-          value: input.value,
-          targetTaskId: input.targetTaskId,
-          targetRoutineId: input.targetRoutineId
-        }
+          routineId,
+          controlsRoutine,
+          logic,
+          checks: {
+            create: checks.map((check) => ({
+              negate: check.negate,
+              operator: check.operator,
+              value: check.value,
+              targetTaskId: check.targetTaskId,
+              targetRoutineId: check.targetRoutineId,
+              targetGoalId: check.targetGoalId,
+            })),
+          },
+        },
+        include: {
+          checks: true,
+        },
       });
 
       return condition;
     }),
 
   /**
-   * Update a condition
+   * Update an existing condition
    */
   update: protectedProcedure
-    .input(z.object({
-      id: z.string().cuid(),
-      type: z.nativeEnum(ConditionType).optional(),
-      operator: z.nativeEnum(ConditionOperator).optional(),
-      value: z.string().optional(),
-      targetTaskId: z.string().cuid().optional(),
-      targetRoutineId: z.string().cuid().optional()
-    }))
+    .input(updateConditionSchema)
     .mutation(async ({ ctx, input }) => {
-      const condition = await ctx.prisma.condition.findUnique({
-        where: { id: input.id },
+      const { id, logic, checks } = input;
+
+      // Verify condition ownership
+      const existingCondition = await prisma.condition.findUnique({
+        where: { id },
         include: {
-          routine: { include: { role: true } }
-        }
+          routine: {
+            include: { role: true },
+          },
+          checks: true,
+        },
       });
 
-      if (!condition) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Condition not found' });
-      }
-
-      if (condition.routine.role.userId !== ctx.user.id) {
-        throw new TRPCError({ code: 'FORBIDDEN' });
-      }
-
-      // Check for circular dependencies if changing target
-      const newTargetRoutineId = input.targetRoutineId ?? condition.targetRoutineId;
-      const newTargetTaskId = input.targetTaskId ?? condition.targetTaskId;
-
-      const targetRoutineIds: string[] = [];
-
-      if (newTargetRoutineId) {
-        targetRoutineIds.push(newTargetRoutineId);
-      }
-
-      if (newTargetTaskId) {
-        const task = await ctx.prisma.task.findUnique({
-          where: { id: newTargetTaskId }
+      if (!existingCondition || existingCondition.routine.role.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to update this condition',
         });
-        if (task) {
-          targetRoutineIds.push(task.routineId);
+      }
+
+      // Check for circular dependencies if checks are being updated
+      if (checks) {
+        for (const check of checks) {
+          if (check.targetRoutineId) {
+            const hasCycle = await detectCircularDependency(
+              existingCondition.routineId,
+              check.targetRoutineId
+            );
+            if (hasCycle) {
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: 'Circular dependency detected. This condition would create an infinite loop.',
+              });
+            }
+          }
         }
       }
 
-      if (targetRoutineIds.length > 0) {
-        const depCheck = await detectCircularDependency(
-          condition.routineId,
-          targetRoutineIds
-        );
-
-        if (depCheck.hasCycle) {
-          const pathStr = await getCyclePathString(depCheck.cyclePath || []);
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: `Circular dependency detected: ${pathStr}`
+      // Update condition and replace checks
+      const updated = await prisma.$transaction(async (tx) => {
+        // Delete existing checks if new checks provided
+        if (checks) {
+          await tx.conditionCheck.deleteMany({
+            where: { conditionId: id },
           });
         }
-      }
 
-      const { id, ...updateData } = input;
-
-      const updated = await ctx.prisma.condition.update({
-        where: { id },
-        data: updateData
+        // Update condition
+        return await tx.condition.update({
+          where: { id },
+          data: {
+            logic: logic || existingCondition.logic,
+            checks: checks
+              ? {
+                  create: checks.map((check) => ({
+                    negate: check.negate,
+                    operator: check.operator,
+                    value: check.value,
+                    targetTaskId: check.targetTaskId,
+                    targetRoutineId: check.targetRoutineId,
+                    targetGoalId: check.targetGoalId,
+                  })),
+                }
+              : undefined,
+          },
+          include: {
+            checks: true,
+          },
+        });
       });
 
       return updated;
@@ -206,108 +159,296 @@ export const conditionRouter = router({
    * Delete a condition
    */
   delete: protectedProcedure
-    .input(z.object({
-      id: z.string().cuid()
-    }))
+    .input(deleteConditionSchema)
     .mutation(async ({ ctx, input }) => {
-      const condition = await ctx.prisma.condition.findUnique({
-        where: { id: input.id },
+      const { id } = input;
+
+      // Verify condition ownership
+      const condition = await prisma.condition.findUnique({
+        where: { id },
         include: {
-          routine: { include: { role: true } }
-        }
+          routine: {
+            include: { role: true },
+          },
+        },
       });
 
-      if (!condition) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Condition not found' });
+      if (!condition || condition.routine.role.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to delete this condition',
+        });
       }
 
-      if (condition.routine.role.userId !== ctx.user.id) {
-        throw new TRPCError({ code: 'FORBIDDEN' });
-      }
-
-      await ctx.prisma.condition.delete({
-        where: { id: input.id }
+      // Delete condition (checks will cascade)
+      await prisma.condition.delete({
+        where: { id },
       });
 
       return { success: true };
     }),
 
   /**
-   * Evaluate conditions for a routine (check if it should be visible)
+   * Get condition by ID
    */
-  evaluate: protectedProcedure
-    .input(z.object({
-      routineId: z.string().cuid(),
-      personId: z.string().cuid().optional()
-    }))
+  getById: protectedProcedure
+    .input(getConditionByIdSchema)
     .query(async ({ ctx, input }) => {
-      const routine = await ctx.prisma.routine.findUnique({
-        where: { id: input.routineId },
-        include: { role: true }
+      const { id } = input;
+
+      const condition = await prisma.condition.findUnique({
+        where: { id },
+        include: {
+          checks: {
+            include: {
+              targetTask: {
+                select: { id: true, name: true },
+              },
+              targetRoutine: {
+                select: { id: true, name: true },
+              },
+              targetGoal: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+          routine: {
+            include: { role: true },
+          },
+        },
       });
 
-      if (!routine) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Routine not found' });
+      if (!condition || condition.routine.role.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to view this condition',
+        });
       }
 
-      if (routine.role.userId !== ctx.user.id) {
-        throw new TRPCError({ code: 'FORBIDDEN' });
-      }
-
-      const isVisible = await evaluateRoutineConditions(
-        input.routineId,
-        input.personId
-      );
-
-      return { isVisible };
+      return condition;
     }),
 
   /**
-   * Upgrade routine to SMART type
+   * List conditions for a routine
    */
-  upgradeRoutineToSmart: protectedProcedure
-    .input(z.object({
-      routineId: z.string().cuid()
-    }))
-    .mutation(async ({ ctx, input }) => {
-      const routine = await ctx.prisma.routine.findUnique({
-        where: { id: input.routineId },
-        include: { role: true }
+  list: protectedProcedure
+    .input(listConditionsSchema)
+    .query(async ({ ctx, input }) => {
+      const { routineId, controlsRoutine } = input;
+
+      // Verify routine ownership
+      const routine = await prisma.routine.findUnique({
+        where: { id: routineId },
+        include: { role: true },
       });
 
-      if (!routine) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Routine not found' });
-      }
-
-      if (routine.role.userId !== ctx.user.id) {
-        throw new TRPCError({ code: 'FORBIDDEN' });
-      }
-
-      if (routine.type === RoutineType.SMART) {
+      if (!routine || routine.role.userId !== ctx.user.id) {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Routine is already a SMART routine'
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to view conditions for this routine',
         });
       }
 
-      // Check if user tier allows smart routines
-      const role = await ctx.prisma.role.findUnique({
-        where: { id: routine.roleId }
+      const conditions = await prisma.condition.findMany({
+        where: {
+          routineId,
+          ...(controlsRoutine !== undefined ? { controlsRoutine } : {}),
+        },
+        include: {
+          checks: {
+            include: {
+              targetTask: {
+                select: { id: true, name: true },
+              },
+              targetRoutine: {
+                select: { id: true, name: true },
+              },
+              targetGoal: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
       });
 
-      if (role && (role.tier === 'FREE' || role.tier === 'BRONZE')) {
+      return conditions;
+    }),
+
+  /**
+   * Evaluate a condition for a person
+   */
+  evaluate: protectedProcedure
+    .input(evaluateConditionSchema)
+    .query(async ({ ctx, input }) => {
+      const { conditionId, personId } = input;
+
+      // Verify condition ownership
+      const condition = await prisma.condition.findUnique({
+        where: { id: conditionId },
+        include: {
+          routine: {
+            include: { role: true },
+          },
+        },
+      });
+
+      if (!condition || condition.routine.role.userId !== ctx.user.id) {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Smart routines require GOLD tier or higher'
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to evaluate this condition',
         });
       }
 
-      // Upgrade routine to SMART
-      const updated = await ctx.prisma.routine.update({
-        where: { id: input.routineId },
-        data: { type: RoutineType.SMART }
+      // Verify person ownership
+      const person = await prisma.person.findUnique({
+        where: { id: personId },
+        include: { role: true },
       });
 
-      return updated;
-    })
+      if (!person || person.role.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to evaluate for this person',
+        });
+      }
+
+      // Evaluate the condition
+      const evaluation = await evaluateCondition(prisma, conditionId, personId);
+
+      return evaluation;
+    }),
+
+  /**
+   * Get available targets for condition (tasks, routines, goals in same role)
+   */
+  getAvailableTargets: protectedProcedure
+    .input(z.object({ routineId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const { routineId } = input;
+
+      // Get routine with role
+      const routine = await prisma.routine.findUnique({
+        where: { id: routineId },
+        include: { role: true },
+      });
+
+      if (!routine || routine.role.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to view this routine',
+        });
+      }
+
+      // Get all active tasks in the same routine (for same-routine conditions)
+      const tasks = await prisma.task.findMany({
+        where: {
+          routineId,
+          status: 'ACTIVE',
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+        },
+        orderBy: {
+          order: 'asc',
+        },
+      });
+
+      // Get all active routines in the same role (for cross-routine conditions)
+      const routines = await prisma.routine.findMany({
+        where: {
+          roleId: routine.roleId,
+          status: 'ACTIVE',
+          id: {
+            not: routineId, // Exclude current routine
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      });
+
+      // Get all active goals in the same role
+      const goals = await prisma.goal.findMany({
+        where: {
+          roleId: routine.roleId,
+          status: 'ACTIVE',
+        },
+        select: {
+          id: true,
+          name: true,
+          target: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      });
+
+      return {
+        tasks,
+        routines,
+        goals,
+      };
+    }),
 });
+
+/**
+ * Detect circular dependency between routines
+ * Uses DFS to check if targetRoutineId eventually depends on sourceRoutineId
+ */
+async function detectCircularDependency(
+  sourceRoutineId: string,
+  targetRoutineId: string
+): Promise<boolean> {
+  const visited = new Set<string>();
+  const stack = [targetRoutineId];
+
+  while (stack.length > 0) {
+    const currentId = stack.pop()!;
+
+    if (currentId === sourceRoutineId) {
+      return true; // Cycle detected
+    }
+
+    if (visited.has(currentId)) {
+      continue;
+    }
+
+    visited.add(currentId);
+
+    // Get all conditions that control this routine
+    const conditions = await prisma.condition.findMany({
+      where: {
+        routineId: currentId,
+        controlsRoutine: true,
+      },
+      include: {
+        checks: {
+          select: {
+            targetRoutineId: true,
+          },
+        },
+      },
+    });
+
+    // Add all target routines to stack
+    for (const condition of conditions) {
+      for (const check of condition.checks) {
+        if (check.targetRoutineId && !visited.has(check.targetRoutineId)) {
+          stack.push(check.targetRoutineId);
+        }
+      }
+    }
+  }
+
+  return false; // No cycle detected
+}

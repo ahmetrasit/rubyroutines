@@ -9,14 +9,16 @@ import { PersonForm } from './person-form';
 import { RestorePersonDialog } from './restore-person-dialog';
 import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 import type { Person } from '@/lib/types/database';
+import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
 
 interface PersonListProps {
   roleId: string;
   userName: string;
+  effectiveLimits?: ComponentTierLimits | null;
   onSelectPerson?: (person: Person) => void;
 }
 
-export function PersonList({ roleId, userName, onSelectPerson }: PersonListProps) {
+export function PersonList({ roleId, userName, effectiveLimits = null, onSelectPerson }: PersonListProps) {
   const [showForm, setShowForm] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
   const [kioskCollapsed, setKioskCollapsed] = useState(true); // Collapsed by default
@@ -28,6 +30,18 @@ export function PersonList({ roleId, userName, onSelectPerson }: PersonListProps
   const { data: allPersons } = trpc.person.list.useQuery(
     { roleId, includeInactive: true },
     { enabled: !!roleId }
+  );
+
+  const { data: coParents } = trpc.coParent.list.useQuery(
+    { roleId },
+    {
+      enabled: !!roleId,
+      retry: false,
+      onError: (error) => {
+        // Silently handle co-parent errors if the feature is not set up yet
+        console.warn('Co-parent feature not available:', error.message);
+      }
+    }
   );
 
   if (isLoading) {
@@ -43,6 +57,15 @@ export function PersonList({ roleId, userName, onSelectPerson }: PersonListProps
   // Separate adults (Me) from children
   const adults = persons?.filter((person) => person.name === 'Me') || [];
   const children = persons?.filter((person) => person.name !== 'Me') || [];
+
+  // Check tier limits using effective limits from database
+  const childLimit = getTierLimit(effectiveLimits, 'children_per_family');
+  const currentChildCount = children.length;
+  const canAddChild = currentChildCount < childLimit;
+
+  const coParentLimit = getTierLimit(effectiveLimits, 'co_parents');
+  const currentCoParentCount = coParents?.length || 0;
+  const canAddCoParent = currentCoParentCount < coParentLimit;
 
   return (
     <div className="space-y-8">
@@ -94,19 +117,34 @@ export function PersonList({ roleId, userName, onSelectPerson }: PersonListProps
 
           {/* Add Co-Parent placeholder card */}
           <button
-            onClick={() => {
+            onClick={canAddCoParent ? () => {
               // TODO: Open co-parent invitation dialog
               alert('Co-parent invitation feature coming soon!');
-            }}
-            className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-purple-400 hover:bg-purple-50/50 transition-all flex flex-col items-center justify-center min-h-[200px] group"
+            } : undefined}
+            className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${
+              canAddCoParent
+                ? 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50 cursor-pointer'
+                : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+            }`}
           >
-            <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-purple-100 flex items-center justify-center mb-3 transition-colors">
-              <Plus className="h-8 w-8 text-gray-400 group-hover:text-purple-600 transition-colors" />
-            </div>
-            <span className="text-gray-600 group-hover:text-purple-600 font-medium transition-colors">
-              Add Co-Parent
-            </span>
-            <span className="text-sm text-gray-400 mt-1">Invite a co-parent to collaborate</span>
+            {canAddCoParent ? (
+              <>
+                <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-purple-100 flex items-center justify-center mb-3 transition-colors">
+                  <Plus className="h-8 w-8 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                </div>
+                <span className="text-gray-600 group-hover:text-purple-600 font-medium transition-colors">
+                  Add Co-Parent
+                </span>
+                <span className="text-sm text-gray-400 mt-1">Invite a co-parent to collaborate</span>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl mb-2">🔒</div>
+                <span className="text-sm font-medium text-gray-500">Upgrade to add</span>
+                <span className="text-sm text-gray-400">new co-parents</span>
+                <span className="text-xs text-gray-400 mt-1">({currentCoParentCount}/{coParentLimit})</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -121,16 +159,31 @@ export function PersonList({ roleId, userName, onSelectPerson }: PersonListProps
 
           {/* Add Member placeholder card */}
           <button
-            onClick={() => setShowForm(true)}
-            className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-purple-400 hover:bg-purple-50/50 transition-all flex flex-col items-center justify-center min-h-[200px] group"
+            onClick={canAddChild ? () => setShowForm(true) : undefined}
+            className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${
+              canAddChild
+                ? 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50 cursor-pointer'
+                : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+            }`}
           >
-            <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-purple-100 flex items-center justify-center mb-3 transition-colors">
-              <Plus className="h-8 w-8 text-gray-400 group-hover:text-purple-600 transition-colors" />
-            </div>
-            <span className="text-gray-600 group-hover:text-purple-600 font-medium transition-colors">
-              Add Member
-            </span>
-            <span className="text-sm text-gray-400 mt-1">add a family member</span>
+            {canAddChild ? (
+              <>
+                <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-purple-100 flex items-center justify-center mb-3 transition-colors">
+                  <Plus className="h-8 w-8 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                </div>
+                <span className="text-gray-600 group-hover:text-purple-600 font-medium transition-colors">
+                  Add Member
+                </span>
+                <span className="text-sm text-gray-400 mt-1">add a family member</span>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl mb-2">🔒</div>
+                <span className="text-sm font-medium text-gray-500">Upgrade to add</span>
+                <span className="text-sm text-gray-400">new members</span>
+                <span className="text-xs text-gray-400 mt-1">({currentChildCount}/{childLimit})</span>
+              </>
+            )}
           </button>
         </div>
       </div>

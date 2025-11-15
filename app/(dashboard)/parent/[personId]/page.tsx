@@ -120,6 +120,7 @@ export default function PersonDetailPage() {
         <PersonDetailSections
           roleId={parentRole.id}
           personId={personId}
+          effectiveLimits={parentRole.effectiveLimits}
           onSelectRoutine={handleSelectRoutine}
         />
       </div>

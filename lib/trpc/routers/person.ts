@@ -1,7 +1,8 @@
 import { router, authorizedProcedure, verifyPersonOwnership } from '../init';
 import { TRPCError } from '@trpc/server';
 import { EntityStatus } from '@/lib/types/prisma-enums';
-import { checkTierLimit } from '@/lib/services/tier-limits';
+import { checkTierLimit, mapDatabaseLimitsToComponentFormat } from '@/lib/services/tier-limits';
+import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
 import {
   createPersonSchema,
   updatePersonSchema,
@@ -80,10 +81,14 @@ export const personRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
       }
 
-      // Check tier limit based on role type
+      // Get effective tier limits from database
+      const dbLimits = await getEffectiveTierLimits(role.id);
+      const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
+
+      // Check tier limit based on role type (only counting ACTIVE persons)
       const limitKey =
         role.type === 'PARENT' ? 'children_per_family' : 'students_per_classroom';
-      checkTierLimit(role.tier, limitKey, role.persons.length);
+      checkTierLimit(effectiveLimits, limitKey, role.persons.length);
 
       // Check for inactive person with same name (suggest restore)
       const existingInactive = await ctx.prisma.person.findFirst({
@@ -110,9 +115,10 @@ export const personRouter = router({
       const dailyRoutine = await ctx.prisma.routine.create({
         data: {
           roleId: input.roleId,
-          name: 'Daily Routine',
+          name: '☀️ Daily Routine',
           description: 'Default routine for daily tasks',
           resetPeriod: 'DAILY',
+          color: '#3B82F6',
           status: EntityStatus.ACTIVE,
           assignments: {
             create: {

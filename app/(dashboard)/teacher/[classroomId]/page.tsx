@@ -87,6 +87,7 @@ export default function ClassroomDetailPage() {
           classroomId={classroomId}
           roleId={teacherRole.id}
           userName={session.user.name || 'User'}
+          effectiveLimits={teacherRole.effectiveLimits}
           onSelectPerson={handleSelectStudent}
         />
       </div>

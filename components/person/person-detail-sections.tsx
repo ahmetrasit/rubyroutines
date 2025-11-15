@@ -1,24 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Pencil } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { isRoutineVisible } from '@/lib/services/visibility-rules';
 import { RoutineForm } from '@/components/routine/routine-form';
 import { GoalForm } from '@/components/goal/goal-form';
+import { Button } from '@/components/ui/button';
+import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
 
 interface PersonDetailSectionsProps {
   roleId: string;
   personId: string;
+  effectiveLimits?: ComponentTierLimits | null;
   onSelectRoutine?: (routine: any) => void;
 }
 
-export function PersonDetailSections({ roleId, personId, onSelectRoutine }: PersonDetailSectionsProps) {
+export function PersonDetailSections({ roleId, personId, effectiveLimits = null, onSelectRoutine }: PersonDetailSectionsProps) {
   const [routinesExpanded, setRoutinesExpanded] = useState(false);
   const [goalsExpanded, setGoalsExpanded] = useState(false);
   const [tasksExpanded, setTasksExpanded] = useState(false);
   const [showRoutineForm, setShowRoutineForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
+  const [editingRoutine, setEditingRoutine] = useState<any>(null);
 
   const { data: routines, isLoading: routinesLoading } = trpc.routine.list.useQuery({
     roleId,
@@ -32,6 +36,15 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
 
   // Filter goals for this person
   const filteredGoals = goals?.filter((goal) => goal.personIds.includes(personId)) || [];
+
+  // Check tier limits using effective limits from database
+  const routineLimit = getTierLimit(effectiveLimits, 'routines_per_person');
+  const currentRoutineCount = routines?.length || 0;
+  const canAddRoutine = currentRoutineCount < routineLimit;
+
+  const goalLimit = getTierLimit(effectiveLimits, 'goals');
+  const currentGoalCount = goals?.length || 0;
+  const canAddGoal = currentGoalCount < goalLimit;
 
   // Extract tasks from routines and group by routine
   const tasksByRoutine = routines?.reduce((acc: any, routine: any) => {
@@ -76,6 +89,9 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {routines.map((routine: any) => {
                   const visible = isRoutineVisible(routine);
+                  const totalTasks = routine.tasks?.length || 0;
+                  const smartTasks = routine.tasks?.filter((t: any) => t.isSmart).length || 0;
+
                   // Extract emoji from name if present
                   const emojiMatch = routine.name.match(/^(\p{Emoji}+)\s*/u);
                   const emoji = emojiMatch ? emojiMatch[1] : '';
@@ -83,36 +99,102 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                     ? routine.name.substring(emoji.length).trim()
                     : routine.name;
 
+                  // Add sunshine for daily routines
+                  const isDailyRoutine = routine.resetPeriod === 'DAILY';
+                  const periodLabel = routine.resetPeriod === 'DAILY' ? 'Daily' :
+                                     routine.resetPeriod === 'WEEKLY' ? 'Weekly' :
+                                     routine.resetPeriod === 'MONTHLY' ? 'Monthly' :
+                                     routine.resetPeriod === 'DAYS_OF_WEEK' ? 'Specific Days' :
+                                     routine.resetPeriod === 'CONDITIONAL' ? 'Conditional' : 'Custom';
+
                   return (
                     <div
                       key={routine.id}
-                      onClick={() => onSelectRoutine?.(routine)}
-                      className={`bg-white rounded-lg border-2 p-4 cursor-pointer transition-all hover:shadow-md ${
-                        visible
-                          ? 'border-gray-200 hover:border-primary-300'
-                          : 'border-gray-100 opacity-50'
+                      className={`group bg-white rounded-lg border-4 p-3 cursor-pointer transition-all hover:shadow-md relative ${
+                        visible ? 'hover:shadow-lg' : 'opacity-40'
                       }`}
+                      style={{
+                        borderColor: routine.color || '#E5E7EB',
+                      }}
                     >
-                      <div className="flex flex-col items-center text-center gap-2">
-                        {emoji && <div className="text-3xl">{emoji}</div>}
-                        <h3 className="font-semibold text-gray-900 text-sm">
+                      <div
+                        onClick={() => onSelectRoutine?.(routine)}
+                        className="flex flex-col gap-2"
+                      >
+                        {/* Header with emoji */}
+                        <div className="flex items-center justify-center gap-1">
+                          {isDailyRoutine && <span className="text-2xl">☀️</span>}
+                          {emoji && !isDailyRoutine && <div className="text-2xl">{emoji}</div>}
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="font-semibold text-gray-900 text-sm text-center line-clamp-2">
                           {displayName}
                         </h3>
+
+                        {/* Task counts */}
+                        <div className="flex items-center justify-center gap-2 text-xs">
+                          <span className="text-gray-600">{totalTasks} tasks</span>
+                          {smartTasks > 0 && (
+                            <span className="flex items-center gap-1 text-amber-700">
+                              (<span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-100 text-[10px] font-bold">S</span>
+                              {smartTasks})
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Period and structure */}
+                        <div className="flex flex-col gap-1 text-xs text-center">
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">
+                            {periodLabel}
+                          </span>
+                          {routine.visibilityStructure && (
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px]">
+                              {routine.visibilityStructure}
+                            </span>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Edit Button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingRoutine(routine);
+                        }}
+                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
                     </div>
                   );
                 })}
 
                 {/* Add Routine Card */}
-                <div
-                  onClick={() => setShowRoutineForm(true)}
-                  className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-4 cursor-pointer transition-all hover:border-primary-400 hover:bg-gray-50 flex items-center justify-center"
+                <button
+                  onClick={canAddRoutine ? () => setShowRoutineForm(true) : undefined}
+                  className={`rounded-lg border-2 border-dashed p-4 transition-all flex items-center justify-center ${
+                    canAddRoutine
+                      ? 'border-gray-300 cursor-pointer hover:border-primary-400 hover:bg-gray-50'
+                      : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                  }`}
                 >
-                  <div className="flex flex-col items-center text-center gap-2 text-gray-400">
-                    <Plus className="h-8 w-8" />
-                    <span className="text-sm font-medium">Add Routine</span>
-                  </div>
-                </div>
+                  {canAddRoutine ? (
+                    <div className="flex flex-col items-center text-center gap-2 text-gray-400">
+                      <Plus className="h-8 w-8" />
+                      <span className="text-sm font-medium">Add Routine</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-center gap-2">
+                      <div className="text-2xl">🔒</div>
+                      <span className="text-xs font-medium text-gray-500">Upgrade to add</span>
+                      <span className="text-xs text-gray-400">new routines</span>
+                      <span className="text-xs text-gray-400 mt-1">({currentRoutineCount}/{routineLimit})</span>
+                    </div>
+                  )}
+                </button>
               </div>
             ) : (
               <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
@@ -179,15 +261,28 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                 })}
 
                 {/* Add Goal Card */}
-                <div
-                  onClick={() => setShowGoalForm(true)}
-                  className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-4 cursor-pointer transition-all hover:border-primary-400 hover:bg-gray-50 flex items-center justify-center"
+                <button
+                  onClick={canAddGoal ? () => setShowGoalForm(true) : undefined}
+                  className={`rounded-lg border-2 border-dashed p-4 transition-all flex items-center justify-center ${
+                    canAddGoal
+                      ? 'border-gray-300 cursor-pointer hover:border-primary-400 hover:bg-gray-50'
+                      : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                  }`}
                 >
-                  <div className="flex flex-col items-center text-center gap-2 text-gray-400">
-                    <Plus className="h-8 w-8" />
-                    <span className="text-sm font-medium">Add Goal</span>
-                  </div>
-                </div>
+                  {canAddGoal ? (
+                    <div className="flex flex-col items-center text-center gap-2 text-gray-400">
+                      <Plus className="h-8 w-8" />
+                      <span className="text-sm font-medium">Add Goal</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-center gap-2">
+                      <div className="text-2xl">🔒</div>
+                      <span className="text-xs font-medium text-gray-500">Upgrade to add</span>
+                      <span className="text-xs text-gray-400">new goals</span>
+                      <span className="text-xs text-gray-400 mt-1">({currentGoalCount}/{goalLimit})</span>
+                    </div>
+                  )}
+                </button>
               </div>
             ) : (
               <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
@@ -233,22 +328,34 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                 {Object.entries(tasksByRoutine).map(([routineName, routineTasks]: [string, any]) => (
                   <div key={routineName}>
                     <h3 className="font-semibold text-gray-700 mb-3">{routineName}</h3>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {routineTasks.map((task: any) => (
                         <div
                           key={task.id}
-                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                          className="flex flex-col gap-2 p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
                         >
-                          <div className="text-xl">✅</div>
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{task.name}</p>
-                            {task.description && (
-                              <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                          <div className="flex items-start gap-2">
+                            <div className="text-xl">✅</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 text-sm line-clamp-2">{task.name}</p>
+                            </div>
+                          </div>
+                          {task.description && (
+                            <p className="text-xs text-gray-600 line-clamp-2">{task.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-1 mt-auto">
+                            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded">
+                              {task.type === 'SIMPLE' ? 'Simple' :
+                               task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                               task.type === 'PROGRESS' ? 'Progress' :
+                               task.type.toLowerCase().replace('_', ' ')}
+                            </span>
+                            {task.isSmart && (
+                              <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded">
+                                Smart
+                              </span>
                             )}
                           </div>
-                          <span className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded capitalize">
-                            {task.type.toLowerCase().replace('_', ' ')}
-                          </span>
                         </div>
                       ))}
                     </div>
@@ -270,6 +377,13 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
           roleId={roleId}
           personIds={[personId]}
           onClose={() => setShowRoutineForm(false)}
+        />
+      )}
+
+      {editingRoutine && (
+        <RoutineForm
+          routine={editingRoutine}
+          onClose={() => setEditingRoutine(null)}
         />
       )}
 

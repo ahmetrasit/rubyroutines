@@ -131,9 +131,10 @@ export const authRouter = router({
           await ctx.prisma.routine.create({
             data: {
               roleId: parentRole.id,
-              name: 'Daily Routine',
+              name: '☀️ Daily Routine',
               description: 'Default routine for daily tasks',
               resetPeriod: 'DAILY',
+              color: '#3B82F6',
               status: 'ACTIVE',
               assignments: {
                 create: {
@@ -163,9 +164,10 @@ export const authRouter = router({
           await ctx.prisma.routine.create({
             data: {
               roleId: teacherRole.id,
-              name: 'Daily Routine',
+              name: '☀️ Daily Routine',
               description: 'Default routine for daily tasks',
               resetPeriod: 'DAILY',
+              color: '#3B82F6',
               status: 'ACTIVE',
               assignments: {
                 create: {
@@ -238,9 +240,10 @@ export const authRouter = router({
           await ctx.prisma.routine.create({
             data: {
               roleId: parentRole.id,
-              name: 'Daily Routine',
+              name: '☀️ Daily Routine',
               description: 'Default routine for daily tasks',
               resetPeriod: 'DAILY',
+              color: '#3B82F6',
               status: 'ACTIVE',
               assignments: {
                 create: {
@@ -267,9 +270,10 @@ export const authRouter = router({
           await ctx.prisma.routine.create({
             data: {
               roleId: teacherRole.id,
-              name: 'Daily Routine',
+              name: '☀️ Daily Routine',
               description: 'Default routine for daily tasks',
               resetPeriod: 'DAILY',
+              color: '#3B82F6',
               status: 'ACTIVE',
               assignments: {
                 create: {
@@ -420,9 +424,10 @@ export const authRouter = router({
         await ctx.prisma.routine.create({
           data: {
             roleId: parentRole.id,
-            name: 'Daily Routine',
+            name: '☀️ Daily Routine',
             description: 'Default routine for daily tasks',
             resetPeriod: 'DAILY',
+            color: '#3B82F6',
             status: 'ACTIVE',
             assignments: {
               create: {
@@ -448,9 +453,10 @@ export const authRouter = router({
         await ctx.prisma.routine.create({
           data: {
             roleId: teacherRole.id,
-            name: 'Daily Routine',
+            name: '☀️ Daily Routine',
             description: 'Default routine for daily tasks',
             resetPeriod: 'DAILY',
+            color: '#3B82F6',
             status: 'ACTIVE',
             assignments: {
               create: {
@@ -535,9 +541,10 @@ export const authRouter = router({
             await ctx.prisma.routine.create({
               data: {
                 roleId: parentRole.id,
-                name: 'Daily Routine',
+                name: '☀️ Daily Routine',
                 description: 'Default routine for daily tasks',
                 resetPeriod: 'DAILY',
+                color: '#3B82F6',
                 status: 'ACTIVE',
                 assignments: {
                   create: {
@@ -576,9 +583,10 @@ export const authRouter = router({
             await ctx.prisma.routine.create({
               data: {
                 roleId: teacherRole.id,
-                name: 'Daily Routine',
+                name: '☀️ Daily Routine',
                 description: 'Default routine for daily tasks',
                 resetPeriod: 'DAILY',
+                color: '#3B82F6',
                 status: 'ACTIVE',
                 assignments: {
                   create: {
@@ -649,6 +657,38 @@ export const authRouter = router({
           roles: true,
         },
       });
+
+      // Fetch effective tier limits for each role
+      if (dbUser && dbUser.roles) {
+        const { getEffectiveTierLimits } = await import('@/lib/services/admin/system-settings.service');
+        const { mapDatabaseLimitsToComponentFormat } = await import('@/lib/services/tier-limits');
+
+        const rolesWithLimits = await Promise.all(
+          dbUser.roles.map(async (role: any) => {
+            try {
+              const dbLimits = await getEffectiveTierLimits(role.id);
+              const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
+              return {
+                ...role,
+                effectiveLimits,
+              };
+            } catch (error) {
+              logger.warn(`Failed to fetch tier limits for role ${role.id}:`, error);
+              return {
+                ...role,
+                effectiveLimits: null,
+              };
+            }
+          })
+        );
+
+        return {
+          user: {
+            ...dbUser,
+            roles: rolesWithLimits,
+          },
+        };
+      }
 
       return { user: dbUser };
     }),

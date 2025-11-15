@@ -8,18 +8,10 @@ export const createTaskSchema = z.object({
   name: z.string().min(1, 'Task name is required').max(200),
   description: z.string().max(500).optional(),
   type: z.nativeEnum(TaskType).default(TaskType.SIMPLE),
+  isSmart: z.boolean().default(false),
+  conditionId: idValidator.optional(),
   order: z.number().int().min(0).default(0),
-  targetValue: z.number().positive().optional(),
   unit: z.string().max(50).optional(),
-}).refine((data) => {
-  // PROGRESS tasks must have targetValue and unit
-  if (data.type === TaskType.PROGRESS) {
-    return data.targetValue !== undefined && data.unit !== undefined;
-  }
-  return true;
-}, {
-  message: 'Progress tasks must have targetValue and unit',
-  path: ['targetValue'],
 });
 
 // Update task schema
@@ -28,8 +20,9 @@ export const updateTaskSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(500).optional().nullable(),
   type: z.nativeEnum(TaskType).optional(),
+  isSmart: z.boolean().optional(),
+  conditionId: idValidator.optional().nullable(),
   order: z.number().int().min(0).optional(),
-  targetValue: z.number().positive().optional().nullable(),
   unit: z.string().max(50).optional().nullable(),
 });
 

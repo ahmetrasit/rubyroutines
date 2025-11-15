@@ -83,6 +83,7 @@ export default function ParentDashboard() {
               <PersonList
                 roleId={parentRole.id}
                 userName={session.user.name || 'User'}
+                effectiveLimits={parentRole.effectiveLimits}
                 onSelectPerson={handleSelectPerson}
               />
             </div>

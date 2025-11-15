@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import {
   Dialog,
@@ -11,12 +11,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, RotateCcw } from 'lucide-react';
-import { PASTEL_COLORS, COMMON_EMOJIS, parseAvatar, serializeAvatar } from '@/lib/utils/avatar';
+import { RotateCcw } from 'lucide-react';
+import { PASTEL_COLORS, parseAvatar, serializeAvatar } from '@/lib/utils/avatar';
 import { useCreateMutation, useUpdateMutation } from '@/lib/hooks';
 import { EntityStatus } from '@/lib/types/prisma-enums';
 import { useToast } from '@/components/ui/toast';
 import type { Person } from '@/lib/types/database';
+import { HexColorPicker } from 'react-colorful';
+import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 
 interface PersonFormProps {
   person?: Person;
@@ -35,7 +37,11 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
   const [name, setName] = useState(person?.name || '');
   const [selectedColor, setSelectedColor] = useState(initialColor);
   const [selectedEmoji, setSelectedEmoji] = useState(initialEmoji);
-  const [emojiSearch, setEmojiSearch] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
 
   const utils = trpc.useUtils();
   const { toast } = useToast();
@@ -66,16 +72,26 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     );
   }, [allPersons, classroom]);
 
-  const filteredEmojis = useMemo(() => {
-    if (!emojiSearch) return COMMON_EMOJIS;
-    const search = emojiSearch.toLowerCase();
-    return COMMON_EMOJIS.filter(
-      (item) =>
-        item.name.includes(search) ||
-        item.keywords.includes(search) ||
-        item.emoji.includes(search)
-    );
-  }, [emojiSearch]);
+  // Close pickers when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
+        setShowColorPicker(false);
+      }
+    };
+
+    if (showEmojiPicker || showColorPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker, showColorPicker]);
+
 
   const addMemberMutation = trpc.group.addMember.useMutation({
     onSuccess: async () => {
@@ -249,80 +265,75 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         {/* Create New Tab */}
         {activeTab === 'create' && (
           <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Name Field */}
-          <div>
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={100}
-              placeholder="Enter name"
-              className="mt-1"
-            />
-          </div>
-
-          {/* Color Palette */}
-          <div>
-            <Label>Choose Color</Label>
-            <div className="grid grid-cols-8 gap-2 mt-2">
-              {PASTEL_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setSelectedColor(color)}
-                  className={`w-10 h-10 rounded-full transition-all ${
-                    selectedColor === color
-                      ? 'ring-4 ring-offset-2 ring-gray-400 scale-105'
-                      : 'hover:scale-105 hover:ring-2 hover:ring-gray-300'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  aria-label={`Select color ${color}`}
-                  title={color}
-                />
-              ))}
+          {/* Emoji and Name Row */}
+          <div className="grid grid-cols-12 gap-3">
+            <div className="col-span-2 relative">
+              <Label htmlFor="emoji">Icon</Label>
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
+              >
+                <RenderIconEmoji value={selectedEmoji} className="h-6 w-6" />
+              </button>
+              {showEmojiPicker && (
+                <div ref={emojiPickerRef} className="absolute z-50 top-full mt-2 left-0">
+                  <IconEmojiPicker
+                    selectedValue={selectedEmoji}
+                    onSelect={setSelectedEmoji}
+                    onClose={() => setShowEmojiPicker(false)}
+                  />
+                </div>
+              )}
             </div>
-          </div>
-
-          {/* Emoji Picker */}
-          <div>
-            <Label>Choose Emoji</Label>
-
-            {/* Search */}
-            <div className="relative mt-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="col-span-10">
+              <Label htmlFor="name">Name *</Label>
               <Input
-                type="text"
-                placeholder="Search emoji... (e.g., cat, smile, star)"
-                value={emojiSearch}
-                onChange={(e) => setEmojiSearch(e.target.value)}
-                className="pl-10"
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                maxLength={100}
+                placeholder="Enter name"
               />
             </div>
+          </div>
 
-            {/* Emoji Grid */}
-            <div className="grid grid-cols-8 gap-2 mt-3 max-h-48 overflow-y-auto p-2 border rounded-lg">
-              {filteredEmojis.map((item) => (
-                <button
-                  key={item.emoji}
-                  type="button"
-                  onClick={() => setSelectedEmoji(item.emoji)}
-                  className={`text-3xl p-2 rounded-lg transition-all ${
-                    selectedEmoji === item.emoji
-                      ? 'bg-primary-100 ring-2 ring-primary-500 scale-110'
-                      : 'hover:bg-gray-100'
-                  }`}
-                  title={item.name}
-                >
-                  {item.emoji}
-                </button>
-              ))}
-            </div>
-            {filteredEmojis.length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">
-                No emojis found. Try a different search term.
-              </p>
+          {/* Color Picker */}
+          <div className="relative">
+            <Label>Color</Label>
+            <button
+              type="button"
+              onClick={() => setShowColorPicker(!showColorPicker)}
+              className="mt-2 w-full h-10 rounded-md border border-gray-300 flex items-center gap-3 px-3 hover:bg-gray-50 transition-colors"
+            >
+              <div
+                className="w-6 h-6 rounded-full border-2 border-gray-300"
+                style={{ backgroundColor: selectedColor }}
+              />
+              <span className="text-sm text-gray-700">{selectedColor}</span>
+            </button>
+            {showColorPicker && (
+              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border">
+                <HexColorPicker color={selectedColor} onChange={setSelectedColor} />
+                <div className="mt-3 pt-3 border-t">
+                  <Label className="text-xs mb-2 block">Quick Colors</Label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {PASTEL_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => {
+                          setSelectedColor(color);
+                          setShowColorPicker(false);
+                        }}
+                        className="w-8 h-8 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
@@ -332,13 +343,14 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
             <div className="bg-gray-50 rounded-xl p-6">
               <div className="flex items-center gap-4">
                 <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
-                  style={{ backgroundColor: selectedColor + '20' }}
+                  className="w-20 h-20 rounded-full flex items-center justify-center text-4xl border-4"
+                  style={{ backgroundColor: selectedColor + '20', borderColor: selectedColor }}
                 >
                   {selectedEmoji}
                 </div>
                 <div>
-                  <p className="text-xl font-semibold">
+                  <p className="text-xl font-semibold flex items-center gap-2">
+                    <span className="text-2xl">{selectedEmoji}</span>
                     {name || 'Enter a name'}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
