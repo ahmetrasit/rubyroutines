@@ -2,8 +2,9 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
 import { ResetPeriod, EntityStatus } from '@/lib/types/prisma-enums';
 import { calculateGoalProgress } from '@/lib/services/goal-progress';
-import { checkTierLimit } from '@/lib/services/tier-limits';
+import { checkTierLimit, mapDatabaseLimitsToComponentFormat } from '@/lib/services/tier-limits';
 import { TRPCError } from '@trpc/server';
+import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
 
 export const goalRouter = router({
   /**
@@ -134,8 +135,12 @@ export const goalRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
-      // Check tier limit for goals
-      await checkTierLimit(role.tier, 'goals', role.goals.length);
+      // Get effective tier limits from database
+      const dbLimits = await getEffectiveTierLimits(role.id);
+      const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
+
+      // Check tier limit for goals (only counting ACTIVE goals)
+      checkTierLimit(effectiveLimits, 'goals', role.goals.length);
 
       const goal = await ctx.prisma.goal.create({
         data: {
@@ -249,9 +254,13 @@ export const goalRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
+      // Get effective tier limits from database
+      const dbLimits = await getEffectiveTierLimits(goal.role.id);
+      const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, goal.role.type);
+
       // Check tier limit for items per goal
       const totalItems = goal.taskLinks.length + goal.routineLinks.length + input.taskIds.length;
-      await checkTierLimit(goal.role.tier, 'items_per_goal', totalItems);
+      checkTierLimit(effectiveLimits, 'items_per_goal', totalItems);
 
       // Create links
       await ctx.prisma.goalTaskLink.createMany({
@@ -291,9 +300,13 @@ export const goalRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
+      // Get effective tier limits from database
+      const dbLimits = await getEffectiveTierLimits(goal.role.id);
+      const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, goal.role.type);
+
       // Check tier limit for items per goal
       const totalItems = goal.taskLinks.length + goal.routineLinks.length + input.routineIds.length;
-      await checkTierLimit(goal.role.tier, 'items_per_goal', totalItems);
+      checkTierLimit(effectiveLimits, 'items_per_goal', totalItems);
 
       // Create links
       await ctx.prisma.goalRoutineLink.createMany({

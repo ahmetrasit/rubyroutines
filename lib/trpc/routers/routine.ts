@@ -1,8 +1,9 @@
 import { router, authorizedProcedure, verifyRoutineOwnership } from '../init';
 import { TRPCError } from '@trpc/server';
 import { EntityStatus } from '@/lib/types/prisma-enums';
-import { checkTierLimit } from '@/lib/services/tier-limits';
+import { checkTierLimit, mapDatabaseLimitsToComponentFormat } from '@/lib/services/tier-limits';
 import { z } from 'zod';
+import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
 import {
   createRoutineSchema,
   updateRoutineSchema,
@@ -101,7 +102,12 @@ export const routineRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
     }
 
-    checkTierLimit(role.tier, 'routines_per_person', role.routines.length);
+    // Get effective tier limits from database
+    const dbLimits = await getEffectiveTierLimits(role.id);
+    const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
+
+    // Check tier limit for routines (only counting ACTIVE routines)
+    checkTierLimit(effectiveLimits, 'routines_per_person', role.routines.length);
 
     // Create routine with assignments
     const routine = await ctx.prisma.routine.create({
