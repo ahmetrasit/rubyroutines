@@ -5,8 +5,15 @@
 
 set -e  # Exit on error
 
+# Load environment variables from .env file
+if [ -f .env ]; then
+    echo "Loading environment variables from .env file..."
+    export $(grep -v '^#' .env | xargs)
+fi
+
 if [ -z "$DATABASE_URL" ]; then
     echo "ERROR: DATABASE_URL environment variable is not set"
+    echo "Please set DATABASE_URL in .env file or as an environment variable"
     exit 1
 fi
 
