@@ -48,6 +48,7 @@ export default function KioskModePage() {
   const [progressValues, setProgressValues] = useState<Record<string, string>>({});
   const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const [lastCheckedAt, setLastCheckedAt] = useState<Date>(new Date());
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -94,7 +95,7 @@ export default function KioskModePage() {
     { kioskCodeId: sessionData?.codeId!, personId: selectedPersonId! },
     {
       enabled: !!sessionData && !!selectedPersonId,
-      refetchInterval: 5000,
+      refetchInterval: false, // Disable auto refetch, will use optimized polling
     }
   );
 
@@ -110,15 +111,40 @@ export default function KioskModePage() {
       { kioskCodeId: sessionData?.codeId!, personId: person.id },
       {
         enabled: !!sessionData && !!sessionData.codeId,
-        refetchInterval: 5000,
+        refetchInterval: false, // Disable auto refetch, will use optimized polling
       }
     )
   );
+
+  // Optimized polling: check for updates every 10 seconds
+  useEffect(() => {
+    if (!sessionData?.codeId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const result = await utils.kiosk.checkRoleUpdates.fetch({
+          kioskCodeId: sessionData.codeId,
+          lastCheckedAt
+        });
+
+        if (result.hasUpdates) {
+          // Invalidate all queries to refetch fresh data
+          utils.kiosk.getPersonTasks.invalidate();
+          setLastCheckedAt(result.lastUpdatedAt);
+        }
+      } catch (error) {
+        console.error('Error checking for updates:', error);
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [sessionData?.codeId, lastCheckedAt, utils]);
 
   const completeMutation = trpc.kiosk.completeTask.useMutation({
     onSuccess: () => {
       setShowCelebration(true);
       utils.kiosk.getPersonTasks.invalidate();
+      setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
       resetInactivityTimer();
     },
     onError: (error) => {
@@ -138,6 +164,7 @@ export default function KioskModePage() {
         variant: 'success',
       });
       utils.kiosk.getPersonTasks.invalidate();
+      setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
       resetInactivityTimer();
     },
     onError: (error) => {

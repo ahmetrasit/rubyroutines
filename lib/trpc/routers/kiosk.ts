@@ -261,15 +261,35 @@ export const kioskRouter = router({
         });
       }
 
-      const completion = await ctx.prisma.taskCompletion.create({
-        data: {
-          taskId: input.taskId,
-          personId: input.personId,
-          completedAt: new Date(),
-          value: input.value,
-          notes: input.notes
-        }
+      // Get person to access roleId for timestamp update
+      const person = await ctx.prisma.person.findUnique({
+        where: { id: input.personId },
+        select: { roleId: true }
       });
+
+      if (!person) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Person not found'
+        });
+      }
+
+      // Create completion and update role timestamp in a transaction
+      const [completion] = await ctx.prisma.$transaction([
+        ctx.prisma.taskCompletion.create({
+          data: {
+            taskId: input.taskId,
+            personId: input.personId,
+            completedAt: new Date(),
+            value: input.value,
+            notes: input.notes
+          }
+        }),
+        ctx.prisma.role.update({
+          where: { id: person.roleId },
+          data: { kioskLastUpdatedAt: new Date() }
+        })
+      ]);
 
       return completion;
     }),
@@ -312,9 +332,29 @@ export const kioskRouter = router({
         });
       }
 
-      await ctx.prisma.taskCompletion.delete({
-        where: { id: input.completionId }
+      // Get person to access roleId for timestamp update
+      const person = await ctx.prisma.person.findUnique({
+        where: { id: completion.personId },
+        select: { roleId: true }
       });
+
+      if (!person) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Person not found'
+        });
+      }
+
+      // Delete completion and update role timestamp in a transaction
+      await ctx.prisma.$transaction([
+        ctx.prisma.taskCompletion.delete({
+          where: { id: input.completionId }
+        }),
+        ctx.prisma.role.update({
+          where: { id: person.roleId },
+          data: { kioskLastUpdatedAt: new Date() }
+        })
+      ]);
 
       return { success: true };
     }),
@@ -329,5 +369,43 @@ export const kioskRouter = router({
     .mutation(async ({ ctx, input }) => {
       await markCodeAsUsed(input.codeId);
       return { success: true };
+    }),
+
+  /**
+   * Check if role has updates since a given timestamp (public - for optimized kiosk polling)
+   */
+  checkRoleUpdates: publicProcedure
+    .input(z.object({
+      kioskCodeId: z.string().cuid(),
+      lastCheckedAt: z.date()
+    }))
+    .query(async ({ ctx, input }) => {
+      // Get the role associated with this kiosk code
+      const code = await ctx.prisma.code.findUnique({
+        where: { id: input.kioskCodeId },
+        select: {
+          roleId: true,
+          role: {
+            select: {
+              kioskLastUpdatedAt: true
+            }
+          }
+        }
+      });
+
+      if (!code) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Kiosk code not found'
+        });
+      }
+
+      // Compare timestamps
+      const hasUpdates = code.role.kioskLastUpdatedAt > input.lastCheckedAt;
+
+      return {
+        hasUpdates,
+        lastUpdatedAt: code.role.kioskLastUpdatedAt
+      };
     })
 });
