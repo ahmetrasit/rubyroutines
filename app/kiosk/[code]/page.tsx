@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { SessionTimeout } from '@/components/kiosk/session-timeout';
-import { ConfettiCelebration } from '@/components/kiosk/confetti-celebration';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Loader2, LogOut, Check, Plus, Undo2, X } from 'lucide-react';
@@ -44,7 +43,6 @@ export default function KioskModePage() {
   const code = params.code as string;
   const [sessionData, setSessionData] = useState<any>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [showCelebration, setShowCelebration] = useState(false);
   const [progressValues, setProgressValues] = useState<Record<string, string>>({});
   const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
@@ -160,7 +158,6 @@ export default function KioskModePage() {
 
   const completeMutation = trpc.kiosk.completeTask.useMutation({
     onSuccess: () => {
-      setShowCelebration(true);
       utils.kiosk.getPersonTasks.invalidate();
       setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
       resetInactivityTimer();
@@ -631,10 +628,6 @@ export default function KioskModePage() {
           )}
         </div>
       </div>
-      <ConfettiCelebration
-        show={showCelebration}
-        onComplete={() => setShowCelebration(false)}
-      />
     </>
   );
 }
