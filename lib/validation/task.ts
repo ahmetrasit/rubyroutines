@@ -12,6 +12,8 @@ export const createTaskSchema = z.object({
   conditionId: idValidator.optional(),
   order: z.number().int().min(0).default(0),
   unit: z.string().max(50).optional(),
+  emoji: z.string().max(100).optional(),
+  color: z.string().max(20).optional(),
 });
 
 // Update task schema
@@ -24,6 +26,8 @@ export const updateTaskSchema = z.object({
   conditionId: idValidator.optional().nullable(),
   order: z.number().int().min(0).optional(),
   unit: z.string().max(50).optional().nullable(),
+  emoji: z.string().max(100).optional().nullable(),
+  color: z.string().max(20).optional().nullable(),
 });
 
 // Delete task schema

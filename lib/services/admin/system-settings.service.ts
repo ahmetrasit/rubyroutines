@@ -257,11 +257,20 @@ export async function getTierLimits() {
   };
 
   try {
-    const setting = await getSetting('tier_limits');
+    let setting = await getSetting('tier_limits');
 
     if (!setting) {
-      // Return default limits with separate parent and teacher sections
-      return defaultLimits;
+      // Initialize tier_limits in database with defaults so admin can modify them
+      logger.info('Initializing tier_limits in database with default values');
+      await prisma.systemSettings.create({
+        data: {
+          key: 'tier_limits',
+          value: defaultLimits,
+          category: SettingCategory.TIERS,
+          description: 'System-wide tier limits',
+        },
+      });
+      setting = defaultLimits;
     }
 
     // Migrate old tier names to new ones if present (mapping only, no database write)
