@@ -34,7 +34,14 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
 
   const { data: coParents } = trpc.coParent.list.useQuery(
     { roleId },
-    { enabled: !!roleId }
+    {
+      enabled: !!roleId,
+      retry: false,
+      onError: (error) => {
+        // Silently handle co-parent errors if the feature is not set up yet
+        console.warn('Co-parent feature not available:', error.message);
+      }
+    }
   );
 
   if (isLoading) {
