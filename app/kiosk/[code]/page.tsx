@@ -585,8 +585,7 @@ export default function KioskModePage() {
                   <div className="h-full flex items-center justify-center">
                     <div className="text-center">
                       <div className="text-6xl mb-4">🎉</div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">All done!</h2>
-                      <p className="text-gray-600">No tasks right now. Great job!</p>
+                      <h2 className="text-2xl font-bold text-gray-900">All done!</h2>
                     </div>
                   </div>
                 ) : (
