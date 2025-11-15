@@ -65,17 +65,30 @@ export function TaskList({ routineId, personId = '' }: TaskListProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {tasks && tasks.length > 0 ? (
-          tasks.map((task: any, index: number) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              personId={personId}
-              onMoveUp={() => moveTask(index, 'up')}
-              onMoveDown={() => moveTask(index, 'down')}
-              canMoveUp={index > 0 && !reorderMutation.isPending}
-              canMoveDown={index < tasks.length - 1 && !reorderMutation.isPending}
-            />
-          ))
+          <>
+            {tasks.map((task: any, index: number) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                personId={personId}
+                onMoveUp={() => moveTask(index, 'up')}
+                onMoveDown={() => moveTask(index, 'down')}
+                canMoveUp={index > 0 && !reorderMutation.isPending}
+                canMoveDown={index < tasks.length - 1 && !reorderMutation.isPending}
+              />
+            ))}
+
+            {/* Add Task Card */}
+            <div
+              onClick={() => setShowForm(true)}
+              className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-4 cursor-pointer transition-all hover:border-primary-400 hover:bg-gray-50 flex items-center justify-center"
+            >
+              <div className="flex flex-col items-center text-center gap-2 text-gray-400">
+                <Plus className="h-8 w-8" />
+                <span className="text-sm font-medium">Add Task</span>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="col-span-full text-center py-12 text-gray-500">
             <div className="text-6xl mb-4">📝</div>
