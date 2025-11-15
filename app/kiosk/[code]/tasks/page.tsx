@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { TaskList } from '@/components/kiosk/task-list';
 import { SessionTimeout } from '@/components/kiosk/session-timeout';
-import { ConfettiCelebration } from '@/components/kiosk/confetti-celebration';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Loader2 } from 'lucide-react';
@@ -16,7 +15,6 @@ export default function KioskTasksPage() {
   const code = params.code as string;
   const personId = searchParams.get('personId');
   const [sessionData, setSessionData] = useState<any>(null);
-  const [showCelebration, setShowCelebration] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -73,7 +71,6 @@ export default function KioskTasksPage() {
 
   const completeMutation = trpc.kiosk.completeTask.useMutation({
     onSuccess: () => {
-      setShowCelebration(true);
       utils.kiosk.getPersonTasks.invalidate();
     },
     onError: (error) => {
@@ -161,10 +158,6 @@ export default function KioskTasksPage() {
         onComplete={handleComplete}
         onUndo={handleUndo}
         onExit={handleExit}
-      />
-      <ConfettiCelebration
-        show={showCelebration}
-        onComplete={() => setShowCelebration(false)}
       />
     </>
   );
