@@ -16,7 +16,7 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     students_per_classroom: 24,
     routines_per_person: 2,
     tasks_per_routine: 5,
-    smart_tasks_per_routine: 0,
+    smart_tasks_per_routine: 1,
     goals: 3,
     items_per_goal: 3,
   },
