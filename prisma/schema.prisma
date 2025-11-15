@@ -200,6 +200,8 @@ model Routine {
   visibleDays             Int[]          // For DAYS_OF_WEEK visibility
   startDate               DateTime?      // For DATE_RANGE visibility
   endDate                 DateTime?      // For DATE_RANGE visibility
+  startTime               String?        // For limited daily routines (HH:MM format)
+  endTime                 String?        // For limited daily routines (HH:MM format)
   status                  EntityStatus   @default(ACTIVE)
   archivedAt              DateTime?
   sourceMarketplaceItemId String?

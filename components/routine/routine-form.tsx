@@ -47,6 +47,8 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const [visibility, setVisibility] = useState<Visibility>(
     routine?.visibility || Visibility.ALWAYS
   );
+  const [startTime, setStartTime] = useState<string>(routine?.startTime || '08:00');
+  const [endTime, setEndTime] = useState<string>(routine?.endTime || '17:00');
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -80,6 +82,20 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
     setEmoji(emojiData.emoji);
     setShowEmojiPicker(false);
   };
+
+  // Generate time options in 5-minute increments
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 5) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        options.push(timeString);
+      }
+    }
+    return options;
+  };
+
+  const timeOptions = generateTimeOptions();
 
   const createMutation = trpc.routine.create.useMutation({
     onSuccess: () => {
@@ -124,6 +140,9 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
 
     const finalName = emoji ? `${emoji} ${name}` : name;
 
+    // Only include time fields for Daily routines with Limited visibility
+    const shouldIncludeTime = resetPeriod === ResetPeriod.DAILY && visibility === Visibility.DAYS_OF_WEEK;
+
     if (routine) {
       updateMutation.mutate({
         id: routine.id,
@@ -132,6 +151,8 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
         resetPeriod,
         resetDay,
         visibility,
+        startTime: shouldIncludeTime ? startTime : null,
+        endTime: shouldIncludeTime ? endTime : null,
       });
     } else if (roleId) {
       createMutation.mutate({
@@ -143,6 +164,8 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
         visibility,
         visibleDays: [],
         personIds,
+        startTime: shouldIncludeTime ? startTime : null,
+        endTime: shouldIncludeTime ? endTime : null,
       });
     }
   };
@@ -278,6 +301,48 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
               )}
             </select>
           </div>
+
+          {/* Time Period Selection for Daily Limited Routines */}
+          {resetPeriod === ResetPeriod.DAILY && visibility === Visibility.DAYS_OF_WEEK && (
+            <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-sm font-medium text-blue-900">Time Period</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="startTime" className="text-xs">Start Time</Label>
+                  <select
+                    id="startTime"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    {timeOptions.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="endTime" className="text-xs">End Time</Label>
+                  <select
+                    id="endTime"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    {timeOptions.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-blue-700">
+                Routine will be visible from {startTime} to {endTime} daily. Times are in 24-hour format.
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onClose}>
