@@ -30,23 +30,22 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
     { enabled: !!roleId }
   );
 
-  const { data: tasks, isLoading: tasksLoading } = trpc.task.list.useQuery(
-    { roleId },
-    { enabled: !!roleId }
-  );
-
   // Filter goals for this person
   const filteredGoals = goals?.filter((goal) => goal.personIds.includes(personId)) || [];
 
-  // Group tasks by routine
-  const tasksByRoutine = tasks?.reduce((acc: any, task: any) => {
-    const routineName = task.routine?.name || 'Unknown Routine';
-    if (!acc[routineName]) {
-      acc[routineName] = [];
+  // Extract tasks from routines and group by routine
+  const tasksByRoutine = routines?.reduce((acc: any, routine: any) => {
+    if (routine.tasks && routine.tasks.length > 0) {
+      acc[routine.name] = routine.tasks;
     }
-    acc[routineName].push(task);
     return acc;
   }, {}) || {};
+
+  // Count total tasks
+  const totalTasks = Object.values(tasksByRoutine).reduce(
+    (sum: number, tasks: any) => sum + tasks.length,
+    0
+  );
 
   return (
     <div className="space-y-6">
@@ -220,16 +219,16 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
             )}
             <h2 className="text-xl font-semibold text-gray-900">Tasks</h2>
             <span className="text-sm text-gray-500">
-              ({tasks?.length || 0})
+              ({totalTasks})
             </span>
           </div>
         </button>
 
         {tasksExpanded && (
           <div className="px-6 pb-6">
-            {tasksLoading ? (
+            {routinesLoading ? (
               <div className="text-center py-8 text-gray-500">Loading...</div>
-            ) : tasks && tasks.length > 0 ? (
+            ) : Object.keys(tasksByRoutine).length > 0 ? (
               <div className="space-y-6">
                 {Object.entries(tasksByRoutine).map(([routineName, routineTasks]: [string, any]) => (
                   <div key={routineName}>
