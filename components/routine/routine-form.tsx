@@ -2,7 +2,7 @@
 
 import { ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
 type Routine = any;
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 interface RoutineFormProps {
   routine?: Routine;
@@ -23,8 +24,21 @@ interface RoutineFormProps {
 }
 
 export function RoutineForm({ routine, roleId, personIds = [], onClose }: RoutineFormProps) {
-  const [name, setName] = useState(routine?.name || '');
-  const [emoji, setEmoji] = useState('');
+  // Extract emoji from routine name if editing
+  const extractEmoji = (text: string): { emoji: string; name: string } => {
+    const emojiRegex = /^([\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F1E6}-\u{1F1FF}]+)\s*(.*)$/u;
+    const match = text.match(emojiRegex);
+    if (match) {
+      return { emoji: match[1], name: match[2] };
+    }
+    return { emoji: '', name: text };
+  };
+
+  const initialData = routine?.name ? extractEmoji(routine.name) : { emoji: '', name: '' };
+
+  const [name, setName] = useState(initialData.name || routine?.name || '');
+  const [emoji, setEmoji] = useState(initialData.emoji);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [description, setDescription] = useState(routine?.description || '');
   const [resetPeriod, setResetPeriod] = useState<ResetPeriod>(
     routine?.resetPeriod || ResetPeriod.DAILY
@@ -34,6 +48,7 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
     routine?.visibility || Visibility.ALWAYS
   );
 
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -43,6 +58,28 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
       setVisibility(Visibility.ALWAYS);
     }
   }, [resetPeriod, visibility]);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setEmoji(emojiData.emoji);
+    setShowEmojiPicker(false);
+  };
 
   const createMutation = trpc.routine.create.useMutation({
     onSuccess: () => {
@@ -121,16 +158,25 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-12 gap-3">
-            <div className="col-span-2">
+            <div className="col-span-2 relative">
               <Label htmlFor="emoji">Emoji</Label>
-              <Input
-                id="emoji"
-                value={emoji}
-                onChange={(e) => setEmoji(e.target.value)}
-                maxLength={2}
-                placeholder="😊"
-                className="text-center text-xl"
-              />
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
+              >
+                {emoji || '😊'}
+              </button>
+              {showEmojiPicker && (
+                <div ref={emojiPickerRef} className="absolute z-50 top-full mt-2 left-0">
+                  <EmojiPicker
+                    onEmojiClick={handleEmojiClick}
+                    searchPlaceHolder="Search emoji..."
+                    width={320}
+                    height={400}
+                  />
+                </div>
+              )}
             </div>
             <div className="col-span-10">
               <Label htmlFor="name">Name *</Label>
