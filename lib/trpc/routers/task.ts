@@ -126,8 +126,14 @@ export const taskRouter = router({
         });
       }
 
-      // Check tier limit
+      // Check tier limit for total tasks
       checkTierLimit(routine.role.tier, 'tasks_per_routine', routine.tasks.length);
+
+      // Check tier limit for smart tasks if creating a smart task
+      if (input.isSmart) {
+        const smartTasksCount = routine.tasks.filter((t) => t.isSmart).length;
+        checkTierLimit(routine.role.tier, 'smart_tasks_per_routine', smartTasksCount);
+      }
 
       // If order not specified, put at end
       const order = input.order || routine.tasks.length;
@@ -153,6 +159,14 @@ export const taskRouter = router({
 
       const task = await ctx.prisma.task.findUnique({
         where: { id },
+        include: {
+          routine: {
+            include: {
+              role: true,
+              tasks: { where: { status: EntityStatus.ACTIVE } },
+            },
+          },
+        },
       });
 
       if (!task) {
@@ -162,15 +176,20 @@ export const taskRouter = router({
         });
       }
 
+      // If changing to smart task, check tier limit
+      if (updateData.isSmart === true && !task.isSmart) {
+        const smartTasksCount = task.routine.tasks.filter((t) => t.isSmart).length;
+        checkTierLimit(task.routine.role.tier, 'smart_tasks_per_routine', smartTasksCount);
+      }
+
       // Validate type-specific requirements
       if (updateData.type === TaskType.PROGRESS) {
-        const targetValue = updateData.targetValue ?? task.targetValue;
         const unit = updateData.unit ?? task.unit;
 
-        if (!targetValue || !unit) {
+        if (!unit) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Progress tasks must have targetValue and unit',
+            message: 'Progress tasks must have a unit (e.g., "pages", "minutes")',
           });
         }
       }

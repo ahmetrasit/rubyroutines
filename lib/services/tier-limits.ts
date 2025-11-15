@@ -6,6 +6,7 @@ type LimitKey =
   | 'students_per_classroom'
   | 'routines_per_person'
   | 'tasks_per_routine'
+  | 'smart_tasks_per_routine'
   | 'goals'
   | 'items_per_goal';
 
@@ -15,6 +16,7 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     students_per_classroom: 24,
     routines_per_person: 2,
     tasks_per_routine: 5,
+    smart_tasks_per_routine: 0,
     goals: 3,
     items_per_goal: 3,
   },
@@ -23,6 +25,7 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     students_per_classroom: 50,
     routines_per_person: 5,
     tasks_per_routine: 10,
+    smart_tasks_per_routine: 3,
     goals: 5,
     items_per_goal: 5,
   },
@@ -31,6 +34,7 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     students_per_classroom: 100,
     routines_per_person: 10,
     tasks_per_routine: 20,
+    smart_tasks_per_routine: 10,
     goals: 10,
     items_per_goal: 10,
   },
@@ -39,6 +43,7 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     students_per_classroom: 500,
     routines_per_person: 50,
     tasks_per_routine: 100,
+    smart_tasks_per_routine: 25,
     goals: 20,
     items_per_goal: 20,
   },
