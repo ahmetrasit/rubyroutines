@@ -76,6 +76,9 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {routines.map((routine: any) => {
                   const visible = isRoutineVisible(routine);
+                  const totalTasks = routine.tasks?.length || 0;
+                  const smartTasks = routine.tasks?.filter((t: any) => t.isSmart).length || 0;
+
                   // Extract emoji from name if present
                   const emojiMatch = routine.name.match(/^(\p{Emoji}+)\s*/u);
                   const emoji = emojiMatch ? emojiMatch[1] : '';
@@ -83,21 +86,58 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                     ? routine.name.substring(emoji.length).trim()
                     : routine.name;
 
+                  // Add sunshine for daily routines
+                  const isDailyRoutine = routine.resetPeriod === 'DAILY';
+                  const periodLabel = routine.resetPeriod === 'DAILY' ? 'Daily' :
+                                     routine.resetPeriod === 'WEEKLY' ? 'Weekly' :
+                                     routine.resetPeriod === 'MONTHLY' ? 'Monthly' :
+                                     routine.resetPeriod === 'DAYS_OF_WEEK' ? 'Specific Days' :
+                                     routine.resetPeriod === 'CONDITIONAL' ? 'Conditional' : 'Custom';
+
                   return (
                     <div
                       key={routine.id}
                       onClick={() => onSelectRoutine?.(routine)}
-                      className={`bg-white rounded-lg border-2 p-4 cursor-pointer transition-all hover:shadow-md ${
+                      className={`bg-white rounded-lg border-2 p-3 cursor-pointer transition-all hover:shadow-md ${
                         visible
                           ? 'border-gray-200 hover:border-primary-300'
-                          : 'border-gray-100 opacity-50'
+                          : 'border-gray-100 opacity-40'
                       }`}
                     >
-                      <div className="flex flex-col items-center text-center gap-2">
-                        {emoji && <div className="text-3xl">{emoji}</div>}
-                        <h3 className="font-semibold text-gray-900 text-sm">
+                      <div className="flex flex-col gap-2">
+                        {/* Header with emoji */}
+                        <div className="flex items-center justify-center gap-1">
+                          {isDailyRoutine && <span className="text-2xl">☀️</span>}
+                          {emoji && !isDailyRoutine && <div className="text-2xl">{emoji}</div>}
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="font-semibold text-gray-900 text-sm text-center line-clamp-2">
                           {displayName}
                         </h3>
+
+                        {/* Task counts */}
+                        <div className="flex items-center justify-center gap-2 text-xs">
+                          <span className="text-gray-600">{totalTasks} tasks</span>
+                          {smartTasks > 0 && (
+                            <span className="flex items-center gap-1 text-amber-700">
+                              (<span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-100 text-[10px] font-bold">S</span>
+                              {smartTasks})
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Period and structure */}
+                        <div className="flex flex-col gap-1 text-xs text-center">
+                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">
+                            {periodLabel}
+                          </span>
+                          {routine.visibilityStructure && (
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px]">
+                              {routine.visibilityStructure}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
