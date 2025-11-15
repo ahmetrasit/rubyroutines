@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { SessionTimeout } from '@/components/kiosk/session-timeout';
 import { ConfettiCelebration } from '@/components/kiosk/confetti-celebration';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
-import { Loader2, LogOut, Check, Plus, Undo2 } from 'lucide-react';
+import { Loader2, LogOut, Check, Plus, Undo2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TaskType } from '@/lib/types/prisma-enums';
@@ -36,6 +36,8 @@ interface Person {
   avatar?: string | null;
 }
 
+const INACTIVITY_TIMEOUT = 30000; // 30 seconds
+
 export default function KioskModePage() {
   const router = useRouter();
   const params = useParams();
@@ -45,6 +47,7 @@ export default function KioskModePage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [progressValues, setProgressValues] = useState<Record<string, string>>({});
   const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -97,10 +100,26 @@ export default function KioskModePage() {
 
   const tasks = personTasksData?.tasks || [];
 
+  // Fetch task data for all persons to show progress
+  const persons = kioskData?.persons || [];
+  const activePersons = persons.filter((p: any) => p.status === 'ACTIVE');
+
+  // Fetch tasks for all persons for progress calculation
+  const personTaskQueries = activePersons.map((person: Person) =>
+    trpc.kiosk.getPersonTasks.useQuery(
+      { kioskCodeId: sessionData?.codeId!, personId: person.id },
+      {
+        enabled: !!sessionData && !!sessionData.codeId,
+        refetchInterval: 5000,
+      }
+    )
+  );
+
   const completeMutation = trpc.kiosk.completeTask.useMutation({
     onSuccess: () => {
       setShowCelebration(true);
       utils.kiosk.getPersonTasks.invalidate();
+      resetInactivityTimer();
     },
     onError: (error) => {
       toast({
@@ -119,6 +138,7 @@ export default function KioskModePage() {
         variant: 'success',
       });
       utils.kiosk.getPersonTasks.invalidate();
+      resetInactivityTimer();
     },
     onError: (error) => {
       toast({
@@ -150,8 +170,30 @@ export default function KioskModePage() {
     return () => clearInterval(interval);
   }, [tasks, selectedPersonId]);
 
+  // Inactivity timer
+  const resetInactivityTimer = useCallback(() => {
+    setLastActivityTime(Date.now());
+  }, []);
+
+  const isGroupScope = activePersons.length > 1;
+
+  useEffect(() => {
+    if (!selectedPersonId || !isGroupScope) return;
+
+    const interval = setInterval(() => {
+      const timeSinceActivity = Date.now() - lastActivityTime;
+      if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
+        setSelectedPersonId(null);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [selectedPersonId, lastActivityTime, isGroupScope]);
+
   const handleComplete = (task: Task) => {
     if (!selectedPersonId) return;
+
+    resetInactivityTimer();
 
     if (task.type === TaskType.PROGRESS) {
       const value = progressValues[task.id];
@@ -176,6 +218,7 @@ export default function KioskModePage() {
   };
 
   const handleUndo = (task: Task) => {
+    resetInactivityTimer();
     const recentCompletion = task.completions?.find((c) => c.personId === selectedPersonId);
     if (recentCompletion) {
       undoMutation.mutate({ kioskCodeId: sessionData!.codeId, completionId: recentCompletion.id });
@@ -189,6 +232,15 @@ export default function KioskModePage() {
 
   const handleTimeout = () => {
     handleExit();
+  };
+
+  const handlePersonSelect = (personId: string) => {
+    setSelectedPersonId(personId);
+    resetInactivityTimer();
+  };
+
+  const handleDone = () => {
+    setSelectedPersonId(null);
   };
 
   const getAvatarData = (avatar?: string | null) => {
@@ -206,6 +258,36 @@ export default function KioskModePage() {
     }
 
     return { avatarColor, avatarEmoji };
+  };
+
+  const getPersonProgress = (personId: string) => {
+    const personIndex = activePersons.findIndex((p: Person) => p.id === personId);
+    if (personIndex === -1) return { completed: 0, total: 0, percentage: 100 };
+
+    const taskData = personTaskQueries[personIndex]?.data;
+    if (!taskData || !taskData.tasks) return { completed: 0, total: 0, percentage: 100 };
+
+    const visibleTasks = taskData.tasks.filter((task: Task) =>
+      task.type === TaskType.SIMPLE || task.type === TaskType.MULTIPLE_CHECKIN || task.type === TaskType.PROGRESS
+    );
+
+    if (visibleTasks.length === 0) return { completed: 0, total: 0, percentage: 100 };
+
+    const completedTasks = visibleTasks.filter((task: Task) => {
+      if (task.type === TaskType.SIMPLE) {
+        return task.isComplete;
+      }
+      if (task.type === TaskType.MULTIPLE_CHECKIN) {
+        return (task.completionCount || 0) > 0;
+      }
+      if (task.type === TaskType.PROGRESS) {
+        return (task.progress || 0) >= 100;
+      }
+      return false;
+    });
+
+    const percentage = (completedTasks.length / visibleTasks.length) * 100;
+    return { completed: completedTasks.length, total: visibleTasks.length, percentage };
   };
 
   const renderTaskButton = (task: Task) => {
@@ -257,9 +339,10 @@ export default function KioskModePage() {
                 step="0.01"
                 min="0"
                 value={progressValues[task.id] || ''}
-                onChange={(e) =>
-                  setProgressValues({ ...progressValues, [task.id]: e.target.value })
-                }
+                onChange={(e) => {
+                  setProgressValues({ ...progressValues, [task.id]: e.target.value });
+                  resetInactivityTimer();
+                }}
                 placeholder="0"
                 className="text-xl h-16"
               />
@@ -310,9 +393,7 @@ export default function KioskModePage() {
     );
   }
 
-  const persons = kioskData?.persons || [];
-  const activePersons = persons.filter((p: any) => p.status === 'ACTIVE');
-  const isGroupScope = activePersons.length > 1;
+  const selectedPersonColor = selectedPerson ? getAvatarData(selectedPerson.avatar).avatarColor : '#6B7280';
 
   return (
     <>
@@ -325,34 +406,52 @@ export default function KioskModePage() {
           {/* Screen Part 1: Person List (Left 2/3) - Only visible in group scope */}
           {isGroupScope && (
             <div className="w-2/3 border-4 border-blue-500 rounded-2xl bg-white p-6 overflow-auto">
-              <div className="mb-6">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">Select Person</h2>
-                <p className="text-gray-600">Choose who is checking in today</p>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-3xl font-bold text-gray-900">Who is checking-in?</h2>
+                <Button variant="outline" onClick={handleExit} size="lg" className="px-4">
+                  <LogOut className="h-5 w-5" />
+                </Button>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 {activePersons.map((person: Person) => {
                   const { avatarColor, avatarEmoji } = getAvatarData(person.avatar);
                   const isSelected = selectedPersonId === person.id;
+                  const progress = getPersonProgress(person.id);
 
                   return (
                     <button
                       key={person.id}
-                      onClick={() => setSelectedPersonId(person.id)}
-                      className={`bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-all transform hover:scale-105 active:scale-95 border-4 ${
+                      onClick={() => handlePersonSelect(person.id)}
+                      className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all transform hover:scale-105 active:scale-95 border-4 overflow-hidden ${
                         isSelected ? 'border-blue-500' : 'border-transparent'
                       }`}
-                      style={{ borderTopColor: isSelected ? avatarColor : undefined }}
                     >
-                      <div className="flex flex-col items-center">
-                        <div
-                          className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-3"
-                          style={{ backgroundColor: avatarColor + '30' }}
-                        >
-                          {avatarEmoji}
+                      {/* Color bar on top */}
+                      <div className="h-3" style={{ backgroundColor: avatarColor }} />
+
+                      <div className="p-4">
+                        <div className="flex flex-col items-center mb-3">
+                          <div
+                            className="w-20 h-20 rounded-full flex items-center justify-center text-4xl mb-3"
+                            style={{ backgroundColor: avatarColor + '30' }}
+                          >
+                            {avatarEmoji}
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-900 text-center">
+                            {person.name}
+                          </h3>
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 text-center">
-                          {person.name}
-                        </h3>
+
+                        {/* Progress bar */}
+                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full transition-all"
+                            style={{
+                              width: `${progress.percentage}%`,
+                              backgroundColor: avatarColor
+                            }}
+                          />
+                        </div>
                       </div>
                     </button>
                   );
@@ -361,97 +460,107 @@ export default function KioskModePage() {
             </div>
           )}
 
-          {/* Right Side Container */}
-          <div className={`${isGroupScope ? 'w-1/3' : 'w-full'} flex flex-col gap-6`}>
-            {/* Screen Part 2: Current Person (Top 1/5) */}
-            <div className="h-[20%] border-4 border-green-500 rounded-2xl bg-white p-6 flex items-center justify-between">
-              {selectedPerson ? (
-                <div className="flex items-center gap-4">
-                  {(() => {
-                    const { avatarColor, avatarEmoji } = getAvatarData(selectedPerson.avatar);
-                    return (
-                      <div
-                        className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
-                        style={{ backgroundColor: avatarColor + '30' }}
-                      >
-                        {avatarEmoji}
-                      </div>
-                    );
-                  })()}
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{selectedPerson.name}</h2>
-                    <p className="text-gray-600">Currently checking in</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-3xl">
-                    👤
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-500">
-                      {isGroupScope ? 'Select a person' : 'No person selected'}
-                    </h2>
-                    <p className="text-gray-500">
-                      {isGroupScope ? 'Choose from the list on the left' : 'No person available'}
-                    </p>
-                  </div>
-                </div>
-              )}
-              <Button variant="outline" onClick={handleExit} size="lg">
-                <LogOut className="h-5 w-5 mr-2" />
-                Exit
-              </Button>
-            </div>
-
-            {/* Screen Part 3: Tasks (Bottom 4/5) */}
-            <div className="h-[80%] border-4 border-purple-500 rounded-2xl bg-white p-6 overflow-auto">
-              {!selectedPersonId ? (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center text-gray-400">
-                    <div className="text-6xl mb-4">📋</div>
-                    <p className="text-xl">
-                      {isGroupScope ? 'Select a person to view tasks' : 'No tasks available'}
-                    </p>
-                  </div>
-                </div>
-              ) : tasksLoading ? (
-                <div className="h-full flex items-center justify-center">
-                  <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-                </div>
-              ) : tasks.length === 0 ? (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">🎉</div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">All done!</h2>
-                    <p className="text-gray-600">No tasks right now. Great job!</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {tasks.map((task: Task) => (
-                    <div
-                      key={task.id}
-                      className="bg-gray-50 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
-                    >
-                      <div className="mb-4">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">{task.name}</h3>
-                        {task.description && (
-                          <p className="text-gray-600">{task.description}</p>
-                        )}
-                        {task.isComplete && task.type === TaskType.SIMPLE && (
-                          <div className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-                            ✓ Completed Today
-                          </div>
-                        )}
-                      </div>
-                      {renderTaskButton(task)}
+          {/* Right Side Container - Only show if person is selected or not group scope */}
+          {(selectedPersonId || !isGroupScope) && (
+            <div className={`${isGroupScope ? 'w-1/3' : 'w-full'} flex flex-col gap-6`}>
+              {/* Screen Part 2: Current Person (Top 1/5) */}
+              <div
+                className="h-[20%] border-4 rounded-2xl bg-white p-6 flex items-center justify-between"
+                style={{ borderColor: selectedPersonColor }}
+              >
+                {selectedPerson ? (
+                  <div className="flex items-center gap-4">
+                    {(() => {
+                      const { avatarColor, avatarEmoji } = getAvatarData(selectedPerson.avatar);
+                      return (
+                        <div
+                          className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
+                          style={{ backgroundColor: avatarColor + '30' }}
+                        >
+                          {avatarEmoji}
+                        </div>
+                      );
+                    })()}
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">{selectedPerson.name}</h2>
+                      <p className="text-gray-600">Currently checking in</p>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-3xl">
+                      👤
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-500">No person selected</h2>
+                      <p className="text-gray-500">No person available</p>
+                    </div>
+                  </div>
+                )}
+                {isGroupScope ? (
+                  <Button variant="default" onClick={handleDone} size="lg">
+                    <X className="h-5 w-5 mr-2" />
+                    Done
+                  </Button>
+                ) : (
+                  <Button variant="outline" onClick={handleExit} size="lg" className="px-4">
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Screen Part 3: Tasks (Bottom 4/5) */}
+              <div
+                className="h-[80%] border-4 rounded-2xl bg-white p-6 overflow-auto"
+                style={{ borderColor: selectedPersonColor }}
+                onClick={resetInactivityTimer}
+                onScroll={resetInactivityTimer}
+              >
+                {!selectedPersonId ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center text-gray-400">
+                      <div className="text-6xl mb-4">📋</div>
+                      <p className="text-xl">No tasks available</p>
+                    </div>
+                  </div>
+                ) : tasksLoading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                  </div>
+                ) : tasks.length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">🎉</div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">All done!</h2>
+                      <p className="text-gray-600">No tasks right now. Great job!</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tasks.map((task: Task) => (
+                      <div
+                        key={task.id}
+                        className="bg-gray-50 rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
+                      >
+                        <div className="mb-4">
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{task.name}</h3>
+                          {task.description && (
+                            <p className="text-gray-600">{task.description}</p>
+                          )}
+                          {task.isComplete && task.type === TaskType.SIMPLE && (
+                            <div className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                              ✓ Completed Today
+                            </div>
+                          )}
+                        </div>
+                        {renderTaskButton(task)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
       <ConfettiCelebration
