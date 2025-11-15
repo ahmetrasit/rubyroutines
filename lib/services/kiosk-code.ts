@@ -26,8 +26,7 @@ export interface KioskCode {
  * Checks for duplicates before returning
  *
  * Format (ALL UPPERCASE):
- * - Parent mode: FIRSTNAME-WORD1-WORD2-WORD3
- * - Teacher mode: FIRSTNAME-CLASSROOMNAME-WORD1-WORD2-WORD3
+ * - FIRSTNAME-WORD1-WORD2-WORD3 (applies to both parent and classroom modes)
  */
 export async function generateKioskCode(
   options: GenerateCodeOptions
@@ -47,11 +46,6 @@ export async function generateKioskCode(
   // Extract first name and format it (uppercase, no spaces)
   const firstName = userName.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-  // Format classroom name if provided (uppercase, spaces to dashes)
-  const formattedClassroomName = classroomName
-    ? classroomName.toUpperCase().replace(/\s+/g, '-').replace(/[^A-Z0-9-]/g, '')
-    : null;
-
   let attempts = 0;
   const maxAttempts = 10;
 
@@ -60,12 +54,9 @@ export async function generateKioskCode(
     const words = getRandomSafeWords(wordCount);
     const wordsPart = words.join('-').toUpperCase();
 
-    // Build the full code based on mode (ALL UPPERCASE)
-    // Parent mode: FIRSTNAME-WORD1-WORD2-WORD3
-    // Teacher mode: FIRSTNAME-CLASSROOMNAME-WORD1-WORD2-WORD3
-    const code = formattedClassroomName
-      ? `${firstName}-${formattedClassroomName}-${wordsPart}`
-      : `${firstName}-${wordsPart}`;
+    // Build the full code (ALL UPPERCASE)
+    // Format: FIRSTNAME-WORD1-WORD2-WORD3
+    const code = `${firstName}-${wordsPart}`;
 
     // Check if code already exists and is active
     const existing = await prisma.code.findFirst({
