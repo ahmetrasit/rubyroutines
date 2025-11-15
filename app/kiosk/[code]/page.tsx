@@ -86,9 +86,23 @@ export default function KioskModePage() {
     { enabled: !!sessionData }
   );
 
-  // Get selected person from the kiosk data instead of using authenticated endpoint
-  const persons = kioskData?.persons || [];
-  const activePersons = persons.filter((p: any) => p.status === 'ACTIVE');
+  // Get persons to display: use group members if groups exist, otherwise use role persons
+  // Filter out teachers/parents (named 'Me') to show only students/kids
+  const groups = kioskData?.groups || [];
+  const rolePersons = kioskData?.persons || [];
+
+  let activePersons: Person[] = [];
+  if (groups.length > 0) {
+    // Use members from groups (classroom/family members)
+    const allMembers = groups.flatMap((g: any) => g.members || []);
+    activePersons = allMembers
+      .map((m: any) => m.person)
+      .filter((p: Person) => p && p.status === 'ACTIVE' && p.name !== 'Me');
+  } else {
+    // Use persons from role (fallback)
+    activePersons = rolePersons.filter((p: Person) => p.status === 'ACTIVE' && p.name !== 'Me');
+  }
+
   const selectedPerson = activePersons.find((p: Person) => p.id === selectedPersonId);
 
   const { data: personTasksData, isLoading: tasksLoading } = trpc.kiosk.getPersonTasks.useQuery(
