@@ -190,6 +190,51 @@ This ensures kiosk sessions detect all relevant changes regardless of the code t
    - Verify 4-card-per-row layout
    - Verify "Add" cards have dashed borders
 
+5. **Smart Student Removal**
+   - Create a student and add them to multiple classrooms
+   - Try to delete the student from one classroom
+   - Verify confirmation message mentions other classrooms
+   - Verify student is only removed from current classroom
+   - Verify student still appears in other classrooms
+   - Create a student in only one classroom
+   - Try to delete the student
+   - Verify confirmation message mentions archiving
+   - Verify student is archived (not visible in any classroom)
+
+### 8. Smart Student Removal in Teacher Mode ⭐
+**Files Modified:**
+- `components/person/person-card.tsx`
+- `components/classroom/classroom-member-list.tsx`
+
+**Changes:**
+Implemented intelligent student removal that respects multi-classroom membership:
+
+**Old Behavior:**
+- Clicking delete on a student always archived them, even if they were in other classrooms
+
+**New Behavior:**
+- **Student in multiple classrooms**: Removes student only from current classroom
+  - Shows confirmation: "Remove [name] from this classroom? Note: [name] will remain in other classrooms."
+- **Student in only one classroom**: Archives the student
+  - Shows confirmation: "Archive [name]? This is the only classroom for [name]. They will be archived."
+- **Parent mode**: Unchanged - still archives person (no classroom context)
+
+**Technical Implementation:**
+- PersonCard now accepts optional `classroomId` prop
+- When in classroom context, queries person's group memberships
+- Uses `group.removeMember` for multi-classroom students
+- Uses `person.delete` (archive) for single-classroom students
+- Added loading states for both removal and deletion
+- ClassroomMemberList passes `classroomId` to all PersonCard instances
+
+**Benefits:**
+- Prevents accidental data loss from archiving active students
+- Provides clear context about the action being taken
+- Maintains data integrity across multiple classrooms
+- Better user experience with informative confirmation dialogs
+
+**Commit:** `81912d2`
+
 ---
 
 ## Database Migration Required
@@ -215,7 +260,8 @@ npx prisma migrate dev
 5. `682dad8` - Fix tasks section display issue
 6. `868425f` - Remove confetti from kiosk tasks page
 7. `ef85630` - Remove confetti from kiosk person selection page
-8. **(PENDING)** - Implement group-level update tracking for kiosk mode
+8. `6c44637` - Implement group-level update tracking for kiosk mode
+9. `81912d2` - Implement smart student removal in teacher mode
 
 ---
 
