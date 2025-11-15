@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { RoutineForm } from './routine-form';
-import { Tier } from '@/lib/types/prisma-enums';
-import { getTierLimit } from '@/lib/services/tier-limits';
+import { getTierLimit, ComponentTierLimits } from '@/lib/services/tier-limits';
 
 
 type RoutineWithRelations = {
@@ -24,11 +23,11 @@ type RoutineWithRelations = {
 interface RoutineListProps {
   roleId?: string;
   personId?: string;
-  tier?: Tier;
+  effectiveLimits?: ComponentTierLimits | null;
   onSelectRoutine?: (routine: RoutineWithRelations) => void;
 }
 
-export function RoutineList({ roleId, personId, tier = Tier.FREE, onSelectRoutine }: RoutineListProps) {
+export function RoutineList({ roleId, personId, effectiveLimits = null, onSelectRoutine }: RoutineListProps) {
   const [showForm, setShowForm] = useState(false);
 
   const { data: routines, isLoading } = trpc.routine.list.useQuery({
@@ -45,7 +44,7 @@ export function RoutineList({ roleId, personId, tier = Tier.FREE, onSelectRoutin
   }
 
   // Check tier limits for routines per person
-  const routineLimit = personId ? getTierLimit(tier, 'routines_per_person') : Infinity;
+  const routineLimit = personId ? getTierLimit(effectiveLimits, 'routines_per_person') : Infinity;
   const currentRoutineCount = routines?.length || 0;
   const canAddRoutine = currentRoutineCount < routineLimit;
 

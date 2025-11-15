@@ -109,7 +109,7 @@ export default function TeacherRoutineDetailPage() {
           )}
         </div>
 
-        <TaskList routineId={routineId} personId={studentId} tier={teacherRole.tier} />
+        <TaskList routineId={routineId} personId={studentId} effectiveLimits={teacherRole.effectiveLimits} />
       </div>
     </div>
   );

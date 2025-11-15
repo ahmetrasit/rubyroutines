@@ -7,16 +7,15 @@ import { GoalForm } from './goal-form';
 import { GoalProgressBar } from './goal-progress-bar';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
-import { Tier } from '@/lib/types/prisma-enums';
-import { getTierLimit } from '@/lib/services/tier-limits';
+import { getTierLimit, ComponentTierLimits } from '@/lib/services/tier-limits';
 
 interface GoalListProps {
   roleId: string;
   personId?: string;
-  tier?: Tier;
+  effectiveLimits?: ComponentTierLimits | null;
 }
 
-export function GoalList({ roleId, personId, tier = Tier.FREE }: GoalListProps) {
+export function GoalList({ roleId, personId, effectiveLimits = null }: GoalListProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
   const { toast } = useToast();
@@ -70,7 +69,7 @@ export function GoalList({ roleId, personId, tier = Tier.FREE }: GoalListProps) 
   const activeGoals = filteredGoals.filter((g) => g.status === 'ACTIVE');
 
   // Check tier limits
-  const goalLimit = getTierLimit(tier, 'goals');
+  const goalLimit = getTierLimit(effectiveLimits, 'goals');
   const currentGoalCount = activeGoals.length;
   const canAddGoal = currentGoalCount < goalLimit;
 

@@ -6,16 +6,15 @@ import { useState } from 'react';
 import { TaskForm } from './task-form';
 import { useToast } from '@/components/ui/toast';
 import { Plus } from 'lucide-react';
-import { Tier } from '@/lib/types/prisma-enums';
-import { getTierLimit } from '@/lib/services/tier-limits';
+import { getTierLimit, ComponentTierLimits } from '@/lib/services/tier-limits';
 
 interface TaskListProps {
   routineId: string;
   personId?: string;
-  tier?: Tier;
+  effectiveLimits?: ComponentTierLimits | null;
 }
 
-export function TaskList({ routineId, personId = '', tier = Tier.FREE }: TaskListProps) {
+export function TaskList({ routineId, personId = '', effectiveLimits = null }: TaskListProps) {
   const [showForm, setShowForm] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -61,7 +60,7 @@ export function TaskList({ routineId, personId = '', tier = Tier.FREE }: TaskLis
     );
   }
 
-  const taskLimit = getTierLimit(tier, 'tasks_per_routine');
+  const taskLimit = getTierLimit(effectiveLimits, 'tasks_per_routine');
   const currentTaskCount = tasks?.length || 0;
   const canAddTask = currentTaskCount < taskLimit;
 

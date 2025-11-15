@@ -118,7 +118,7 @@ export default function RoutineDetailPage() {
         <TaskList
           routineId={routineId}
           personId={personId}
-          tier={parentRole.tier}
+          effectiveLimits={parentRole.effectiveLimits}
         />
       </div>
     </div>
