@@ -2,7 +2,7 @@
 
 import { ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
 type Routine = any;
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -24,6 +24,7 @@ interface RoutineFormProps {
 
 export function RoutineForm({ routine, roleId, personIds = [], onClose }: RoutineFormProps) {
   const [name, setName] = useState(routine?.name || '');
+  const [emoji, setEmoji] = useState('');
   const [description, setDescription] = useState(routine?.description || '');
   const [resetPeriod, setResetPeriod] = useState<ResetPeriod>(
     routine?.resetPeriod || ResetPeriod.DAILY
@@ -35,6 +36,13 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Reset visibility if it's invalid for Daily period
+  useEffect(() => {
+    if (resetPeriod === ResetPeriod.DAILY && visibility === Visibility.DATE_RANGE) {
+      setVisibility(Visibility.ALWAYS);
+    }
+  }, [resetPeriod, visibility]);
 
   const createMutation = trpc.routine.create.useMutation({
     onSuccess: () => {
@@ -77,10 +85,12 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const finalName = emoji ? `${emoji} ${name}` : name;
+
     if (routine) {
       updateMutation.mutate({
         id: routine.id,
-        name: name || undefined,
+        name: finalName || undefined,
         description: description || null,
         resetPeriod,
         resetDay,
@@ -89,7 +99,7 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
     } else if (roleId) {
       createMutation.mutate({
         roleId,
-        name,
+        name: finalName,
         description: description || undefined,
         resetPeriod,
         resetDay,
@@ -110,44 +120,55 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              maxLength={100}
-              placeholder="Morning Routine"
-              disabled={routine?.name === 'Daily Routine'}
-            />
-            {routine?.name === 'Daily Routine' && (
-              <p className="text-xs text-gray-500 mt-1">
-                The Daily Routine name cannot be changed
-              </p>
-            )}
+          <div className="grid grid-cols-12 gap-3">
+            <div className="col-span-2">
+              <Label htmlFor="emoji">Emoji</Label>
+              <Input
+                id="emoji"
+                value={emoji}
+                onChange={(e) => setEmoji(e.target.value)}
+                maxLength={2}
+                placeholder="😊"
+                className="text-center text-xl"
+              />
+            </div>
+            <div className="col-span-10">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                maxLength={100}
+                placeholder="Morning Routine"
+                disabled={routine?.name === 'Daily Routine'}
+              />
+              {routine?.name === 'Daily Routine' && (
+                <p className="text-xs text-gray-500 mt-1">
+                  The Daily Routine name cannot be changed
+                </p>
+              )}
+            </div>
           </div>
 
           <div>
             <Label htmlFor="description">Description</Label>
-            <textarea
+            <Input
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              maxLength={500}
-              rows={3}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              maxLength={200}
               placeholder="Get ready for school..."
             />
           </div>
 
-          <div>
-            <Label htmlFor="resetPeriod">Reset Period *</Label>
+          <div className="flex items-center gap-3">
+            <Label htmlFor="resetPeriod" className="whitespace-nowrap">Period:</Label>
             <select
               id="resetPeriod"
               value={resetPeriod}
               onChange={(e) => setResetPeriod(e.target.value as ResetPeriod)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2"
             >
               <option value={ResetPeriod.DAILY}>Daily</option>
               <option value={ResetPeriod.WEEKLY}>Weekly</option>
@@ -191,17 +212,24 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
             </div>
           )}
 
-          <div>
-            <Label htmlFor="visibility">Visibility *</Label>
+          <div className="flex items-center gap-3">
+            <Label htmlFor="visibility" className="whitespace-nowrap">Visibility:</Label>
             <select
               id="visibility"
               value={visibility}
               onChange={(e) => setVisibility(e.target.value as Visibility)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2"
             >
-              <option value={Visibility.ALWAYS}>Always Visible</option>
-              <option value={Visibility.DAYS_OF_WEEK}>Specific Days</option>
-              <option value={Visibility.DATE_RANGE}>Date Range</option>
+              <option value={Visibility.ALWAYS}>Always</option>
+              {resetPeriod === ResetPeriod.DAILY && (
+                <option value={Visibility.DAYS_OF_WEEK}>Limited</option>
+              )}
+              {resetPeriod !== ResetPeriod.DAILY && (
+                <>
+                  <option value={Visibility.DAYS_OF_WEEK}>Specific Days</option>
+                  <option value={Visibility.DATE_RANGE}>Date Range</option>
+                </>
+              )}
             </select>
           </div>
 
