@@ -5,6 +5,7 @@ import { TaskCard } from './task-card';
 import { useState } from 'react';
 import { TaskForm } from './task-form';
 import { useToast } from '@/components/ui/toast';
+import { Plus } from 'lucide-react';
 
 interface TaskListProps {
   routineId: string;
