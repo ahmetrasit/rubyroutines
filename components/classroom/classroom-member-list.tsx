@@ -3,8 +3,9 @@
 import { trpc } from '@/lib/trpc/client';
 import { PersonCard } from '@/components/person/person-card';
 import { Button } from '@/components/ui/button';
-import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Plus, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { PersonForm } from '@/components/person/person-form';
 import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 import type { Person } from '@/lib/types/database';
@@ -20,6 +21,7 @@ export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPer
   const [showForm, setShowForm] = useState(false);
   const [invisibleRoutineCollapsed, setInvisibleRoutineCollapsed] = useState(true);
   const [kioskCollapsed, setKioskCollapsed] = useState(true);
+  const [studentSearch, setStudentSearch] = useState('');
 
   // Get classroom members
   const { data: classroom, isLoading } = trpc.group.getById.useQuery(
@@ -41,15 +43,25 @@ export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPer
     );
   }
 
-  // Get member IDs from classroom
-  const memberIds = classroom?.members?.map((m: any) => m.personId) || [];
+  // Get member IDs from classroom with their join order
+  const memberMap = new Map(classroom?.members?.map((m: any, index: number) => [m.personId, index]) || []);
 
-  // Filter persons who are members of this classroom
-  const members = persons?.filter(p => memberIds.includes(p.id)) || [];
+  // Filter persons who are members of this classroom and sort by join order
+  const members = persons?.filter(p => memberMap.has(p.id))
+    .sort((a, b) => (memberMap.get(a.id) || 0) - (memberMap.get(b.id) || 0)) || [];
 
   // Separate teachers (Me) from students
   const teachers = members.filter((person) => person.name === 'Me');
-  const students = members.filter((person) => person.name !== 'Me');
+  const allStudents = members.filter((person) => person.name !== 'Me');
+
+  // Filter students based on search query
+  const students = useMemo(() => {
+    if (!studentSearch.trim()) return allStudents;
+    const search = studentSearch.toLowerCase();
+    return allStudents.filter(student =>
+      student.name.toLowerCase().includes(search)
+    );
+  }, [allStudents, studentSearch]);
 
   // Check if this is the Teacher-Only classroom (should not allow adding students)
   const isTeacherOnlyClassroom = classroom?.name === 'Teacher-Only';
@@ -152,6 +164,26 @@ export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPer
 
       {/* Row 4+: Students */}
       <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search students..."
+            value={studentSearch}
+            onChange={(e) => setStudentSearch(e.target.value)}
+            className="pl-10"
+          />
+          {studentSearch && (
+            <button
+              onClick={() => setStudentSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Student cards */}
           {students.map((person) => (
