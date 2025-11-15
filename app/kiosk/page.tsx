@@ -8,21 +8,15 @@ import { trpc } from '@/lib/trpc/client';
 export default function KioskPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [inputCode, setInputCode] = useState('');
   const router = useRouter();
-
-  const { refetch: validateCode } = trpc.kiosk.validateCode.useQuery(
-    { code: inputCode },
-    { enabled: false }
-  );
+  const utils = trpc.useUtils();
 
   const handleSubmit = async (code: string) => {
     setError('');
     setIsLoading(true);
-    setInputCode(code);
 
     try {
-      const { data } = await validateCode();
+      const data = await utils.kiosk.validateCode.fetch({ code });
       if (data) {
         // Store session in localStorage
         const sessionData = {

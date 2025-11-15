@@ -55,6 +55,7 @@ model Role {
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
   subscriptionStatus   String?  @default("ACTIVE")
+  kioskLastUpdatedAt   DateTime @default(now()) // Track task completions and changes for kiosk polling
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

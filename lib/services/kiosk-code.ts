@@ -25,9 +25,8 @@ export interface KioskCode {
  * Uses safe words from 2000-word list
  * Checks for duplicates before returning
  *
- * Format:
- * - Parent mode: <firstName>-<word1>-<word2>-<word3>
- * - Teacher mode: <firstName>-<classroomName>-<word1>-<word2>-<word3>
+ * Format (ALL UPPERCASE):
+ * - FIRSTNAME-WORD1-WORD2-WORD3 (applies to both parent and classroom modes)
  */
 export async function generateKioskCode(
   options: GenerateCodeOptions
@@ -44,13 +43,8 @@ export async function generateKioskCode(
     throw new Error('Role not found');
   }
 
-  // Extract first name and format it (lowercase, no spaces)
-  const firstName = userName.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-
-  // Format classroom name if provided (lowercase, spaces to dashes)
-  const formattedClassroomName = classroomName
-    ? classroomName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-    : null;
+  // Extract first name and format it (uppercase, no spaces)
+  const firstName = userName.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
 
   let attempts = 0;
   const maxAttempts = 10;
@@ -60,12 +54,9 @@ export async function generateKioskCode(
     const words = getRandomSafeWords(wordCount);
     const wordsPart = words.join('-').toUpperCase();
 
-    // Build the full code based on mode
-    // Parent mode: firstName-WORD1-WORD2-WORD3
-    // Teacher mode: firstName-classroomName-WORD1-WORD2-WORD3
-    const code = formattedClassroomName
-      ? `${firstName}-${formattedClassroomName}-${wordsPart}`
-      : `${firstName}-${wordsPart}`;
+    // Build the full code (ALL UPPERCASE)
+    // Format: FIRSTNAME-WORD1-WORD2-WORD3
+    const code = `${firstName}-${wordsPart}`;
 
     // Check if code already exists and is active
     const existing = await prisma.code.findFirst({
@@ -112,13 +103,15 @@ export async function generateKioskCode(
 /**
  * Validate kiosk code
  * Checks if code exists, is active, not expired, not used
+ * Accepts codes with spaces or dashes (e.g., "OCEAN TIGER" or "OCEAN-TIGER")
  */
 export async function validateKioskCode(code: string): Promise<{
   valid: boolean;
   kioskCode?: KioskCode;
   error?: string;
 }> {
-  const normalizedCode = code.trim().toUpperCase();
+  // Normalize: trim, replace spaces with dashes, convert to uppercase
+  const normalizedCode = code.trim().replace(/\s+/g, '-').toUpperCase();
 
   const dbCode = await prisma.code.findFirst({
     where: {
