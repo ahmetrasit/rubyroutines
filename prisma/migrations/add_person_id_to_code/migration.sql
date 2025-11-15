@@ -1,8 +1,8 @@
 -- AlterTable
-ALTER TABLE "Code" ADD COLUMN "personId" TEXT;
+ALTER TABLE "codes" ADD COLUMN "personId" TEXT;
 
 -- CreateIndex
-CREATE INDEX "Code_personId_idx" ON "Code"("personId");
+CREATE INDEX "codes_personId_idx" ON "codes"("personId");
 
 -- AddForeignKey
-ALTER TABLE "Code" ADD CONSTRAINT "Code_personId_fkey" FOREIGN KEY ("personId") REFERENCES "Person"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "codes" ADD CONSTRAINT "codes_personId_fkey" FOREIGN KEY ("personId") REFERENCES "persons"("id") ON DELETE CASCADE ON UPDATE CASCADE;
