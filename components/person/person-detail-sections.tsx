@@ -7,14 +7,17 @@ import { isRoutineVisible } from '@/lib/services/visibility-rules';
 import { RoutineForm } from '@/components/routine/routine-form';
 import { GoalForm } from '@/components/goal/goal-form';
 import { Button } from '@/components/ui/button';
+import { Tier } from '@/lib/types/prisma-enums';
+import { getTierLimit } from '@/lib/services/tier-limits';
 
 interface PersonDetailSectionsProps {
   roleId: string;
   personId: string;
+  tier?: Tier;
   onSelectRoutine?: (routine: any) => void;
 }
 
-export function PersonDetailSections({ roleId, personId, onSelectRoutine }: PersonDetailSectionsProps) {
+export function PersonDetailSections({ roleId, personId, tier = Tier.FREE, onSelectRoutine }: PersonDetailSectionsProps) {
   const [routinesExpanded, setRoutinesExpanded] = useState(false);
   const [goalsExpanded, setGoalsExpanded] = useState(false);
   const [tasksExpanded, setTasksExpanded] = useState(false);
@@ -34,6 +37,15 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
 
   // Filter goals for this person
   const filteredGoals = goals?.filter((goal) => goal.personIds.includes(personId)) || [];
+
+  // Check tier limits
+  const routineLimit = getTierLimit(tier, 'routines_per_person');
+  const currentRoutineCount = routines?.length || 0;
+  const canAddRoutine = currentRoutineCount < routineLimit;
+
+  const goalLimit = getTierLimit(tier, 'goals');
+  const currentGoalCount = goals?.length || 0;
+  const canAddGoal = currentGoalCount < goalLimit;
 
   // Extract tasks from routines and group by routine
   const tasksByRoutine = routines?.reduce((acc: any, routine: any) => {
@@ -162,15 +174,28 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                 })}
 
                 {/* Add Routine Card */}
-                <div
-                  onClick={() => setShowRoutineForm(true)}
-                  className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-4 cursor-pointer transition-all hover:border-primary-400 hover:bg-gray-50 flex items-center justify-center"
+                <button
+                  onClick={canAddRoutine ? () => setShowRoutineForm(true) : undefined}
+                  className={`rounded-lg border-2 border-dashed p-4 transition-all flex items-center justify-center ${
+                    canAddRoutine
+                      ? 'border-gray-300 cursor-pointer hover:border-primary-400 hover:bg-gray-50'
+                      : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                  }`}
                 >
-                  <div className="flex flex-col items-center text-center gap-2 text-gray-400">
-                    <Plus className="h-8 w-8" />
-                    <span className="text-sm font-medium">Add Routine</span>
-                  </div>
-                </div>
+                  {canAddRoutine ? (
+                    <div className="flex flex-col items-center text-center gap-2 text-gray-400">
+                      <Plus className="h-8 w-8" />
+                      <span className="text-sm font-medium">Add Routine</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-center gap-2">
+                      <div className="text-2xl">🔒</div>
+                      <span className="text-xs font-medium text-gray-500">Upgrade to add</span>
+                      <span className="text-xs text-gray-400">new routines</span>
+                      <span className="text-xs text-gray-400 mt-1">({currentRoutineCount}/{routineLimit})</span>
+                    </div>
+                  )}
+                </button>
               </div>
             ) : (
               <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
@@ -237,15 +262,28 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                 })}
 
                 {/* Add Goal Card */}
-                <div
-                  onClick={() => setShowGoalForm(true)}
-                  className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-4 cursor-pointer transition-all hover:border-primary-400 hover:bg-gray-50 flex items-center justify-center"
+                <button
+                  onClick={canAddGoal ? () => setShowGoalForm(true) : undefined}
+                  className={`rounded-lg border-2 border-dashed p-4 transition-all flex items-center justify-center ${
+                    canAddGoal
+                      ? 'border-gray-300 cursor-pointer hover:border-primary-400 hover:bg-gray-50'
+                      : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                  }`}
                 >
-                  <div className="flex flex-col items-center text-center gap-2 text-gray-400">
-                    <Plus className="h-8 w-8" />
-                    <span className="text-sm font-medium">Add Goal</span>
-                  </div>
-                </div>
+                  {canAddGoal ? (
+                    <div className="flex flex-col items-center text-center gap-2 text-gray-400">
+                      <Plus className="h-8 w-8" />
+                      <span className="text-sm font-medium">Add Goal</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-center gap-2">
+                      <div className="text-2xl">🔒</div>
+                      <span className="text-xs font-medium text-gray-500">Upgrade to add</span>
+                      <span className="text-xs text-gray-400">new goals</span>
+                      <span className="text-xs text-gray-400 mt-1">({currentGoalCount}/{goalLimit})</span>
+                    </div>
+                  )}
+                </button>
               </div>
             ) : (
               <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">

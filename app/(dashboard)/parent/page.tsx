@@ -83,6 +83,7 @@ export default function ParentDashboard() {
               <PersonList
                 roleId={parentRole.id}
                 userName={session.user.name || 'User'}
+                tier={parentRole.tier}
                 onSelectPerson={handleSelectPerson}
               />
             </div>
