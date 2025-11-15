@@ -11,7 +11,7 @@ export const goalRouter = router({
    */
   list: protectedProcedure
     .input(z.object({
-      roleId: z.string().cuid()
+      roleId: z.string().uuid()
     }))
     .query(async ({ ctx, input }) => {
       // Verify user owns this role
@@ -66,7 +66,7 @@ export const goalRouter = router({
    */
   getById: protectedProcedure
     .input(z.object({
-      id: z.string().cuid()
+      id: z.string().uuid()
     }))
     .query(async ({ ctx, input }) => {
       const goal = await ctx.prisma.goal.findUnique({
@@ -112,7 +112,7 @@ export const goalRouter = router({
    */
   create: protectedProcedure
     .input(z.object({
-      roleId: z.string().cuid(),
+      roleId: z.string().uuid(),
       name: z.string().min(1).max(100),
       description: z.string().max(500).optional(),
       target: z.number().positive(),
@@ -158,7 +158,7 @@ export const goalRouter = router({
    */
   update: protectedProcedure
     .input(z.object({
-      id: z.string().cuid(),
+      id: z.string().uuid(),
       name: z.string().min(1).max(100).optional(),
       description: z.string().max(500).optional(),
       target: z.number().positive().optional(),
@@ -196,7 +196,7 @@ export const goalRouter = router({
    */
   archive: protectedProcedure
     .input(z.object({
-      id: z.string().cuid()
+      id: z.string().uuid()
     }))
     .mutation(async ({ ctx, input }) => {
       const goal = await ctx.prisma.goal.findUnique({
@@ -228,7 +228,7 @@ export const goalRouter = router({
    */
   linkTasks: protectedProcedure
     .input(z.object({
-      goalId: z.string().cuid(),
+      goalId: z.string().uuid(),
       taskIds: z.array(z.string().cuid())
     }))
     .mutation(async ({ ctx, input }) => {
@@ -270,7 +270,7 @@ export const goalRouter = router({
    */
   linkRoutines: protectedProcedure
     .input(z.object({
-      goalId: z.string().cuid(),
+      goalId: z.string().uuid(),
       routineIds: z.array(z.string().cuid())
     }))
     .mutation(async ({ ctx, input }) => {
@@ -312,7 +312,7 @@ export const goalRouter = router({
    */
   unlinkTask: protectedProcedure
     .input(z.object({
-      goalId: z.string().cuid(),
+      goalId: z.string().uuid(),
       taskId: z.string().cuid()
     }))
     .mutation(async ({ ctx, input }) => {
@@ -357,7 +357,7 @@ export const goalRouter = router({
    */
   unlinkRoutine: protectedProcedure
     .input(z.object({
-      goalId: z.string().cuid(),
+      goalId: z.string().uuid(),
       routineId: z.string().cuid()
     }))
     .mutation(async ({ ctx, input }) => {

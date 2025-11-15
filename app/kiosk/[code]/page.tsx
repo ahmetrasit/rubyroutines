@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { SessionTimeout } from '@/components/kiosk/session-timeout';
-import { ConfettiCelebration } from '@/components/kiosk/confetti-celebration';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Loader2, LogOut, Check, Plus, Undo2, X } from 'lucide-react';
@@ -36,7 +35,7 @@ interface Person {
   avatar?: string | null;
 }
 
-const INACTIVITY_TIMEOUT = 30000; // 30 seconds
+const INACTIVITY_TIMEOUT = 60000; // 60 seconds (default, can be configured in admin settings)
 
 export default function KioskModePage() {
   const router = useRouter();
@@ -44,7 +43,6 @@ export default function KioskModePage() {
   const code = params.code as string;
   const [sessionData, setSessionData] = useState<any>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [showCelebration, setShowCelebration] = useState(false);
   const [progressValues, setProgressValues] = useState<Record<string, string>>({});
   const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
@@ -86,10 +84,32 @@ export default function KioskModePage() {
     { enabled: !!sessionData }
   );
 
-  const { data: selectedPerson } = trpc.person.getById.useQuery(
-    { id: selectedPersonId! },
-    { enabled: !!selectedPersonId }
-  );
+  // Get kiosk settings (inactivity timeout)
+  const { data: kioskSettings } = trpc.kiosk.getSettings.useQuery();
+  const inactivityTimeout = kioskSettings?.inactivityTimeout || INACTIVITY_TIMEOUT;
+
+  // Get persons to display: use group members if groups exist, otherwise use role persons
+  // Filter out teachers/parents (named 'Me') to show only students/kids
+  const groups = kioskData?.groups || [];
+  const rolePersons = kioskData?.persons || [];
+  const isIndividualCode = !!kioskData?.personId; // Check if this is an individual code
+
+  let activePersons: Person[] = [];
+  if (isIndividualCode) {
+    // Individual code: only show the specific person
+    activePersons = rolePersons.filter((p: Person) => p.id === kioskData.personId && p.status === 'ACTIVE');
+  } else if (groups.length > 0) {
+    // Group code: use members from groups (classroom/family members)
+    const allMembers = groups.flatMap((g: any) => g.members || []);
+    activePersons = allMembers
+      .map((m: any) => m.person)
+      .filter((p: Person) => p && p.status === 'ACTIVE' && p.name !== 'Me');
+  } else {
+    // Role code: use persons from role (fallback)
+    activePersons = rolePersons.filter((p: Person) => p.status === 'ACTIVE' && p.name !== 'Me');
+  }
+
+  const selectedPerson = activePersons.find((p: Person) => p.id === selectedPersonId);
 
   const { data: personTasksData, isLoading: tasksLoading } = trpc.kiosk.getPersonTasks.useQuery(
     { kioskCodeId: sessionData?.codeId!, personId: selectedPersonId! },
@@ -100,10 +120,6 @@ export default function KioskModePage() {
   );
 
   const tasks = personTasksData?.tasks || [];
-
-  // Fetch task data for all persons to show progress
-  const persons = kioskData?.persons || [];
-  const activePersons = persons.filter((p: any) => p.status === 'ACTIVE');
 
   // Fetch tasks for all persons for progress calculation
   const personTaskQueries = activePersons.map((person: Person) =>
@@ -142,7 +158,6 @@ export default function KioskModePage() {
 
   const completeMutation = trpc.kiosk.completeTask.useMutation({
     onSuccess: () => {
-      setShowCelebration(true);
       utils.kiosk.getPersonTasks.invalidate();
       setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
       resetInactivityTimer();
@@ -202,20 +217,20 @@ export default function KioskModePage() {
     setLastActivityTime(Date.now());
   }, []);
 
-  const isGroupScope = activePersons.length > 1;
+  const isGroupScope = !isIndividualCode && activePersons.length > 1;
 
   useEffect(() => {
     if (!selectedPersonId || !isGroupScope) return;
 
     const interval = setInterval(() => {
       const timeSinceActivity = Date.now() - lastActivityTime;
-      if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
+      if (timeSinceActivity >= inactivityTimeout) {
         setSelectedPersonId(null);
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [selectedPersonId, lastActivityTime, isGroupScope]);
+  }, [selectedPersonId, lastActivityTime, isGroupScope, inactivityTimeout]);
 
   const handleComplete = (task: Task) => {
     if (!selectedPersonId) return;
@@ -265,6 +280,13 @@ export default function KioskModePage() {
     setSelectedPersonId(personId);
     resetInactivityTimer();
   };
+
+  // Auto-select person for individual codes
+  useEffect(() => {
+    if (isIndividualCode && activePersons.length === 1 && !selectedPersonId) {
+      setSelectedPersonId(activePersons[0].id);
+    }
+  }, [isIndividualCode, activePersons, selectedPersonId]);
 
   const handleDone = () => {
     setSelectedPersonId(null);
@@ -529,7 +551,6 @@ export default function KioskModePage() {
                     })()}
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">{selectedPerson.name}</h2>
-                      <p className="text-gray-600">Currently checking in</p>
                     </div>
                   </div>
                 ) : (
@@ -576,8 +597,7 @@ export default function KioskModePage() {
                   <div className="h-full flex items-center justify-center">
                     <div className="text-center">
                       <div className="text-6xl mb-4">🎉</div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">All done!</h2>
-                      <p className="text-gray-600">No tasks right now. Great job!</p>
+                      <h2 className="text-2xl font-bold text-gray-900">All done!</h2>
                     </div>
                   </div>
                 ) : (
@@ -608,10 +628,6 @@ export default function KioskModePage() {
           )}
         </div>
       </div>
-      <ConfettiCelebration
-        show={showCelebration}
-        onComplete={() => setShowCelebration(false)}
-      />
     </>
   );
 }

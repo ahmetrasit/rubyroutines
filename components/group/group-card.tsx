@@ -42,7 +42,13 @@ export function GroupCard({ group, onSelect, hideSubtitle = false }: GroupCardPr
     }
   };
 
-  const memberCount = group._count?.members || group.members?.length || 0;
+  // Count only students/kids (exclude teachers/parents named 'Me')
+  const memberCount = group.members
+    ? group.members.filter((m: any) => m.person?.name !== 'Me').length
+    : (group._count?.members || 0);
+
+  // Check if this is the protected Teacher-Only classroom
+  const isTeacherOnlyClassroom = group.name === 'Teacher-Only';
 
   return (
     <>
@@ -60,30 +66,33 @@ export function GroupCard({ group, onSelect, hideSubtitle = false }: GroupCardPr
             )}
           </div>
 
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowEdit(true);
-              }}
-              className="h-8 w-8 p-0"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete();
-              }}
-              className="h-8 w-8 p-0"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Hide edit/delete buttons for Teacher-Only classroom */}
+          {!isTeacherOnlyClassroom && (
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowEdit(true);
+                }}
+                className="h-8 w-8 p-0"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                className="h-8 w-8 p-0"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {group.description && group.name !== 'Teacher-Only' && (

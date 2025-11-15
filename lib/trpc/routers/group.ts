@@ -112,29 +112,36 @@ export const groupRouter = router({
       }
     }
 
-    const group = await ctx.prisma.group.create({
-      data: {
-        roleId: input.roleId,
-        name: input.name,
-        type: input.type,
-        description: input.description,
-        status: EntityStatus.ACTIVE,
-        // Add "Me" person as member if this is a classroom
-        members: mePerson ? {
-          create: {
-            personId: mePerson.id,
-            role: 'member',
-          },
-        } : undefined,
-      },
-      include: {
-        members: {
-          include: {
-            person: true,
+    // Create group and update role timestamp for kiosk polling
+    const [group] = await ctx.prisma.$transaction([
+      ctx.prisma.group.create({
+        data: {
+          roleId: input.roleId,
+          name: input.name,
+          type: input.type,
+          description: input.description,
+          status: EntityStatus.ACTIVE,
+          // Add "Me" person as member if this is a classroom
+          members: mePerson ? {
+            create: {
+              personId: mePerson.id,
+              role: 'member',
+            },
+          } : undefined,
+        },
+        include: {
+          members: {
+            include: {
+              person: true,
+            },
           },
         },
-      },
-    });
+      }),
+      ctx.prisma.role.update({
+        where: { id: input.roleId },
+        data: { kioskLastUpdatedAt: new Date() }
+      })
+    ]);
 
     return group;
   }),
@@ -145,6 +152,7 @@ export const groupRouter = router({
     // Check if this is the protected default classroom
     const existingGroup = await ctx.prisma.group.findUnique({
       where: { id },
+      include: { role: true }
     });
 
     if (existingGroup && existingGroup.name === 'Teacher-Only') {
@@ -154,17 +162,28 @@ export const groupRouter = router({
       });
     }
 
-    const group = await ctx.prisma.group.update({
-      where: { id },
-      data,
-      include: {
-        members: {
-          include: {
-            person: true,
+    // Update group and role + group timestamps for kiosk polling
+    const now = new Date();
+    const [group] = await ctx.prisma.$transaction([
+      ctx.prisma.group.update({
+        where: { id },
+        data: {
+          ...data,
+          kioskLastUpdatedAt: now
+        },
+        include: {
+          members: {
+            include: {
+              person: true,
+            },
           },
         },
-      },
-    });
+      }),
+      ctx.prisma.role.update({
+        where: { id: existingGroup!.roleId },
+        data: { kioskLastUpdatedAt: now }
+      })
+    ]);
 
     return group;
   }),
@@ -211,29 +230,79 @@ export const groupRouter = router({
       });
     }
 
-    const member = await ctx.prisma.groupMember.create({
-      data: {
-        groupId: input.groupId,
-        personId: input.personId,
-      },
-      include: {
-        person: true,
-        group: true,
-      },
+    // Get group to access roleId
+    const group = await ctx.prisma.group.findUnique({
+      where: { id: input.groupId },
+      select: { roleId: true }
     });
+
+    if (!group) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Group not found',
+      });
+    }
+
+    // Add member and update role + group timestamps for kiosk polling
+    const now = new Date();
+    const [member] = await ctx.prisma.$transaction([
+      ctx.prisma.groupMember.create({
+        data: {
+          groupId: input.groupId,
+          personId: input.personId,
+        },
+        include: {
+          person: true,
+          group: true,
+        },
+      }),
+      ctx.prisma.role.update({
+        where: { id: group.roleId },
+        data: { kioskLastUpdatedAt: now }
+      }),
+      ctx.prisma.group.update({
+        where: { id: input.groupId },
+        data: { kioskLastUpdatedAt: now }
+      })
+    ]);
 
     return member;
   }),
 
   removeMember: protectedProcedure.input(removeMemberSchema).mutation(async ({ ctx, input }) => {
-    const member = await ctx.prisma.groupMember.delete({
-      where: {
-        groupId_personId: {
-          groupId: input.groupId,
-          personId: input.personId,
-        },
-      },
+    // Get group to access roleId
+    const group = await ctx.prisma.group.findUnique({
+      where: { id: input.groupId },
+      select: { roleId: true }
     });
+
+    if (!group) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Group not found',
+      });
+    }
+
+    // Remove member and update role + group timestamps for kiosk polling
+    const now = new Date();
+    const [member] = await ctx.prisma.$transaction([
+      ctx.prisma.groupMember.delete({
+        where: {
+          groupId_personId: {
+            groupId: input.groupId,
+            personId: input.personId,
+          },
+        },
+      }),
+      ctx.prisma.role.update({
+        where: { id: group.roleId },
+        data: { kioskLastUpdatedAt: now }
+      }),
+      ctx.prisma.group.update({
+        where: { id: input.groupId },
+        data: { kioskLastUpdatedAt: now }
+      })
+    ]);
 
     return member;
   }),

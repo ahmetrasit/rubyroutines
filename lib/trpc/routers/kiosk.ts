@@ -13,11 +13,31 @@ import { kioskRateLimitedProcedure } from '../middleware/ratelimit';
 
 export const kioskRouter = router({
   /**
+   * Get kiosk settings (public - no auth required)
+   */
+  getSettings: publicProcedure.query(async ({ ctx }) => {
+    // Get inactivity timeout from system settings, default to 60 seconds
+    const timeoutSetting = await ctx.prisma.systemSettings.findUnique({
+      where: { key: 'kiosk_inactivity_timeout' }
+    });
+
+    const inactivityTimeout = timeoutSetting?.value
+      ? Number(timeoutSetting.value)
+      : 60000; // Default 60 seconds
+
+    return {
+      inactivityTimeout
+    };
+  }),
+
+  /**
    * Generate a new kiosk code (protected - requires authentication)
    */
   generateCode: authorizedProcedure
     .input(z.object({
       roleId: z.string().uuid(),
+      groupId: z.string().cuid().optional(), // Optional classroom/group ID
+      personId: z.string().cuid().optional(), // Optional person ID for individual codes
       userName: z.string(),
       classroomName: z.string().optional(),
       wordCount: z.enum(['2', '3']).optional(),
@@ -33,8 +53,21 @@ export const kioskRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
+      // If personId provided, verify person belongs to this role
+      if (input.personId) {
+        const person = await ctx.prisma.person.findUnique({
+          where: { id: input.personId }
+        });
+
+        if (!person || person.roleId !== input.roleId) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Person does not belong to this role' });
+        }
+      }
+
       const code = await generateKioskCode({
         roleId: input.roleId,
+        groupId: input.groupId, // Pass groupId for classroom-specific codes
+        personId: input.personId, // Pass personId for individual codes
         userName: input.userName,
         classroomName: input.classroomName,
         wordCount: input.wordCount === '3' ? 3 : 2,
@@ -119,7 +152,11 @@ export const kioskRouter = router({
                 orderBy: { name: 'asc' }
               },
               groups: {
-                where: { status: 'ACTIVE' },
+                where: {
+                  status: 'ACTIVE',
+                  // If code has groupId, only return that specific group
+                  ...(result.kioskCode!.groupId ? { id: result.kioskCode!.groupId } : {})
+                },
                 include: {
                   members: {
                     where: { person: { status: 'ACTIVE' } },
@@ -135,6 +172,8 @@ export const kioskRouter = router({
       return {
         codeId: code!.id,
         roleId: code!.roleId,
+        groupId: code!.groupId, // Include groupId in response
+        personId: code!.personId, // Include personId in response (for individual codes)
         persons: code!.role.persons,
         groups: code!.role.groups
       };
@@ -274,20 +313,25 @@ export const kioskRouter = router({
         });
       }
 
-      // Create completion and update role timestamp in a transaction
+      // Create completion and update role + person timestamps in a transaction
+      const now = new Date();
       const [completion] = await ctx.prisma.$transaction([
         ctx.prisma.taskCompletion.create({
           data: {
             taskId: input.taskId,
             personId: input.personId,
-            completedAt: new Date(),
+            completedAt: now,
             value: input.value,
             notes: input.notes
           }
         }),
         ctx.prisma.role.update({
           where: { id: person.roleId },
-          data: { kioskLastUpdatedAt: new Date() }
+          data: { kioskLastUpdatedAt: now }
+        }),
+        ctx.prisma.person.update({
+          where: { id: input.personId },
+          data: { kioskLastUpdatedAt: now }
         })
       ]);
 
@@ -345,14 +389,19 @@ export const kioskRouter = router({
         });
       }
 
-      // Delete completion and update role timestamp in a transaction
+      // Delete completion and update role + person timestamps in a transaction
+      const now = new Date();
       await ctx.prisma.$transaction([
         ctx.prisma.taskCompletion.delete({
           where: { id: input.completionId }
         }),
         ctx.prisma.role.update({
           where: { id: person.roleId },
-          data: { kioskLastUpdatedAt: new Date() }
+          data: { kioskLastUpdatedAt: now }
+        }),
+        ctx.prisma.person.update({
+          where: { id: completion.personId },
+          data: { kioskLastUpdatedAt: now }
         })
       ]);
 
@@ -372,7 +421,7 @@ export const kioskRouter = router({
     }),
 
   /**
-   * Check if role has updates since a given timestamp (public - for optimized kiosk polling)
+   * Check if role/group/person has updates since a given timestamp (public - for optimized kiosk polling)
    */
   checkRoleUpdates: publicProcedure
     .input(z.object({
@@ -380,11 +429,13 @@ export const kioskRouter = router({
       lastCheckedAt: z.date()
     }))
     .query(async ({ ctx, input }) => {
-      // Get the role associated with this kiosk code
+      // Get the code with group/person info
       const code = await ctx.prisma.code.findUnique({
         where: { id: input.kioskCodeId },
         select: {
           roleId: true,
+          groupId: true,
+          personId: true,
           role: {
             select: {
               kioskLastUpdatedAt: true
@@ -400,12 +451,36 @@ export const kioskRouter = router({
         });
       }
 
+      let mostRecentUpdate = code.role.kioskLastUpdatedAt;
+
+      // For individual codes, also check person-level updates
+      if (code.personId) {
+        const person = await ctx.prisma.person.findUnique({
+          where: { id: code.personId },
+          select: { kioskLastUpdatedAt: true }
+        });
+        if (person && person.kioskLastUpdatedAt > mostRecentUpdate) {
+          mostRecentUpdate = person.kioskLastUpdatedAt;
+        }
+      }
+
+      // For group codes, also check group-level updates (member changes)
+      else if (code.groupId) {
+        const group = await ctx.prisma.group.findUnique({
+          where: { id: code.groupId },
+          select: { kioskLastUpdatedAt: true }
+        });
+        if (group && group.kioskLastUpdatedAt > mostRecentUpdate) {
+          mostRecentUpdate = group.kioskLastUpdatedAt;
+        }
+      }
+
       // Compare timestamps
-      const hasUpdates = code.role.kioskLastUpdatedAt > input.lastCheckedAt;
+      const hasUpdates = mostRecentUpdate > input.lastCheckedAt;
 
       return {
         hasUpdates,
-        lastUpdatedAt: code.role.kioskLastUpdatedAt
+        lastUpdatedAt: mostRecentUpdate
       };
     })
 });

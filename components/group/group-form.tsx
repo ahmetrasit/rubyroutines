@@ -23,7 +23,8 @@ interface GroupFormProps {
 }
 
 export function GroupForm({ group, roleId, roleType, onClose }: GroupFormProps) {
-  const isTeacherMode = roleType === 'TEACHER';
+  // Determine if teacher mode: from roleType or from group.type
+  const isTeacherMode = roleType === 'TEACHER' || group?.type === GroupType.CLASSROOM;
   const defaultType = isTeacherMode ? GroupType.CLASSROOM : GroupType.FAMILY;
 
   const [name, setName] = useState(group?.name || '');
@@ -96,19 +97,23 @@ export function GroupForm({ group, roleId, roleType, onClose }: GroupFormProps) 
     <Dialog open onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{group ? 'Edit Group' : 'Create New Group'}</DialogTitle>
+          <DialogTitle>
+            {group
+              ? isTeacherMode ? 'Edit Classroom' : 'Edit Group'
+              : isTeacherMode ? 'Create New Classroom' : 'Create New Group'}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <Label htmlFor="name">Group Name *</Label>
+            <Label htmlFor="name">{isTeacherMode ? 'Class Name' : 'Group Name'} *</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               maxLength={100}
-              placeholder="Smith Family"
+              placeholder=""
               className="mt-1"
             />
           </div>

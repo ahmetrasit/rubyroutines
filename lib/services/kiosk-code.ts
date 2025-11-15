@@ -4,8 +4,10 @@ import { addHours } from 'date-fns';
 
 export interface GenerateCodeOptions {
   roleId: string;
+  groupId?: string; // Optional: specific classroom/group ID
+  personId?: string; // Optional: specific person ID for individual codes
   userName: string; // User's first name
-  classroomName?: string; // Optional classroom name for teacher mode
+  classroomName?: string; // Optional classroom name for teacher mode (for code generation)
   wordCount?: 2 | 3; // 2 words = ~4M combinations, 3 words = ~8B combinations
   expiresInHours?: number; // Default 24 hours
 }
@@ -15,6 +17,8 @@ export interface KioskCode {
   code: string; // e.g., "OCEAN-TIGER" or "CLOUD-FOREST-MOON"
   words: string[];
   roleId: string;
+  groupId?: string | null; // Optional: specific classroom/group ID
+  personId?: string | null; // Optional: specific person ID for individual codes
   expiresAt: Date;
   usedAt: Date | null;
   isActive: boolean;
@@ -31,7 +35,7 @@ export interface KioskCode {
 export async function generateKioskCode(
   options: GenerateCodeOptions
 ): Promise<KioskCode> {
-  const { roleId, userName, classroomName, wordCount = 2, expiresInHours = 24 } = options;
+  const { roleId, groupId, personId, userName, classroomName, wordCount = 2, expiresInHours = 24 } = options;
 
   // Verify role exists and user has permission
   const role = await prisma.role.findUnique({
@@ -77,6 +81,8 @@ export async function generateKioskCode(
         data: {
           code,
           roleId,
+          groupId, // Store groupId if provided
+          personId, // Store personId if provided (for individual codes)
           type: 'KIOSK',
           expiresAt,
           status: 'ACTIVE'
@@ -88,6 +94,8 @@ export async function generateKioskCode(
         code,
         words,
         roleId,
+        groupId,
+        personId,
         expiresAt,
         usedAt: null,
         isActive: true
@@ -154,6 +162,8 @@ export async function validateKioskCode(code: string): Promise<{
       code: dbCode.code,
       words: dbCode.code.split('-'),
       roleId: dbCode.roleId,
+      groupId: dbCode.groupId,
+      personId: dbCode.personId,
       expiresAt: dbCode.expiresAt,
       usedAt: dbCode.usedAt,
       isActive: true
@@ -194,6 +204,8 @@ export async function getActiveCodesForRole(roleId: string): Promise<KioskCode[]
     code: c.code,
     words: c.code.split('-'),
     roleId: c.roleId,
+    groupId: c.groupId,
+    personId: c.personId,
     expiresAt: c.expiresAt,
     usedAt: c.usedAt,
     isActive: true

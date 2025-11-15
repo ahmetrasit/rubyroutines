@@ -26,7 +26,7 @@ interface PersonFormProps {
 }
 
 export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormProps) {
-  const [activeTab, setActiveTab] = useState<'create' | 'restore'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'existing' | 'restore'>('create');
   // Parse existing avatar data if editing
   const initialAvatar = parseAvatar(person?.avatar, person?.name);
   const initialColor = initialAvatar.color;
@@ -40,15 +40,31 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
   const utils = trpc.useUtils();
   const { toast } = useToast();
 
-  // Query for inactive persons (only when roleId is provided and not editing)
+  // Query for all persons (only when roleId is provided and not editing)
   const { data: allPersons } = trpc.person.list.useQuery(
     { roleId: roleId!, includeInactive: true },
     { enabled: !!roleId && !person }
   );
 
+  // Query for classroom members to filter out existing members
+  const { data: classroom } = trpc.group.getById.useQuery(
+    { id: classroomId! },
+    { enabled: !!classroomId && !person }
+  );
+
   const inactivePersons = useMemo(() => {
     return allPersons?.filter((p: any) => p.status === EntityStatus.INACTIVE) || [];
   }, [allPersons]);
+
+  const existingPersons = useMemo(() => {
+    if (!allPersons || !classroom) return [];
+    const memberIds = classroom.members?.map((m: any) => m.personId) || [];
+    return allPersons.filter((p: any) =>
+      p.status === EntityStatus.ACTIVE &&
+      p.name !== 'Me' &&
+      !memberIds.includes(p.id)
+    );
+  }, [allPersons, classroom]);
 
   const filteredEmojis = useMemo(() => {
     if (!emojiSearch) return COMMON_EMOJIS;
@@ -61,7 +77,26 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     );
   }, [emojiSearch]);
 
-  const addMemberMutation = trpc.group.addMember.useMutation();
+  const addMemberMutation = trpc.group.addMember.useMutation({
+    onSuccess: async () => {
+      toast({
+        title: 'Success',
+        description: 'Student added to classroom',
+        variant: 'success',
+      });
+      utils.person.list.invalidate();
+      utils.group.getById.invalidate();
+      utils.group.list.invalidate();
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   const restoreMutation = trpc.person.restore.useMutation({
     onSuccess: async (restoredPerson) => {
@@ -167,8 +202,8 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
           <DialogTitle>{person ? 'Edit Person' : 'Add New Member'}</DialogTitle>
         </DialogHeader>
 
-        {/* Tabs - only show when adding new (not editing) and has inactive persons */}
-        {!person && inactivePersons.length > 0 && (
+        {/* Tabs - only show when adding new (not editing) and has existing/inactive persons */}
+        {!person && (existingPersons.length > 0 || inactivePersons.length > 0) && (
           <div className="flex gap-2 border-b">
             <button
               type="button"
@@ -181,18 +216,33 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
             >
               Create New
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('restore')}
-              className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
-                activeTab === 'restore'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <RotateCcw className="h-4 w-4" />
-              Restore ({inactivePersons.length})
-            </button>
+            {existingPersons.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('existing')}
+                className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+                  activeTab === 'existing'
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Add Existing ({existingPersons.length})
+              </button>
+            )}
+            {inactivePersons.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('restore')}
+                className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+                  activeTab === 'restore'
+                    ? 'border-b-2 border-blue-600 text-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <RotateCcw className="h-4 w-4" />
+                Restore ({inactivePersons.length})
+              </button>
+            )}
           </div>
         )}
 
@@ -309,6 +359,54 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
             </Button>
           </div>
         </form>
+        )}
+
+        {/* Add Existing Tab */}
+        {activeTab === 'existing' && (
+          <div className="space-y-4">
+            {existingPersons.length === 0 ? (
+              <p className="text-center py-8 text-gray-500">No existing students to add</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {existingPersons.map((existingPerson: any) => {
+                  const avatar = parseAvatar(existingPerson.avatar, existingPerson.name);
+                  return (
+                    <div
+                      key={existingPerson.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
+                          style={{ backgroundColor: avatar.backgroundColor }}
+                        >
+                          {avatar.emoji}
+                        </div>
+                        <div>
+                          <p className="font-medium">{existingPerson.name}</p>
+                          <p className="text-sm text-gray-500">Active student</p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (classroomId) {
+                            addMemberMutation.mutate({
+                              groupId: classroomId,
+                              personId: existingPerson.id,
+                            });
+                          }
+                        }}
+                        disabled={addMemberMutation.isPending}
+                      >
+                        Add to Classroom
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Restore Tab */}

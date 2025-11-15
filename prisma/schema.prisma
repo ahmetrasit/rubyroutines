@@ -102,16 +102,17 @@ enum Tier {
 // ============================================================================
 
 model Person {
-  id          String       @id @default(cuid())
-  roleId      String
-  name        String
-  birthDate   DateTime?
-  avatar      String?
-  notes       String?
-  status      EntityStatus @default(ACTIVE)
-  archivedAt  DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  roleId              String
+  name                String
+  birthDate           DateTime?
+  avatar              String?
+  notes               String?
+  status              EntityStatus @default(ACTIVE)
+  archivedAt          DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  kioskLastUpdatedAt  DateTime     @default(now())
 
   // Relations
   role                    Role                      @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -121,6 +122,7 @@ model Person {
   studentConnections      StudentParentConnection[] @relation("StudentPerson")
   parentConnections       StudentParentConnection[] @relation("ParentPerson")
   connectionCodes         ConnectionCode[]
+  codes                   Code[]                    // Individual kiosk codes for this person
 
   @@index([roleId])
   @@index([status])
@@ -128,22 +130,24 @@ model Person {
 }
 
 model Group {
-  id          String       @id @default(cuid())
-  roleId      String
-  name        String
-  description String?
-  type        GroupType    @default(FAMILY)
-  isClassroom Boolean      @default(false)
-  status      EntityStatus @default(ACTIVE)
-  archivedAt  DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  roleId              String
+  name                String
+  description         String?
+  type                GroupType    @default(FAMILY)
+  isClassroom         Boolean      @default(false)
+  status              EntityStatus @default(ACTIVE)
+  archivedAt          DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  kioskLastUpdatedAt  DateTime     @default(now())
 
   // Relations
   role        Role          @relation(fields: [roleId], references: [id], onDelete: Cascade)
   members     GroupMember[]
   assignments RoutineAssignment[]
   coTeachers  CoTeacher[]
+  codes       Code[]        // Kiosk codes for this specific group/classroom
 
   @@index([roleId])
   @@index([type])
@@ -312,7 +316,7 @@ model TaskCompletion {
 // ============================================================================
 
 model Goal {
-  id                      String       @id @default(cuid())
+  id                      String       @id @default(uuid())
   roleId                  String
   name                    String
   description             String?
@@ -338,7 +342,7 @@ model Goal {
 }
 
 model GoalTaskLink {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   goalId    String
   taskId    String
   weight    Float    @default(1.0)
@@ -355,7 +359,7 @@ model GoalTaskLink {
 }
 
 model GoalRoutineLink {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   goalId    String
   routineId String
   weight    Float    @default(1.0)
@@ -437,6 +441,8 @@ model Code {
   id         String     @id @default(cuid())
   code       String     @unique
   roleId     String
+  groupId    String?    // Optional: links kiosk code to specific classroom/group
+  personId   String?    // Optional: links kiosk code to specific person (individual code)
   type       CodeType   @default(KIOSK)
   expiresAt  DateTime
   usedAt     DateTime?
@@ -444,10 +450,14 @@ model Code {
   createdAt  DateTime   @default(now())
 
   // Relations
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  group  Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  person Person? @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@index([code])
   @@index([roleId])
+  @@index([groupId])
+  @@index([personId])
   @@index([status])
   @@index([expiresAt])
   @@map("codes")

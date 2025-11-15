@@ -12,9 +12,10 @@ import type { Person } from '@/lib/types/database';
 interface PersonCardProps {
   person: Person;
   onSelect?: (person: Person) => void;
+  classroomId?: string; // Optional: for teacher mode to handle classroom-specific removal
 }
 
-export const PersonCard = memo(function PersonCard({ person, onSelect }: PersonCardProps) {
+export const PersonCard = memo(function PersonCard({ person, onSelect, classroomId }: PersonCardProps) {
   const [showEdit, setShowEdit] = useState(false);
   const utils = trpc.useUtils();
 
@@ -33,9 +34,46 @@ export const PersonCard = memo(function PersonCard({ person, onSelect }: PersonC
     }
   );
 
+  const removeMemberMutation = trpc.group.removeMember.useMutation();
+  const { mutate: removeMember, isLoading: isRemoving } = useDeleteMutation(
+    removeMemberMutation,
+    {
+      entityName: person.name,
+      invalidateQueries: [
+        () => utils.person.list.invalidate(),
+        () => utils.group.getById.invalidate(),
+      ],
+    }
+  );
+
+  // Get person details with group memberships for smart deletion in teacher mode
+  const { data: personDetails } = trpc.person.getById.useQuery(
+    { id: person.id },
+    { enabled: !!classroomId } // Only fetch when in classroom context
+  );
+
   const handleDelete = () => {
-    if (confirm(`Are you sure you want to archive ${person.name}?`)) {
-      deletePerson({ id: person.id });
+    // In teacher mode (classroom context), handle removal intelligently
+    if (classroomId) {
+      const groupMemberships = personDetails?.groupMembers || [];
+      const isInMultipleClassrooms = groupMemberships.length > 1;
+
+      if (isInMultipleClassrooms) {
+        // Student is in multiple classrooms - just remove from this one
+        if (confirm(`Remove ${person.name} from this classroom?\n\nNote: ${person.name} will remain in other classrooms.`)) {
+          removeMember({ groupId: classroomId, personId: person.id });
+        }
+      } else {
+        // Student is only in this classroom - archive them
+        if (confirm(`Archive ${person.name}?\n\nThis is the only classroom for ${person.name}. They will be archived.`)) {
+          deletePerson({ id: person.id });
+        }
+      }
+    } else {
+      // Parent mode or general deletion - archive as before
+      if (confirm(`Are you sure you want to archive ${person.name}?`)) {
+        deletePerson({ id: person.id });
+      }
     }
   };
 
@@ -159,7 +197,8 @@ export const PersonCard = memo(function PersonCard({ person, onSelect }: PersonC
                 e.stopPropagation();
                 handleDelete();
               }}
-              className="px-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+              disabled={isDeleting || isRemoving}
+              className="px-3 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

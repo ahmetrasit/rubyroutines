@@ -147,14 +147,43 @@ export const personRouter = router({
       // Verify person ownership
       await verifyPersonOwnership(ctx.user.id, input.id, ctx.prisma);
 
-      // Soft delete by setting status to INACTIVE
-      const person = await ctx.prisma.person.update({
+      // Get person to access roleId and groups
+      const existingPerson = await ctx.prisma.person.findUnique({
         where: { id: input.id },
-        data: {
-          status: EntityStatus.INACTIVE,
-          archivedAt: new Date(),
-        },
+        select: { roleId: true, groupMembers: { select: { groupId: true } } }
       });
+
+      if (!existingPerson) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Person not found',
+        });
+      }
+
+      // Soft delete by setting status to INACTIVE and update timestamps for kiosk polling
+      const now = new Date();
+      const groupUpdates = existingPerson.groupMembers.map(({ groupId }) =>
+        ctx.prisma.group.update({
+          where: { id: groupId },
+          data: { kioskLastUpdatedAt: now }
+        })
+      );
+
+      const [person] = await ctx.prisma.$transaction([
+        ctx.prisma.person.update({
+          where: { id: input.id },
+          data: {
+            status: EntityStatus.INACTIVE,
+            archivedAt: now,
+            kioskLastUpdatedAt: now,
+          },
+        }),
+        ctx.prisma.role.update({
+          where: { id: existingPerson.roleId },
+          data: { kioskLastUpdatedAt: now }
+        }),
+        ...groupUpdates
+      ]);
 
       return person;
     }),
@@ -164,13 +193,44 @@ export const personRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Verify person ownership
       await verifyPersonOwnership(ctx.user.id, input.id, ctx.prisma);
-      const person = await ctx.prisma.person.update({
+
+      // Get person to access roleId and groups
+      const existingPerson = await ctx.prisma.person.findUnique({
         where: { id: input.id },
-        data: {
-          status: EntityStatus.ACTIVE,
-          archivedAt: null,
-        },
+        select: { roleId: true, groupMembers: { select: { groupId: true } } }
       });
+
+      if (!existingPerson) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Person not found',
+        });
+      }
+
+      // Restore person and update timestamps for kiosk polling
+      const now = new Date();
+      const groupUpdates = existingPerson.groupMembers.map(({ groupId }) =>
+        ctx.prisma.group.update({
+          where: { id: groupId },
+          data: { kioskLastUpdatedAt: now }
+        })
+      );
+
+      const [person] = await ctx.prisma.$transaction([
+        ctx.prisma.person.update({
+          where: { id: input.id },
+          data: {
+            status: EntityStatus.ACTIVE,
+            archivedAt: null,
+            kioskLastUpdatedAt: now,
+          },
+        }),
+        ctx.prisma.role.update({
+          where: { id: existingPerson.roleId },
+          data: { kioskLastUpdatedAt: now }
+        }),
+        ...groupUpdates
+      ]);
 
       return person;
     }),
