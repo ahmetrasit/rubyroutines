@@ -96,19 +96,23 @@ export function GroupForm({ group, roleId, roleType, onClose }: GroupFormProps) 
     <Dialog open onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{group ? 'Edit Group' : 'Create New Group'}</DialogTitle>
+          <DialogTitle>
+            {group
+              ? isTeacherMode ? 'Edit Classroom' : 'Edit Group'
+              : isTeacherMode ? 'Create New Classroom' : 'Create New Group'}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <Label htmlFor="name">Group Name *</Label>
+            <Label htmlFor="name">{isTeacherMode ? 'Classroom Name' : 'Group Name'} *</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               maxLength={100}
-              placeholder="Smith Family"
+              placeholder=""
               className="mt-1"
             />
           </div>

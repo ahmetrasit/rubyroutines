@@ -86,10 +86,10 @@ export default function KioskModePage() {
     { enabled: !!sessionData }
   );
 
-  const { data: selectedPerson } = trpc.person.getById.useQuery(
-    { id: selectedPersonId! },
-    { enabled: !!selectedPersonId }
-  );
+  // Get selected person from the kiosk data instead of using authenticated endpoint
+  const persons = kioskData?.persons || [];
+  const activePersons = persons.filter((p: any) => p.status === 'ACTIVE');
+  const selectedPerson = activePersons.find((p: Person) => p.id === selectedPersonId);
 
   const { data: personTasksData, isLoading: tasksLoading } = trpc.kiosk.getPersonTasks.useQuery(
     { kioskCodeId: sessionData?.codeId!, personId: selectedPersonId! },
@@ -100,10 +100,6 @@ export default function KioskModePage() {
   );
 
   const tasks = personTasksData?.tasks || [];
-
-  // Fetch task data for all persons to show progress
-  const persons = kioskData?.persons || [];
-  const activePersons = persons.filter((p: any) => p.status === 'ACTIVE');
 
   // Fetch tasks for all persons for progress calculation
   const personTaskQueries = activePersons.map((person: Person) =>

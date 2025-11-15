@@ -115,14 +115,22 @@ export const kioskRouter = router({
           role: {
             include: {
               persons: {
-                where: { status: 'ACTIVE' },
+                where: {
+                  status: 'ACTIVE',
+                  NOT: { name: 'Me' } // Exclude teachers/parents (Me person)
+                },
                 orderBy: { name: 'asc' }
               },
               groups: {
                 where: { status: 'ACTIVE' },
                 include: {
                   members: {
-                    where: { person: { status: 'ACTIVE' } },
+                    where: {
+                      person: {
+                        status: 'ACTIVE',
+                        NOT: { name: 'Me' } // Exclude teachers/parents from group members
+                      }
+                    },
                     include: { person: true }
                   }
                 }
