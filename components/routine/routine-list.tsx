@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { RoutineForm } from './routine-form';
+import { Tier } from '@/lib/types/prisma-enums';
+import { getTierLimit } from '@/lib/services/tier-limits';
 
 
 type RoutineWithRelations = {
@@ -22,10 +24,11 @@ type RoutineWithRelations = {
 interface RoutineListProps {
   roleId?: string;
   personId?: string;
+  tier?: Tier;
   onSelectRoutine?: (routine: RoutineWithRelations) => void;
 }
 
-export function RoutineList({ roleId, personId, onSelectRoutine }: RoutineListProps) {
+export function RoutineList({ roleId, personId, tier = Tier.FREE, onSelectRoutine }: RoutineListProps) {
   const [showForm, setShowForm] = useState(false);
 
   const { data: routines, isLoading } = trpc.routine.list.useQuery({
@@ -41,14 +44,24 @@ export function RoutineList({ roleId, personId, onSelectRoutine }: RoutineListPr
     );
   }
 
+  // Check tier limits for routines per person
+  const routineLimit = personId ? getTierLimit(tier, 'routines_per_person') : Infinity;
+  const currentRoutineCount = routines?.length || 0;
+  const canAddRoutine = currentRoutineCount < routineLimit;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Routines</h2>
-        {roleId && (
+        {roleId && canAddRoutine && (
           <Button size="md" onClick={() => setShowForm(true)}>
             <Plus className="h-5 w-5 mr-2" />
             Add Routine
+          </Button>
+        )}
+        {roleId && !canAddRoutine && (
+          <Button size="md" variant="outline" disabled>
+            🔒 Upgrade to add new routines
           </Button>
         )}
       </div>
@@ -66,11 +79,16 @@ export function RoutineList({ roleId, personId, onSelectRoutine }: RoutineListPr
       ) : (
         <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
           <p className="text-gray-600 mb-4 text-lg">No routines yet</p>
-          {roleId && (
+          {roleId && canAddRoutine && (
             <Button onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Routine
             </Button>
+          )}
+          {roleId && !canAddRoutine && (
+            <p className="text-gray-500 text-sm">
+              🔒 Upgrade to add new routines
+            </p>
           )}
         </div>
       )}

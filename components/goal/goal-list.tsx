@@ -7,13 +7,16 @@ import { GoalForm } from './goal-form';
 import { GoalProgressBar } from './goal-progress-bar';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
+import { Tier } from '@/lib/types/prisma-enums';
+import { getTierLimit } from '@/lib/services/tier-limits';
 
 interface GoalListProps {
   roleId: string;
   personId?: string;
+  tier?: Tier;
 }
 
-export function GoalList({ roleId, personId }: GoalListProps) {
+export function GoalList({ roleId, personId, tier = Tier.FREE }: GoalListProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
   const { toast } = useToast();
@@ -66,6 +69,11 @@ export function GoalList({ roleId, personId }: GoalListProps) {
 
   const activeGoals = filteredGoals.filter((g) => g.status === 'ACTIVE');
 
+  // Check tier limits
+  const goalLimit = getTierLimit(tier, 'goals');
+  const currentGoalCount = activeGoals.length;
+  const canAddGoal = currentGoalCount < goalLimit;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -73,10 +81,16 @@ export function GoalList({ roleId, personId }: GoalListProps) {
           <Target className="h-5 w-5 text-blue-600" />
           <h2 className="text-lg font-semibold text-gray-900">Goals</h2>
         </div>
-        <Button size="sm" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Goal
-        </Button>
+        {canAddGoal ? (
+          <Button size="sm" onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Goal
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" disabled>
+            🔒 Upgrade to add new goals
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -86,10 +100,16 @@ export function GoalList({ roleId, personId }: GoalListProps) {
           <Target className="h-12 w-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 mb-2">No goals yet</p>
           <p className="text-sm text-gray-400 mb-4">Create goals to track your progress</p>
-          <Button size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Your First Goal
-          </Button>
+          {canAddGoal ? (
+            <Button size="sm" onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Your First Goal
+            </Button>
+          ) : (
+            <p className="text-gray-500 text-sm">
+              🔒 Upgrade to add new goals
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid gap-4">

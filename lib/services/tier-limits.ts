@@ -8,7 +8,9 @@ type LimitKey =
   | 'tasks_per_routine'
   | 'smart_tasks_per_routine'
   | 'goals'
-  | 'items_per_goal';
+  | 'items_per_goal'
+  | 'co_parents'
+  | 'co_teachers';
 
 const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
   [Tier.FREE]: {
@@ -19,6 +21,8 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     smart_tasks_per_routine: 1,
     goals: 3,
     items_per_goal: 3,
+    co_parents: 1,
+    co_teachers: 1,
   },
   [Tier.BRONZE]: {
     children_per_family: 5,
@@ -28,6 +32,8 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     smart_tasks_per_routine: 3,
     goals: 5,
     items_per_goal: 5,
+    co_parents: 2,
+    co_teachers: 2,
   },
   [Tier.GOLD]: {
     children_per_family: 10,
@@ -37,6 +43,8 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     smart_tasks_per_routine: 10,
     goals: 10,
     items_per_goal: 10,
+    co_parents: 5,
+    co_teachers: 5,
   },
   [Tier.PRO]: {
     children_per_family: 50,
@@ -46,6 +54,8 @@ const TIER_LIMITS: Record<Tier, Record<LimitKey, number>> = {
     smart_tasks_per_routine: 25,
     goals: 20,
     items_per_goal: 20,
+    co_parents: 20,
+    co_teachers: 20,
   },
 };
 

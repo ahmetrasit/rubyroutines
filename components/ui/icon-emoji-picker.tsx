@@ -92,6 +92,7 @@ export function IconEmojiPicker({ selectedValue, onSelect, onClose }: IconEmojiP
       {/* Tabs */}
       <div className="flex border-b">
         <button
+          type="button"
           className={`flex-1 px-4 py-2 text-sm font-medium ${
             activeTab === 'emoji'
               ? 'border-b-2 border-blue-500 text-blue-600'
@@ -102,6 +103,7 @@ export function IconEmojiPicker({ selectedValue, onSelect, onClose }: IconEmojiP
           😊 Emojis
         </button>
         <button
+          type="button"
           className={`flex-1 px-4 py-2 text-sm font-medium ${
             activeTab === 'icon'
               ? 'border-b-2 border-blue-500 text-blue-600'

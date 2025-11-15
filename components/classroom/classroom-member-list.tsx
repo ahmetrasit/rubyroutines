@@ -9,15 +9,18 @@ import { useState, useMemo } from 'react';
 import { PersonForm } from '@/components/person/person-form';
 import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 import type { Person } from '@/lib/types/database';
+import { Tier } from '@/lib/types/prisma-enums';
+import { getTierLimit } from '@/lib/services/tier-limits';
 
 interface ClassroomMemberListProps {
   classroomId: string;
   roleId: string;
   userName: string;
+  tier?: Tier;
   onSelectPerson?: (person: Person) => void;
 }
 
-export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPerson }: ClassroomMemberListProps) {
+export function ClassroomMemberList({ classroomId, roleId, userName, tier = Tier.FREE, onSelectPerson }: ClassroomMemberListProps) {
   const [showForm, setShowForm] = useState(false);
   const [invisibleRoutineCollapsed, setInvisibleRoutineCollapsed] = useState(true);
   const [kioskCollapsed, setKioskCollapsed] = useState(true);
@@ -33,6 +36,12 @@ export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPer
   const { data: persons } = trpc.person.list.useQuery(
     { roleId },
     { enabled: !!roleId }
+  );
+
+  // Get co-teachers for this classroom
+  const { data: coTeachers } = trpc.coTeacher.list.useQuery(
+    { classroomId },
+    { enabled: !!classroomId }
   );
 
   if (isLoading) {
@@ -53,6 +62,15 @@ export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPer
   // Separate teachers (Me) from students
   const teachers = members.filter((person) => person.name === 'Me');
   const allStudents = members.filter((person) => person.name !== 'Me');
+
+  // Check tier limits
+  const studentLimit = getTierLimit(tier, 'students_per_classroom');
+  const currentStudentCount = allStudents.length;
+  const canAddStudent = currentStudentCount < studentLimit;
+
+  const coTeacherLimit = getTierLimit(tier, 'co_teachers');
+  const currentCoTeacherCount = coTeachers?.length || 0;
+  const canAddCoTeacher = currentCoTeacherCount < coTeacherLimit;
 
   // Filter students based on search query
   const students = useMemo(() => {
@@ -145,19 +163,34 @@ export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPer
 
           {/* Add Co-Teacher placeholder card */}
           <button
-            onClick={() => {
+            onClick={canAddCoTeacher ? () => {
               // TODO: Open co-teacher invitation dialog
               alert('Co-teacher invitation feature coming soon!');
-            }}
-            className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-blue-400 hover:bg-blue-50/50 transition-all flex flex-col items-center justify-center min-h-[200px] group"
+            } : undefined}
+            className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${
+              canAddCoTeacher
+                ? 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer'
+                : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+            }`}
           >
-            <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 transition-colors">
-              <Plus className="h-8 w-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
-            </div>
-            <span className="text-gray-600 group-hover:text-blue-600 font-medium transition-colors">
-              Add Co-Teacher
-            </span>
-            <span className="text-sm text-gray-400 mt-1">invite a co-teacher to collaborate</span>
+            {canAddCoTeacher ? (
+              <>
+                <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 transition-colors">
+                  <Plus className="h-8 w-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                </div>
+                <span className="text-gray-600 group-hover:text-blue-600 font-medium transition-colors">
+                  Add Co-Teacher
+                </span>
+                <span className="text-sm text-gray-400 mt-1">invite a co-teacher to collaborate</span>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl mb-2">🔒</div>
+                <span className="text-sm font-medium text-gray-500">Upgrade to add</span>
+                <span className="text-sm text-gray-400">new co-teachers</span>
+                <span className="text-xs text-gray-400 mt-1">({currentCoTeacherCount}/{coTeacherLimit})</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -193,16 +226,31 @@ export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPer
           {/* Add Student placeholder card - only show if not Teacher-Only classroom */}
           {!isTeacherOnlyClassroom && (
             <button
-              onClick={() => setShowForm(true)}
-              className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-blue-400 hover:bg-blue-50/50 transition-all flex flex-col items-center justify-center min-h-[200px] group"
+              onClick={canAddStudent ? () => setShowForm(true) : undefined}
+              className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${
+                canAddStudent
+                  ? 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer'
+                  : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+              }`}
             >
-              <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 transition-colors">
-                <Plus className="h-8 w-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
-              </div>
-              <span className="text-gray-600 group-hover:text-blue-600 font-medium transition-colors">
-                Add Student
-              </span>
-              <span className="text-sm text-gray-400 mt-1">add a student to this classroom</span>
+              {canAddStudent ? (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center mb-3 transition-colors">
+                    <Plus className="h-8 w-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                  </div>
+                  <span className="text-gray-600 group-hover:text-blue-600 font-medium transition-colors">
+                    Add Student
+                  </span>
+                  <span className="text-sm text-gray-400 mt-1">add a student to this classroom</span>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl mb-2">🔒</div>
+                  <span className="text-sm font-medium text-gray-500">Upgrade to add</span>
+                  <span className="text-sm text-gray-400">new students</span>
+                  <span className="text-xs text-gray-400 mt-1">({currentStudentCount}/{studentLimit})</span>
+                </>
+              )}
             </button>
           )}
         </div>
