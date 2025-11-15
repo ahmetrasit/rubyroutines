@@ -7,17 +7,16 @@ import { isRoutineVisible } from '@/lib/services/visibility-rules';
 import { RoutineForm } from '@/components/routine/routine-form';
 import { GoalForm } from '@/components/goal/goal-form';
 import { Button } from '@/components/ui/button';
-import { Tier } from '@/lib/types/prisma-enums';
-import { getTierLimit } from '@/lib/services/tier-limits';
+import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
 
 interface PersonDetailSectionsProps {
   roleId: string;
   personId: string;
-  tier?: Tier;
+  effectiveLimits?: ComponentTierLimits | null;
   onSelectRoutine?: (routine: any) => void;
 }
 
-export function PersonDetailSections({ roleId, personId, tier = Tier.FREE, onSelectRoutine }: PersonDetailSectionsProps) {
+export function PersonDetailSections({ roleId, personId, effectiveLimits = null, onSelectRoutine }: PersonDetailSectionsProps) {
   const [routinesExpanded, setRoutinesExpanded] = useState(false);
   const [goalsExpanded, setGoalsExpanded] = useState(false);
   const [tasksExpanded, setTasksExpanded] = useState(false);
@@ -38,12 +37,12 @@ export function PersonDetailSections({ roleId, personId, tier = Tier.FREE, onSel
   // Filter goals for this person
   const filteredGoals = goals?.filter((goal) => goal.personIds.includes(personId)) || [];
 
-  // Check tier limits
-  const routineLimit = getTierLimit(tier, 'routines_per_person');
+  // Check tier limits using effective limits from database
+  const routineLimit = getTierLimit(effectiveLimits, 'routines_per_person');
   const currentRoutineCount = routines?.length || 0;
   const canAddRoutine = currentRoutineCount < routineLimit;
 
-  const goalLimit = getTierLimit(tier, 'goals');
+  const goalLimit = getTierLimit(effectiveLimits, 'goals');
   const currentGoalCount = goals?.length || 0;
   const canAddGoal = currentGoalCount < goalLimit;
 

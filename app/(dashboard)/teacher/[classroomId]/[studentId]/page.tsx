@@ -120,7 +120,7 @@ export default function StudentDetailPage() {
         <PersonDetailSections
           roleId={teacherRole.id}
           personId={studentId}
-          tier={teacherRole.tier}
+          effectiveLimits={teacherRole.effectiveLimits}
           onSelectRoutine={handleSelectRoutine}
         />
       </div>

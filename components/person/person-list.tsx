@@ -9,17 +9,16 @@ import { PersonForm } from './person-form';
 import { RestorePersonDialog } from './restore-person-dialog';
 import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 import type { Person } from '@/lib/types/database';
-import { Tier } from '@/lib/types/prisma-enums';
-import { getTierLimit } from '@/lib/services/tier-limits';
+import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
 
 interface PersonListProps {
   roleId: string;
   userName: string;
-  tier?: Tier;
+  effectiveLimits?: ComponentTierLimits | null;
   onSelectPerson?: (person: Person) => void;
 }
 
-export function PersonList({ roleId, userName, tier = Tier.FREE, onSelectPerson }: PersonListProps) {
+export function PersonList({ roleId, userName, effectiveLimits = null, onSelectPerson }: PersonListProps) {
   const [showForm, setShowForm] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
   const [kioskCollapsed, setKioskCollapsed] = useState(true); // Collapsed by default
@@ -52,12 +51,12 @@ export function PersonList({ roleId, userName, tier = Tier.FREE, onSelectPerson 
   const adults = persons?.filter((person) => person.name === 'Me') || [];
   const children = persons?.filter((person) => person.name !== 'Me') || [];
 
-  // Check tier limits
-  const childLimit = getTierLimit(tier, 'children_per_family');
+  // Check tier limits using effective limits from database
+  const childLimit = getTierLimit(effectiveLimits, 'children_per_family');
   const currentChildCount = children.length;
   const canAddChild = currentChildCount < childLimit;
 
-  const coParentLimit = getTierLimit(tier, 'co_parents');
+  const coParentLimit = getTierLimit(effectiveLimits, 'co_parents');
   const currentCoParentCount = coParents?.length || 0;
   const canAddCoParent = currentCoParentCount < coParentLimit;
 

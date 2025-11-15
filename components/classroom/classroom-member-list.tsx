@@ -9,18 +9,17 @@ import { useState, useMemo } from 'react';
 import { PersonForm } from '@/components/person/person-form';
 import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 import type { Person } from '@/lib/types/database';
-import { Tier } from '@/lib/types/prisma-enums';
-import { getTierLimit } from '@/lib/services/tier-limits';
+import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
 
 interface ClassroomMemberListProps {
   classroomId: string;
   roleId: string;
   userName: string;
-  tier?: Tier;
+  effectiveLimits?: ComponentTierLimits | null;
   onSelectPerson?: (person: Person) => void;
 }
 
-export function ClassroomMemberList({ classroomId, roleId, userName, tier = Tier.FREE, onSelectPerson }: ClassroomMemberListProps) {
+export function ClassroomMemberList({ classroomId, roleId, userName, effectiveLimits = null, onSelectPerson }: ClassroomMemberListProps) {
   const [showForm, setShowForm] = useState(false);
   const [invisibleRoutineCollapsed, setInvisibleRoutineCollapsed] = useState(true);
   const [kioskCollapsed, setKioskCollapsed] = useState(true);
@@ -63,12 +62,12 @@ export function ClassroomMemberList({ classroomId, roleId, userName, tier = Tier
   const teachers = members.filter((person) => person.name === 'Me');
   const allStudents = members.filter((person) => person.name !== 'Me');
 
-  // Check tier limits
-  const studentLimit = getTierLimit(tier, 'students_per_classroom');
+  // Check tier limits using effective limits from database
+  const studentLimit = getTierLimit(effectiveLimits, 'students_per_classroom');
   const currentStudentCount = allStudents.length;
   const canAddStudent = currentStudentCount < studentLimit;
 
-  const coTeacherLimit = getTierLimit(tier, 'co_teachers');
+  const coTeacherLimit = getTierLimit(effectiveLimits, 'co_teachers');
   const currentCoTeacherCount = coTeachers?.length || 0;
   const canAddCoTeacher = currentCoTeacherCount < coTeacherLimit;
 
