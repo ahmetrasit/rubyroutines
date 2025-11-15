@@ -223,10 +223,38 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
                   Make this a Smart Task
                 </Label>
                 <p className="text-xs text-gray-500 mt-1">
-                  Smart tasks only appear when conditions are met. You can set conditions after creating the task.
+                  {task && isSmart
+                    ? 'Smart tasks only appear when conditions are met. Set conditions below.'
+                    : 'Smart tasks only appear when conditions are met. You can set conditions after creating the task.'}
                 </p>
               </div>
             </div>
+
+            {task && isSmart && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800 mb-2">
+                  <strong>Condition Management</strong>
+                </p>
+                <p className="text-xs text-blue-700 mb-3">
+                  Define when this task should appear. Task will be visible when conditions are met.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                  onClick={() => {
+                    // TODO: Open condition builder dialog
+                    toast({
+                      title: 'Coming Soon',
+                      description: 'Condition builder UI will be available soon',
+                    });
+                  }}
+                >
+                  {task.conditionId ? 'Edit Conditions' : 'Set Conditions'}
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="border-t pt-4">
