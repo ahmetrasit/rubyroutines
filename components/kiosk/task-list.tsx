@@ -84,26 +84,42 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
 
     switch (task.type) {
       case TaskType.SIMPLE:
-        return canUndo ? (
-          <Button
-            size="lg"
-            variant="outline"
-            onClick={() => handleUndo(task)}
-            className="w-full h-16 text-lg"
-          >
-            <Undo2 className="h-6 w-6 mr-3" />
-            Undo ({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})
-          </Button>
-        ) : (
-          <Button
-            size="lg"
-            onClick={() => handleComplete(task)}
-            disabled={task.isComplete}
-            className={`w-full h-16 text-lg ${task.isComplete ? 'bg-green-600' : ''}`}
-          >
-            <Check className="h-6 w-6 mr-3" />
-            {task.isComplete ? 'Done Today!' : 'Mark Done'}
-          </Button>
+        return (
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => task.isComplete && canUndo ? handleUndo(task) : handleComplete(task)}
+              disabled={task.isComplete && !canUndo}
+              className={`flex items-center gap-4 w-full p-4 rounded-lg transition-all ${
+                task.isComplete && !canUndo
+                  ? 'cursor-not-allowed opacity-75'
+                  : 'hover:bg-gray-50 cursor-pointer'
+              }`}
+            >
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded border-2 transition-all ${
+                  task.isComplete
+                    ? 'bg-green-500 border-green-500'
+                    : 'border-gray-300 hover:border-green-500'
+                }`}
+              >
+                {task.isComplete && <Check className="h-5 w-5 text-white" />}
+              </div>
+              <span className="text-lg font-medium text-gray-700">
+                {task.isComplete ? 'Completed' : 'Click to complete'}
+              </span>
+            </button>
+            {canUndo && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleUndo(task)}
+                className="ml-4"
+              >
+                <Undo2 className="h-4 w-4 mr-2" />
+                Undo ({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})
+              </Button>
+            )}
+          </div>
         );
 
       case TaskType.MULTIPLE_CHECKIN:
@@ -114,7 +130,7 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
             className="w-full h-16 text-lg"
           >
             <Plus className="h-6 w-6 mr-3" />
-            Check In ({task.completionCount || 0}x)
+            Check In
           </Button>
         );
 
@@ -189,14 +205,21 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
                 className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow"
               >
                 <div className="mb-4">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{task.name}</h3>
+                  <div className="flex items-baseline gap-3 mb-2">
+                    <h3 className="text-2xl font-bold text-gray-900">{task.name}</h3>
+                    {task.type === TaskType.MULTIPLE_CHECKIN && (
+                      <span className="text-lg font-semibold text-blue-600">
+                        ({task.completionCount || 0}x)
+                      </span>
+                    )}
+                    {task.type === TaskType.PROGRESS && (
+                      <span className="text-lg font-semibold text-green-600">
+                        {task.totalValue || 0} {task.unit}
+                      </span>
+                    )}
+                  </div>
                   {task.description && (
                     <p className="text-gray-600">{task.description}</p>
-                  )}
-                  {task.isComplete && task.type === TaskType.SIMPLE && (
-                    <div className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-                      ✓ Completed Today
-                    </div>
                   )}
                 </div>
                 {renderTaskButton(task)}
