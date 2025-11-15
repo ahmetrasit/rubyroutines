@@ -118,6 +118,7 @@ export default function RoutineDetailPage() {
         <TaskList
           routineId={routineId}
           personId={personId}
+          tier={parentRole.tier}
         />
       </div>
     </div>
