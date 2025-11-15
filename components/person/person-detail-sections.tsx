@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Pencil } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { isRoutineVisible } from '@/lib/services/visibility-rules';
 import { RoutineForm } from '@/components/routine/routine-form';
 import { GoalForm } from '@/components/goal/goal-form';
+import { Button } from '@/components/ui/button';
 
 interface PersonDetailSectionsProps {
   roleId: string;
@@ -19,6 +20,7 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
   const [tasksExpanded, setTasksExpanded] = useState(false);
   const [showRoutineForm, setShowRoutineForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
+  const [editingRoutine, setEditingRoutine] = useState<any>(null);
 
   const { data: routines, isLoading: routinesLoading } = trpc.routine.list.useQuery({
     roleId,
@@ -97,14 +99,16 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                   return (
                     <div
                       key={routine.id}
-                      onClick={() => onSelectRoutine?.(routine)}
-                      className={`bg-white rounded-lg border-2 p-3 cursor-pointer transition-all hover:shadow-md ${
+                      className={`group bg-white rounded-lg border-2 p-3 cursor-pointer transition-all hover:shadow-md relative ${
                         visible
                           ? 'border-gray-200 hover:border-primary-300'
                           : 'border-gray-100 opacity-40'
                       }`}
                     >
-                      <div className="flex flex-col gap-2">
+                      <div
+                        onClick={() => onSelectRoutine?.(routine)}
+                        className="flex flex-col gap-2"
+                      >
                         {/* Header with emoji */}
                         <div className="flex items-center justify-center gap-1">
                           {isDailyRoutine && <span className="text-2xl">☀️</span>}
@@ -139,6 +143,19 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
                           )}
                         </div>
                       </div>
+
+                      {/* Edit Button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingRoutine(routine);
+                        }}
+                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
                     </div>
                   );
                 })}
@@ -322,6 +339,13 @@ export function PersonDetailSections({ roleId, personId, onSelectRoutine }: Pers
           roleId={roleId}
           personIds={[personId]}
           onClose={() => setShowRoutineForm(false)}
+        />
+      )}
+
+      {editingRoutine && (
+        <RoutineForm
+          routine={editingRoutine}
+          onClose={() => setEditingRoutine(null)}
         />
       )}
 
