@@ -131,13 +131,6 @@ export const taskRouter = router({
       const dbLimits = await getEffectiveTierLimits(routine.role.id);
       const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, routine.role.type);
 
-      // Debug logging
-      console.log('[TASK CREATE] Role tier:', routine.role.tier);
-      console.log('[TASK CREATE] DB limits:', JSON.stringify(dbLimits, null, 2));
-      console.log('[TASK CREATE] Effective limits:', JSON.stringify(effectiveLimits, null, 2));
-      console.log('[TASK CREATE] Current task count:', routine.tasks.length);
-      console.log('[TASK CREATE] tasks_per_routine limit:', effectiveLimits?.tasks_per_routine);
-
       // Check tier limit for total tasks (only counting ACTIVE tasks)
       checkTierLimit(effectiveLimits, 'tasks_per_routine', routine.tasks.length);
 
