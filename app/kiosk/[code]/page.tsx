@@ -429,10 +429,10 @@ export default function KioskModePage() {
         onTimeout={handleTimeout}
       />
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
-        <div className="h-[calc(100vh-3rem)] flex gap-6">
+        <div className="h-[calc(100vh-3rem)] flex gap-6 items-center justify-center">
           {/* Screen Part 1: Person List (Left 2/3) - Only visible in group scope */}
           {isGroupScope && (
-            <div className="w-2/3 border-4 border-blue-500 rounded-2xl bg-white p-6 overflow-auto">
+            <div className={`${selectedPersonId ? 'w-2/3' : 'w-full max-w-6xl'} border-4 border-blue-500 rounded-2xl bg-white p-6 overflow-auto`}>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-3xl font-bold text-gray-900">Who is checking-in?</h2>
                 <Button variant="outline" onClick={handleExit} size="lg" className="px-4">
