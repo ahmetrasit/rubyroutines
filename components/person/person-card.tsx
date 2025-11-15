@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, CheckCircle } from 'lucide-react';
 import { useState, memo } from 'react';
 import { PersonForm } from './person-form';
+import { PersonKioskCodeManager } from '@/components/kiosk/person-kiosk-code-manager';
 import { trpc } from '@/lib/trpc/client';
 import { useAvatar } from '@/lib/hooks';
 import { useDeleteMutation } from '@/lib/hooks';
@@ -11,10 +12,12 @@ import type { Person } from '@/lib/types/database';
 
 interface PersonCardProps {
   person: Person;
+  roleId?: string; // Optional: needed for individual kiosk codes
+  userName?: string; // Optional: needed for individual kiosk codes
   onSelect?: (person: Person) => void;
 }
 
-export const PersonCard = memo(function PersonCard({ person, onSelect }: PersonCardProps) {
+export const PersonCard = memo(function PersonCard({ person, roleId, userName, onSelect }: PersonCardProps) {
   const [showEdit, setShowEdit] = useState(false);
   const utils = trpc.useUtils();
 
@@ -129,6 +132,15 @@ export const PersonCard = memo(function PersonCard({ person, onSelect }: PersonC
             )}
           </div>
         </div>
+
+        {/* Individual Kiosk Code (only for students/kids, not teachers/parents) */}
+        {person.name !== 'Me' && roleId && userName && (
+          <PersonKioskCodeManager
+            roleId={roleId}
+            personId={person.id}
+            personName={person.name}
+          />
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-2">

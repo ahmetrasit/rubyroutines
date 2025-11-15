@@ -121,6 +121,7 @@ model Person {
   studentConnections      StudentParentConnection[] @relation("StudentPerson")
   parentConnections       StudentParentConnection[] @relation("ParentPerson")
   connectionCodes         ConnectionCode[]
+  codes                   Code[]                    // Individual kiosk codes for this person
 
   @@index([roleId])
   @@index([status])
@@ -439,6 +440,7 @@ model Code {
   code       String     @unique
   roleId     String
   groupId    String?    // Optional: links kiosk code to specific classroom/group
+  personId   String?    // Optional: links kiosk code to specific person (individual code)
   type       CodeType   @default(KIOSK)
   expiresAt  DateTime
   usedAt     DateTime?
@@ -446,12 +448,14 @@ model Code {
   createdAt  DateTime   @default(now())
 
   // Relations
-  role  Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  group  Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  person Person? @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@index([code])
   @@index([roleId])
   @@index([groupId])
+  @@index([personId])
   @@index([status])
   @@index([expiresAt])
   @@map("codes")

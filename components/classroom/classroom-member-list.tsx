@@ -128,7 +128,7 @@ export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPer
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Teacher cards */}
           {teachers.map((person) => (
-            <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
+            <PersonCard key={person.id} person={person} roleId={roleId} userName={userName} onSelect={onSelectPerson} />
           ))}
 
           {/* Add Co-Teacher placeholder card */}
@@ -155,7 +155,7 @@ export function ClassroomMemberList({ classroomId, roleId, userName, onSelectPer
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Student cards */}
           {students.map((person) => (
-            <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
+            <PersonCard key={person.id} person={person} roleId={roleId} userName={userName} onSelect={onSelectPerson} />
           ))}
 
           {/* Add Student placeholder card - only show if not Teacher-Only classroom */}

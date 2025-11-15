@@ -37,6 +37,7 @@ export const kioskRouter = router({
     .input(z.object({
       roleId: z.string().uuid(),
       groupId: z.string().cuid().optional(), // Optional classroom/group ID
+      personId: z.string().cuid().optional(), // Optional person ID for individual codes
       userName: z.string(),
       classroomName: z.string().optional(),
       wordCount: z.enum(['2', '3']).optional(),
@@ -52,9 +53,21 @@ export const kioskRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
+      // If personId provided, verify person belongs to this role
+      if (input.personId) {
+        const person = await ctx.prisma.person.findUnique({
+          where: { id: input.personId }
+        });
+
+        if (!person || person.roleId !== input.roleId) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Person does not belong to this role' });
+        }
+      }
+
       const code = await generateKioskCode({
         roleId: input.roleId,
         groupId: input.groupId, // Pass groupId for classroom-specific codes
+        personId: input.personId, // Pass personId for individual codes
         userName: input.userName,
         classroomName: input.classroomName,
         wordCount: input.wordCount === '3' ? 3 : 2,
@@ -160,6 +173,7 @@ export const kioskRouter = router({
         codeId: code!.id,
         roleId: code!.roleId,
         groupId: code!.groupId, // Include groupId in response
+        personId: code!.personId, // Include personId in response (for individual codes)
         persons: code!.role.persons,
         groups: code!.role.groups
       };

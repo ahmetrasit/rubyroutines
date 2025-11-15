@@ -94,16 +94,20 @@ export default function KioskModePage() {
   // Filter out teachers/parents (named 'Me') to show only students/kids
   const groups = kioskData?.groups || [];
   const rolePersons = kioskData?.persons || [];
+  const isIndividualCode = !!kioskData?.personId; // Check if this is an individual code
 
   let activePersons: Person[] = [];
-  if (groups.length > 0) {
-    // Use members from groups (classroom/family members)
+  if (isIndividualCode) {
+    // Individual code: only show the specific person
+    activePersons = rolePersons.filter((p: Person) => p.id === kioskData.personId && p.status === 'ACTIVE');
+  } else if (groups.length > 0) {
+    // Group code: use members from groups (classroom/family members)
     const allMembers = groups.flatMap((g: any) => g.members || []);
     activePersons = allMembers
       .map((m: any) => m.person)
       .filter((p: Person) => p && p.status === 'ACTIVE' && p.name !== 'Me');
   } else {
-    // Use persons from role (fallback)
+    // Role code: use persons from role (fallback)
     activePersons = rolePersons.filter((p: Person) => p.status === 'ACTIVE' && p.name !== 'Me');
   }
 
@@ -216,7 +220,7 @@ export default function KioskModePage() {
     setLastActivityTime(Date.now());
   }, []);
 
-  const isGroupScope = activePersons.length > 1;
+  const isGroupScope = !isIndividualCode && activePersons.length > 1;
 
   useEffect(() => {
     if (!selectedPersonId || !isGroupScope) return;
@@ -279,6 +283,13 @@ export default function KioskModePage() {
     setSelectedPersonId(personId);
     resetInactivityTimer();
   };
+
+  // Auto-select person for individual codes
+  useEffect(() => {
+    if (isIndividualCode && activePersons.length === 1 && !selectedPersonId) {
+      setSelectedPersonId(activePersons[0].id);
+    }
+  }, [isIndividualCode, activePersons, selectedPersonId]);
 
   const handleDone = () => {
     setSelectedPersonId(null);
