@@ -17,6 +17,34 @@ if [ -z "$DATABASE_URL" ]; then
     exit 1
 fi
 
+# Find psql command (handle both standard install and Homebrew on macOS)
+PSQL_CMD=""
+if command -v psql &> /dev/null; then
+    PSQL_CMD="psql"
+elif [ -f "/opt/homebrew/bin/psql" ]; then
+    # Apple Silicon Mac (M1/M2)
+    PSQL_CMD="/opt/homebrew/bin/psql"
+elif [ -f "/usr/local/bin/psql" ]; then
+    # Intel Mac
+    PSQL_CMD="/usr/local/bin/psql"
+else
+    echo "ERROR: psql command not found"
+    echo ""
+    echo "Tried the following locations:"
+    echo "  - psql (in PATH)"
+    echo "  - /opt/homebrew/bin/psql (Apple Silicon)"
+    echo "  - /usr/local/bin/psql (Intel Mac)"
+    echo ""
+    echo "Please install PostgreSQL:"
+    echo "  brew install postgresql@15"
+    echo ""
+    echo "Or add psql to your PATH:"
+    echo "  export PATH=\"/opt/homebrew/opt/postgresql@15/bin:\$PATH\""
+    exit 1
+fi
+
+echo "Using psql: $PSQL_CMD"
+
 echo "Applying all migrations to database..."
 echo "Database: ${DATABASE_URL%%@*}@***"  # Hide credentials in output
 
@@ -32,10 +60,10 @@ MIGRATIONS=(
 
 for migration in "${MIGRATIONS[@]}"; do
     migration_file="prisma/migrations/$migration/migration.sql"
-    
+
     if [ -f "$migration_file" ]; then
         echo "Applying migration: $migration"
-        psql "$DATABASE_URL" -f "$migration_file"
+        $PSQL_CMD "$DATABASE_URL" -f "$migration_file"
         echo "✓ $migration applied"
     else
         echo "⚠ Migration file not found: $migration_file"
@@ -46,5 +74,5 @@ echo ""
 echo "✓ All migrations applied successfully!"
 echo ""
 echo "Verifying database schema..."
-psql "$DATABASE_URL" -c "\dt" | head -20
+$PSQL_CMD "$DATABASE_URL" -c "\dt" | head -20
 
