@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { TaskForm } from './task-form';
 import { TaskDeletionWarning } from './task-deletion-warning';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardHeader } from '@/components/ui/card';
 import { RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 
 type TaskWithAggregation = Task & {
@@ -23,19 +23,11 @@ type TaskWithAggregation = Task & {
 interface TaskCardProps {
   task: TaskWithAggregation;
   personId: string;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
-  canMoveUp?: boolean;
-  canMoveDown?: boolean;
 }
 
 export const TaskCard = memo(function TaskCard({
   task,
   personId,
-  onMoveUp,
-  onMoveDown,
-  canMoveUp = false,
-  canMoveDown = false,
 }: TaskCardProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
@@ -50,7 +42,7 @@ export const TaskCard = memo(function TaskCard({
         className="group hover:shadow-md transition-all h-full flex flex-col border-2"
         style={{ borderColor: task.color || '#E5E7EB' }}
       >
-        <CardHeader className="p-2 pb-1">
+        <CardHeader className="p-1.5 pb-0.5">
           <div className="flex items-start gap-1.5">
             {task.emoji && (
               <div className="flex-shrink-0">
@@ -108,31 +100,6 @@ export const TaskCard = memo(function TaskCard({
             <p className="text-[10px] text-gray-500 mt-0.5 line-clamp-1">{task.description}</p>
           )}
         </CardHeader>
-
-        <CardContent className="p-2 pt-0 mt-auto">
-          {(canMoveUp || canMoveDown) && (
-            <div className="flex gap-0.5 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onMoveUp}
-                disabled={!canMoveUp}
-                className="flex-1 h-5 text-[10px]"
-              >
-                ↑
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onMoveDown}
-                disabled={!canMoveDown}
-                className="flex-1 h-5 text-[10px]"
-              >
-                ↓
-              </Button>
-            </div>
-          )}
-        </CardContent>
       </Card>
 
       {showEdit && <TaskForm task={task} onClose={() => setShowEdit(false)} />}

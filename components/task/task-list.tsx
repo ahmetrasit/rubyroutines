@@ -76,10 +76,6 @@ export function TaskList({ routineId, personId = '', effectiveLimits = null }: T
             key={task.id}
             task={task}
             personId={personId}
-            onMoveUp={() => moveTask(index, 'up')}
-            onMoveDown={() => moveTask(index, 'down')}
-            canMoveUp={index > 0 && !reorderMutation.isPending}
-            canMoveDown={index < tasks.length - 1 && !reorderMutation.isPending}
           />
         ))}
 
