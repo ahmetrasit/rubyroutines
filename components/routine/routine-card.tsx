@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Eye, EyeOff, Clock } from 'lucide-react';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { RoutineForm } from './routine-form';
 import { VisibilityOverrideDialog } from './visibility-override-dialog';
 import { VisibilityOverrideBadge } from './visibility-override-badge';
@@ -35,7 +35,7 @@ interface RoutineCardProps {
   onSelect?: (routine: RoutineWithRelations) => void;
 }
 
-export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
+export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: RoutineCardProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [showOverride, setShowOverride] = useState(false);
   const { toast } = useToast();
@@ -182,4 +182,4 @@ export function RoutineCard({ routine, onSelect }: RoutineCardProps) {
       />
     </>
   );
-}
+});

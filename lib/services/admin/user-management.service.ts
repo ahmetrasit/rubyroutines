@@ -3,6 +3,7 @@ import { Tier } from '@prisma/client';
 import { createAuditLog, AdminAction } from './audit.service';
 import { logger } from '@/lib/utils/logger';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { softDelete } from '@/lib/soft-delete';
 
 export interface UserSearchFilters {
   email?: string;
@@ -34,7 +35,9 @@ export interface UserWithStats {
  * Search and list users with admin filters
  */
 export async function searchUsers(filters: UserSearchFilters) {
-  const where: any = {};
+  const where: any = {
+    deletedAt: null, // Exclude soft-deleted users
+  };
 
   if (filters.email) {
     where.email = {
@@ -51,6 +54,7 @@ export async function searchUsers(filters: UserSearchFilters) {
     where.roles = {
       some: {
         tier: filters.tier,
+        deletedAt: null, // Exclude soft-deleted roles
       },
     };
   }
@@ -60,6 +64,9 @@ export async function searchUsers(filters: UserSearchFilters) {
       where,
       include: {
         roles: {
+          where: {
+            deletedAt: null, // Only include active roles
+          },
           select: {
             id: true,
             type: true,
@@ -400,20 +407,23 @@ export async function getSystemStatistics() {
     tierCountsByType,
     recentUsers,
   ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { isAdmin: true } }),
-    prisma.user.count({ where: { emailVerified: { not: null } } }),
-    prisma.role.count(),
+    prisma.user.count({ where: { deletedAt: null } }),
+    prisma.user.count({ where: { isAdmin: true, deletedAt: null } }),
+    prisma.user.count({ where: { emailVerified: { not: null }, deletedAt: null } }),
+    prisma.role.count({ where: { deletedAt: null } }),
     prisma.role.groupBy({
       by: ['tier'],
+      where: { deletedAt: null },
       _count: true,
     }),
     prisma.role.groupBy({
       by: ['type', 'tier'],
+      where: { deletedAt: null },
       _count: true,
     }),
     prisma.user.count({
       where: {
+        deletedAt: null,
         createdAt: {
           gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
         },
@@ -451,6 +461,7 @@ export async function getSystemStatistics() {
 
 /**
  * Delete user account (admin only, use with caution)
+ * Uses soft delete - marks user as deleted instead of removing from database
  */
 export async function deleteUserAccount(
   userId: string,
@@ -460,7 +471,7 @@ export async function deleteUserAccount(
 ) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true, isAdmin: true },
+    select: { email: true, isAdmin: true, roles: true },
   });
 
   if (!user) {
@@ -484,31 +495,41 @@ export async function deleteUserAccount(
     entityId: userId,
     changes: {
       email: user.email,
+      deletedAt: new Date().toISOString(),
     },
     ipAddress,
     userAgent,
   });
 
-  // Delete from Supabase Auth first
-  try {
-    const supabaseAdmin = createAdminClient();
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  /**
+   * SOFT DELETE: Mark as deleted instead of hard delete
+   * This preserves audit trail and allows potential recovery
+   */
+  const roleIds = user.roles.map((role) => role.id);
 
-    if (authError) {
-      logger.warn(`Failed to delete user ${userId} from Supabase Auth: ${authError.message}`);
-      // Continue with database deletion even if Supabase Auth deletion fails
-    } else {
-      logger.info(`User ${userId} deleted from Supabase Auth`);
+  await prisma.$transaction(async (tx) => {
+    // Soft delete all roles first
+    for (const roleId of roleIds) {
+      await softDelete(tx as any, 'role', roleId);
     }
-  } catch (error) {
-    logger.error(`Error deleting user ${userId} from Supabase Auth:`, error);
-    // Continue with database deletion even if Supabase Auth deletion fails
-  }
 
-  // Delete user from database (cascade will handle related records)
-  await prisma.user.delete({
-    where: { id: userId },
+    // Soft delete the user
+    await softDelete(tx as any, 'user', userId);
+
+    // Revoke active codes
+    await tx.code.updateMany({
+      where: {
+        roleId: { in: roleIds },
+        status: 'ACTIVE',
+      },
+      data: {
+        status: 'REVOKED',
+      },
+    });
   });
 
-  logger.info(`User ${userId} deleted from database by admin ${deletedByAdminId}`);
+  // Note: We do NOT delete from Supabase Auth to allow potential account recovery
+  // If permanent deletion is needed, admin can do it manually from Supabase dashboard
+
+  logger.info(`User ${userId} soft-deleted by admin ${deletedByAdminId}`);
 }

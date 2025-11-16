@@ -1,8 +1,8 @@
 'use client';
 
 import { TaskType } from '@/lib/types/prisma-enums';
-type Task = any;
-import { useState, useEffect, useRef } from 'react';
+import type { Task } from "@/lib/types/task";
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import {
@@ -15,8 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
-import { HexColorPicker } from 'react-colorful';
-import { PASTEL_COLORS } from '@/lib/utils/avatar';
+import { ColorPicker } from '@/components/ui/color-picker';
+import { usePickerState } from '@/hooks/use-picker-state';
 
 interface TaskFormProps {
   task?: Task;
@@ -33,34 +33,11 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
   const [isSmart, setIsSmart] = useState(task?.isSmart || false);
   const [emoji, setEmoji] = useState(task?.emoji || '✅');
   const [color, setColor] = useState<string>(task?.color || '#3B82F6');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
 
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const colorPickerRef = useRef<HTMLDivElement>(null);
+  const { pickerRef, togglePicker, closePicker, isPickerOpen } = usePickerState();
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
-
-  // Close pickers when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
-        setShowEmojiPicker(false);
-      }
-      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
-        setShowColorPicker(false);
-      }
-    };
-
-    if (showEmojiPicker || showColorPicker) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showEmojiPicker, showColorPicker]);
 
   const createMutation = trpc.task.create.useMutation({
     onSuccess: () => {
@@ -142,17 +119,17 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
               <Label htmlFor="emoji">Icon</Label>
               <button
                 type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                onClick={() => togglePicker('emoji')}
                 className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
               >
                 <RenderIconEmoji value={emoji || '✅'} className="h-6 w-6" />
               </button>
-              {showEmojiPicker && (
-                <div ref={emojiPickerRef} className="absolute z-50 top-full mt-2 left-0">
+              {isPickerOpen('emoji') && (
+                <div ref={pickerRef} className="absolute z-50 top-full mt-2 left-0">
                   <IconEmojiPicker
                     selectedValue={emoji || '✅'}
                     onSelect={setEmoji}
-                    onClose={() => setShowEmojiPicker(false)}
+                    onClose={closePicker}
                   />
                 </div>
               )}
@@ -189,7 +166,7 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
             <Label>Color</Label>
             <button
               type="button"
-              onClick={() => setShowColorPicker(!showColorPicker)}
+              onClick={() => togglePicker('color')}
               className="mt-2 w-full h-10 rounded-md border border-gray-300 flex items-center gap-3 px-3 hover:bg-gray-50 transition-colors"
             >
               <div
@@ -198,26 +175,13 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
               />
               <span className="text-sm text-gray-700">{color}</span>
             </button>
-            {showColorPicker && (
-              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border">
-                <HexColorPicker color={color} onChange={setColor} />
-                <div className="mt-3 pt-3 border-t">
-                  <Label className="text-xs mb-2 block">Quick Colors</Label>
-                  <div className="grid grid-cols-6 gap-2">
-                    {PASTEL_COLORS.map((presetColor) => (
-                      <button
-                        key={presetColor}
-                        type="button"
-                        onClick={() => {
-                          setColor(presetColor);
-                          setShowColorPicker(false);
-                        }}
-                        className="w-8 h-8 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
-                        style={{ backgroundColor: presetColor }}
-                      />
-                    ))}
-                  </div>
-                </div>
+            {isPickerOpen('color') && (
+              <div ref={pickerRef} className="absolute z-50 top-full mt-2">
+                <ColorPicker
+                  color={color}
+                  onChange={setColor}
+                  onClose={closePicker}
+                />
               </div>
             )}
           </div>
@@ -302,7 +266,7 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
                   size="sm"
                   className="text-blue-700 border-blue-300 hover:bg-blue-100"
                   onClick={() => {
-                    // TODO: Open condition builder dialog
+                    // FEATURE: Visual condition builder UI planned for future release
                     toast({
                       title: 'Coming Soon',
                       description: 'Condition builder UI will be available soon',

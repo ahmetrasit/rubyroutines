@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { logDataChange, AUDIT_ACTIONS } from '@/lib/services/audit-log';
 import { logger } from '@/lib/utils/logger';
+import { softDelete } from '@/lib/soft-delete';
 
 export const gdprRouter = router({
   /**
@@ -154,144 +155,61 @@ export const gdprRouter = router({
       // Get all role IDs for this user
       const roleIds = user.roles.map((role) => role.id);
 
-      // Delete all associated data in transaction
-      // Prisma will handle cascading deletes based on schema
-      await ctx.prisma.$transaction([
-        // Delete task completions (no cascade from person)
-        ctx.prisma.taskCompletion.deleteMany({
-          where: {
-            person: {
-              role: {
-                userId,
-              },
-            },
-          },
-        }),
+      /**
+       * SOFT DELETE: Mark user as deleted instead of hard delete
+       * This preserves data for compliance/recovery while preventing access
+       *
+       * Benefits:
+       * 1. Data recovery possible if user changes mind (within grace period)
+       * 2. Maintains referential integrity and audit trail
+       * 3. Easier compliance with data retention requirements
+       * 4. Preserves historical data for analytics/reporting
+       */
+      await ctx.prisma.$transaction(async (tx) => {
+        // Soft delete all roles first
+        for (const roleId of roleIds) {
+          await softDelete(tx as any, 'role', roleId);
+        }
 
-        // Delete conditions
-        ctx.prisma.condition.deleteMany({
-          where: {
-            task: {
-              routine: {
-                roleId: {
-                  in: roleIds,
-                },
-              },
-            },
-          },
-        }),
+        // Soft delete the user
+        await softDelete(tx as any, 'user', userId);
 
-        // Delete goal task links
-        ctx.prisma.goalTaskLink.deleteMany({
-          where: {
-            goal: {
-              roleId: {
-                in: roleIds,
-              },
-            },
-          },
-        }),
-
-        // Delete goals
-        ctx.prisma.goal.deleteMany({
-          where: {
-            roleId: {
-              in: roleIds,
-            },
-          },
-        }),
-
-        // Delete tasks
-        ctx.prisma.task.deleteMany({
-          where: {
-            routine: {
-              roleId: {
-                in: roleIds,
-              },
-            },
-          },
-        }),
-
-        // Delete routine assignments
-        ctx.prisma.routineAssignment.deleteMany({
-          where: {
-            routine: {
-              roleId: {
-                in: roleIds,
-              },
-            },
-          },
-        }),
-
-        // Delete routines
-        ctx.prisma.routine.deleteMany({
-          where: {
-            roleId: {
-              in: roleIds,
-            },
-          },
-        }),
-
-        // Delete persons
-        ctx.prisma.person.deleteMany({
-          where: {
-            roleId: {
-              in: roleIds,
-            },
-          },
-        }),
-
-        // Delete codes
-        ctx.prisma.code.deleteMany({
-          where: {
-            roleId: {
-              in: roleIds,
-            },
-          },
-        }),
-
-        // Delete co-parent connections
-        ctx.prisma.coParent.deleteMany({
+        // Revoke active invitations
+        await tx.invitation.updateMany({
           where: {
             OR: [
-              { parentRoleId: { in: roleIds } },
-              { coParentRoleId: { in: roleIds } },
+              { inviterUserId: userId },
+              { acceptedByUserId: userId }
             ],
+            status: 'PENDING',
           },
-        }),
+          data: {
+            status: 'EXPIRED',
+          },
+        });
 
-        // Delete invitations
-        ctx.prisma.invitation.deleteMany({
+        // Expire all active codes
+        await tx.code.updateMany({
           where: {
-            OR: [{ inviterUserId: userId }, { acceptedUserId: userId }],
+            roleId: { in: roleIds },
+            status: 'ACTIVE',
           },
-        }),
+          data: {
+            status: 'REVOKED',
+          },
+        });
 
-        // Delete marketplace ratings
-        ctx.prisma.marketplaceRating.deleteMany({
-          where: { userId },
-        }),
-
-        // Delete marketplace comments
-        ctx.prisma.marketplaceComment.deleteMany({
-          where: { userId },
-        }),
-
-        // Delete verification codes
-        ctx.prisma.verificationCode.deleteMany({
-          where: { userId },
-        }),
-
-        // Delete roles (will cascade delete related data)
-        ctx.prisma.role.deleteMany({
-          where: { userId },
-        }),
-
-        // Finally, delete the user (audit logs will cascade delete)
-        ctx.prisma.user.delete({
-          where: { id: userId },
-        }),
-      ]);
+        // Mark verification codes as expired
+        await tx.verificationCode.updateMany({
+          where: {
+            userId,
+            status: 'PENDING',
+          },
+          data: {
+            status: 'EXPIRED',
+          },
+        });
+      });
 
       // Sign out user from Supabase
       await ctx.supabase.auth.signOut();

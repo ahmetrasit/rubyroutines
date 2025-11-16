@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Users } from 'lucide-react';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { GroupForm } from './group-form';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
@@ -14,7 +14,7 @@ interface GroupCardProps {
   hideSubtitle?: boolean;
 }
 
-export function GroupCard({ group, onSelect, hideSubtitle = false }: GroupCardProps) {
+export const GroupCard = memo(function GroupCard({ group, onSelect, hideSubtitle = false }: GroupCardProps) {
   const [showEdit, setShowEdit] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -115,4 +115,4 @@ export function GroupCard({ group, onSelect, hideSubtitle = false }: GroupCardPr
       {showEdit && <GroupForm group={group} onClose={() => setShowEdit(false)} />}
     </>
   );
-}
+});

@@ -16,7 +16,7 @@ export const rateLimitedProcedure = (
     // Use user ID for authenticated users, otherwise 'anonymous'
     const identifier = `${prefix}:${ctx.user?.id || 'anonymous'}`;
 
-    const result = rateLimit(identifier, config);
+    const result = await rateLimit(identifier, config);
 
     if (!result.allowed) {
       const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);

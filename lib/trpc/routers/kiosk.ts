@@ -313,6 +313,32 @@ export const kioskRouter = router({
         });
       }
 
+      // For SIMPLE tasks, check if already completed today to prevent race conditions
+      if (task.type === 'SIMPLE') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const existingCompletion = await ctx.prisma.taskCompletion.findFirst({
+          where: {
+            taskId: input.taskId,
+            personId: input.personId,
+            completedAt: {
+              gte: today,
+              lt: tomorrow
+            }
+          }
+        });
+
+        if (existingCompletion) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Task already completed today'
+          });
+        }
+      }
+
       // Create completion and update role + person timestamps in a transaction
       const now = new Date();
       const [completion] = await ctx.prisma.$transaction([

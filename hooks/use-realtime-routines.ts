@@ -20,8 +20,6 @@ export function useRealtimeRoutines(roleId: string | undefined) {
       // Invalidate routine queries to refetch data
       utils.routine.invalidate();
       utils.person.invalidate();
-
-      console.log(`Routine ${event}:`, payload);
     });
 
     channelRef.current = channel;

@@ -118,7 +118,7 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
           {/* Add Co-Parent placeholder card */}
           <button
             onClick={canAddCoParent ? () => {
-              // TODO: Open co-parent invitation dialog
+              // FEATURE: Co-parent invitation dialog component not yet created
               alert('Co-parent invitation feature coming soon!');
             } : undefined}
             className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${

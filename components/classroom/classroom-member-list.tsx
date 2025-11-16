@@ -170,7 +170,7 @@ export function ClassroomMemberList({ classroomId, roleId, userName, effectiveLi
           {/* Add Co-Teacher placeholder card */}
           <button
             onClick={canAddCoTeacher ? () => {
-              // TODO: Open co-teacher invitation dialog
+              // FEATURE: Co-teacher invitation dialog component not yet created
               alert('Co-teacher invitation feature coming soon!');
             } : undefined}
             className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${

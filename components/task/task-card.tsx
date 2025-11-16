@@ -1,10 +1,10 @@
 'use client';
 
 import { TaskType } from '@/lib/types/prisma-enums';
-type Task = any;
+import type { Task } from "@/lib/types/task";
 type TaskCompletion = any;
 type Person = any;
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { TaskForm } from './task-form';
@@ -29,7 +29,7 @@ interface TaskCardProps {
   canMoveDown?: boolean;
 }
 
-export function TaskCard({
+export const TaskCard = memo(function TaskCard({
   task,
   personId,
   onMoveUp,
@@ -146,4 +146,4 @@ export function TaskCard({
       />
     </>
   );
-}
+});

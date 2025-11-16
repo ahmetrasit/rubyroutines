@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TaskType } from '@/lib/types/prisma-enums';
 import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
+import { usePageVisibility } from '@/hooks/use-page-visibility';
 
 interface Task {
   id: string;
@@ -49,6 +50,7 @@ export default function KioskModePage() {
   const [lastCheckedAt, setLastCheckedAt] = useState<Date>(new Date());
   const { toast } = useToast();
   const utils = trpc.useUtils();
+  const isPageVisible = usePageVisibility();
 
   useEffect(() => {
     // Verify session from localStorage
@@ -132,9 +134,9 @@ export default function KioskModePage() {
     )
   );
 
-  // Optimized polling: check for updates every 10 seconds
+  // Optimized polling: check for updates every 15 seconds, pause when page not visible
   useEffect(() => {
-    if (!sessionData?.codeId) return;
+    if (!sessionData?.codeId || !isPageVisible) return;
 
     const interval = setInterval(async () => {
       try {
@@ -151,10 +153,10 @@ export default function KioskModePage() {
       } catch (error) {
         console.error('Error checking for updates:', error);
       }
-    }, 10000); // Check every 10 seconds
+    }, 15000); // Check every 15 seconds (optimized from 10s)
 
     return () => clearInterval(interval);
-  }, [sessionData?.codeId, lastCheckedAt, utils]);
+  }, [sessionData?.codeId, lastCheckedAt, utils, isPageVisible]);
 
   const completeMutation = trpc.kiosk.completeTask.useMutation({
     onSuccess: () => {
@@ -366,6 +368,7 @@ export default function KioskModePage() {
             size="lg"
             variant="outline"
             onClick={() => handleUndo(task)}
+            disabled={undoMutation.isPending}
             className="w-full h-16 text-lg"
           >
             <Undo2 className="h-6 w-6 mr-3" />
@@ -375,7 +378,7 @@ export default function KioskModePage() {
           <Button
             size="lg"
             onClick={() => handleComplete(task)}
-            disabled={task.isComplete}
+            disabled={task.isComplete || completeMutation.isPending}
             className={`w-full h-16 text-lg ${task.isComplete ? 'bg-green-600' : ''}`}
           >
             <Check className="h-6 w-6 mr-3" />
@@ -388,6 +391,7 @@ export default function KioskModePage() {
           <Button
             size="lg"
             onClick={() => handleComplete(task)}
+            disabled={completeMutation.isPending}
             className="w-full h-16 text-lg"
           >
             <Plus className="h-6 w-6 mr-3" />
@@ -414,6 +418,7 @@ export default function KioskModePage() {
               <Button
                 size="lg"
                 onClick={() => handleComplete(task)}
+                disabled={completeMutation.isPending}
                 className="h-16 px-8 text-lg"
               >
                 <Plus className="h-6 w-6 mr-2" />
@@ -473,8 +478,8 @@ export default function KioskModePage() {
             <div className={`${selectedPersonId ? 'w-2/3' : 'w-full max-w-6xl'} border-4 border-blue-500 rounded-2xl bg-white p-6 overflow-auto`}>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-3xl font-bold text-gray-900">Who is checking-in?</h2>
-                <Button variant="outline" onClick={handleExit} size="lg" className="px-4">
-                  <LogOut className="h-5 w-5" />
+                <Button variant="outline" onClick={handleExit} size="lg" className="px-4" aria-label="Exit kiosk mode">
+                  <LogOut className="h-5 w-5" aria-hidden="true" />
                 </Button>
               </div>
               <div className="grid grid-cols-4 gap-4">
@@ -487,6 +492,8 @@ export default function KioskModePage() {
                     <button
                       key={person.id}
                       onClick={() => handlePersonSelect(person.id)}
+                      aria-label={`Select ${person.name}. Progress: ${progress.completed} of ${progress.total} tasks completed`}
+                      aria-pressed={isSelected}
                       className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all transform hover:scale-105 active:scale-95 border-4 overflow-hidden ${
                         isSelected ? 'border-blue-500' : 'border-transparent'
                       }`}
@@ -511,6 +518,11 @@ export default function KioskModePage() {
                         <div
                           className="w-full h-2 bg-gray-200 rounded-full overflow-hidden border-2"
                           style={{ borderColor: darkenColor(avatarColor) }}
+                          role="progressbar"
+                          aria-valuenow={Math.round(progress.percentage)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`Task completion progress: ${progress.completed} of ${progress.total} tasks`}
                         >
                           <div
                             className="h-full transition-all"

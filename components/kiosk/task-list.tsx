@@ -89,6 +89,8 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
             <button
               onClick={() => task.isComplete && canUndo ? handleUndo(task) : handleComplete(task)}
               disabled={task.isComplete && !canUndo}
+              aria-label={task.isComplete ? `Mark ${task.name} as not completed` : `Mark ${task.name} as completed`}
+              aria-pressed={task.isComplete}
               className={`flex items-center gap-4 w-full p-4 rounded-lg transition-all ${
                 task.isComplete && !canUndo
                   ? 'cursor-not-allowed opacity-75'
@@ -113,9 +115,10 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
                 size="sm"
                 variant="outline"
                 onClick={() => handleUndo(task)}
+                aria-label={`Undo completion of ${task.name}`}
                 className="ml-4"
               >
-                <Undo2 className="h-4 w-4 mr-2" />
+                <Undo2 className="h-4 w-4 mr-2" aria-hidden="true" />
                 Undo ({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})
               </Button>
             )}
@@ -127,9 +130,10 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
           <Button
             size="lg"
             onClick={() => handleComplete(task)}
+            aria-label={`Check in for ${task.name}. Current count: ${task.completionCount || 0}`}
             className="w-full h-16 text-lg"
           >
-            <Plus className="h-6 w-6 mr-3" />
+            <Plus className="h-6 w-6 mr-3" aria-hidden="true" />
             Check In
           </Button>
         );
@@ -147,25 +151,35 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
                   setProgressValues({ ...progressValues, [task.id]: e.target.value })
                 }
                 placeholder="0"
+                aria-label={`Enter value for ${task.name}`}
+                aria-describedby={`progress-${task.id}`}
                 className="text-xl h-16"
               />
               <Button
                 size="lg"
                 onClick={() => handleComplete(task)}
+                aria-label={`Add ${task.unit} to ${task.name}`}
                 className="h-16 px-8 text-lg"
               >
-                <Plus className="h-6 w-6 mr-2" />
+                <Plus className="h-6 w-6 mr-2" aria-hidden="true" />
                 Add {task.unit}
               </Button>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden"
+                role="progressbar"
+                aria-valuenow={task.progress || 0}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Progress for ${task.name}`}
+              >
                 <div
                   className="h-full bg-green-500 transition-all"
                   style={{ width: `${Math.min(100, task.progress || 0)}%` }}
                 />
               </div>
-              <span className="text-lg font-semibold text-gray-700 whitespace-nowrap">
+              <span id={`progress-${task.id}`} className="text-lg font-semibold text-gray-700 whitespace-nowrap">
                 {task.totalValue || 0} / {task.targetValue} {task.unit}
               </span>
             </div>
@@ -185,8 +199,8 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
             <h1 className="text-4xl font-bold text-gray-900 mb-2">{personName}&apos;s Tasks</h1>
             <p className="text-xl text-gray-600">Let&apos;s get things done!</p>
           </div>
-          <Button variant="outline" onClick={onExit} size="lg">
-            <LogOut className="h-5 w-5 mr-2" />
+          <Button variant="outline" onClick={onExit} size="lg" aria-label="Exit kiosk mode">
+            <LogOut className="h-5 w-5 mr-2" aria-hidden="true" />
             Exit
           </Button>
         </div>

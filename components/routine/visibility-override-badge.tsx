@@ -18,7 +18,7 @@ export function VisibilityOverrideBadge({ routineId }: VisibilityOverrideBadgePr
   const { data: override } = trpc.routine.getVisibilityOverride.useQuery(
     { routineId },
     {
-      refetchInterval: 5000, // Refresh every 5 seconds
+      refetchInterval: 30000, // Refresh every 30 seconds (optimized from 5s)
     }
   );
 

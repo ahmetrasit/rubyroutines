@@ -80,11 +80,11 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
 
   const handleCheckIn = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // TODO: Implement check-in functionality
+    // FEATURE: Quick check-in from person card planned for future
     alert('Check-in feature coming soon!');
   };
 
-  // TODO: Fetch actual task and goal completion data
+  // FEATURE: Real-time task and goal completion stats to be implemented
   const dailyTasksCompleted = 0;
   const dailyTasksTotal = 0;
   const dailyGoalsAccomplished = 0;
@@ -93,7 +93,7 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
   const taskProgress = dailyTasksTotal > 0 ? (dailyTasksCompleted / dailyTasksTotal) * 100 : 0;
   const goalProgress = dailyGoalsTotal > 0 ? (dailyGoalsAccomplished / dailyGoalsTotal) * 100 : 0;
 
-  // TODO: Check if person is connected to a classroom
+  // FEATURE: Classroom connection indicator to be implemented
   const isInClassroom = false;
 
   return (

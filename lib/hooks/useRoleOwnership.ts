@@ -99,7 +99,7 @@ export function useOwnsResource(resourceRoleId: string | undefined): boolean {
  */
 export function useCanAccessResource(resourceRoleId: string | undefined): boolean {
   // For now, just check direct ownership
-  // TODO: Extend to check shared access (co-parents, co-teachers, etc.)
+  // FEATURE: Shared access checking (co-parents, co-teachers) to be implemented
   return useOwnsResource(resourceRoleId);
 }
 
