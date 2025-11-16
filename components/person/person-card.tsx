@@ -49,11 +49,8 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
     }
   );
 
-  // Get person details with group memberships for smart deletion in teacher mode
-  const { data: personDetails } = trpc.person.getById.useQuery(
-    { id: person.id },
-    { enabled: !!classroomId } // Only fetch when in classroom context
-  );
+  // Get person details with assignments for stats and group memberships for smart deletion
+  const { data: personDetails } = trpc.person.getById.useQuery({ id: person.id });
 
   const handleDelete = () => {
     // In teacher mode (classroom context), handle removal intelligently
@@ -85,14 +82,14 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
     setShowCheckin(true);
   };
 
-  // FEATURE: Real-time task and goal completion stats to be implemented
-  const dailyTasksCompleted = 0;
-  const dailyTasksTotal = 0;
-  const dailyGoalsAccomplished = 0;
-  const dailyGoalsTotal = 0;
+  // FEATURE: Real-time counts and completion stats to be implemented
+  const routineCount = personDetails?.assignments?.length || 0;
+  const taskCount = personDetails?.assignments?.flatMap((a: any) => a.routine.tasks).length || 0;
+  const goalCount = 0; // TODO: Implement goals
 
-  const taskProgress = dailyTasksTotal > 0 ? (dailyTasksCompleted / dailyTasksTotal) * 100 : 0;
-  const goalProgress = dailyGoalsTotal > 0 ? (dailyGoalsAccomplished / dailyGoalsTotal) * 100 : 0;
+  const goalsAccomplished = 0;
+  const goalsTotal = goalCount;
+  const goalProgress = goalsTotal > 0 ? (goalsAccomplished / goalsTotal) * 100 : 0;
 
   // FEATURE: Classroom connection indicator to be implemented
   const isInClassroom = false;
@@ -128,32 +125,27 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
           </div>
         </div>
 
-        {/* Progress Bars */}
+        {/* Stats and Progress */}
         <div className="space-y-2 mb-4">
-          {/* Daily Tasks Progress */}
-          <div className="h-6 bg-gray-200 rounded-full overflow-hidden relative">
-            {dailyTasksTotal > 0 ? (
-              <>
-                <div
-                  className="h-full bg-green-500 transition-all"
-                  style={{ width: `${taskProgress}%` }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-medium text-gray-700">
-                    Daily Tasks: {dailyTasksCompleted}/{dailyTasksTotal}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <span className="text-xs text-gray-500">no daily tasks</span>
-              </div>
-            )}
+          {/* First row: Counts */}
+          <div className="flex items-center justify-around text-center">
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-gray-900">{routineCount}</div>
+              <div className="text-xs text-gray-500">Routines</div>
+            </div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-gray-900">{taskCount}</div>
+              <div className="text-xs text-gray-500">Tasks</div>
+            </div>
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-gray-900">{goalCount}</div>
+              <div className="text-xs text-gray-500">Goals</div>
+            </div>
           </div>
 
-          {/* Daily Goals Progress */}
+          {/* Second row: Goal completion progress bar */}
           <div className="h-6 bg-gray-200 rounded-full overflow-hidden relative">
-            {dailyGoalsTotal > 0 ? (
+            {goalsTotal > 0 ? (
               <>
                 <div
                   className="h-full bg-blue-500 transition-all"
@@ -161,13 +153,13 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-xs font-medium text-gray-700">
-                    Daily Goals: {dailyGoalsAccomplished}/{dailyGoalsTotal}
+                    Goals: {goalsAccomplished}/{goalsTotal}
                   </span>
                 </div>
               </>
             ) : (
               <div className="h-full flex items-center justify-center">
-                <span className="text-xs text-gray-500">no daily goals</span>
+                <span className="text-xs text-gray-500">no goals yet</span>
               </div>
             )}
           </div>

@@ -165,7 +165,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
               className="w-full h-12 text-sm"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Check In ({task.entryNumber || task.completionCount || 0})
+              {task.name} ({(task.entryNumber || task.completionCount || 0)}/9)
             </Button>
             {feedbackMessages[task.id] && (
               <div className="mt-2 p-2 bg-green-100 text-green-800 rounded-md text-center text-sm font-semibold animate-pulse">
