@@ -81,11 +81,12 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
     e.preventDefault();
 
     if (task) {
-      // When editing, only allow changing emoji and color
+      // When editing, allow changing emoji, color, and description
       updateMutation.mutate({
         id: task.id,
         emoji,
         color,
+        description: description || undefined,
       });
     } else if (routineId) {
       // When creating, all fields are available
@@ -137,28 +138,38 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
             )}
           </div>
 
-          {/* Show name and description as read-only when editing */}
+          {/* Show name and type as read-only when editing, but allow description editing */}
           {task ? (
-            <div className="p-4 bg-gray-50 rounded-lg border">
-              <div className="mb-3">
-                <Label className="text-xs text-gray-500">Task Name (cannot be changed)</Label>
-                <p className="text-base font-semibold text-gray-900 mt-1">{name}</p>
-              </div>
-              {description && (
-                <div>
-                  <Label className="text-xs text-gray-500">Description</Label>
-                  <p className="text-sm text-gray-700 mt-1">{description}</p>
+            <>
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="mb-3">
+                  <Label className="text-xs text-gray-500">Task Name (cannot be changed)</Label>
+                  <p className="text-base font-semibold text-gray-900 mt-1">{name}</p>
                 </div>
-              )}
-              <div className="mt-3">
-                <Label className="text-xs text-gray-500">Task Type (cannot be changed)</Label>
-                <p className="text-sm font-medium text-gray-900 mt-1">
-                  {type === TaskType.SIMPLE && 'Simple (Once per period)'}
-                  {type === TaskType.MULTIPLE_CHECKIN && 'Multiple Check-in (Track count)'}
-                  {type === TaskType.PROGRESS && `Progress (Track ${unit})`}
-                </p>
+                <div>
+                  <Label className="text-xs text-gray-500">Task Type (cannot be changed)</Label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">
+                    {type === TaskType.SIMPLE && 'Simple (Once per period)'}
+                    {type === TaskType.MULTIPLE_CHECKIN && 'Multiple Check-in (Track count)'}
+                    {type === TaskType.PROGRESS && `Progress (Track ${unit})`}
+                  </p>
+                </div>
               </div>
-            </div>
+
+              {/* Description - Editable when editing */}
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  maxLength={25}
+                  placeholder="Add a brief description..."
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">{description.length}/25 characters</p>
+              </div>
+            </>
           ) : (
             <>
               {/* Name - Only when creating */}
@@ -169,10 +180,11 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  maxLength={200}
+                  maxLength={25}
                   placeholder="Brush teeth"
                   className="mt-1"
                 />
+                <p className="text-xs text-gray-500 mt-1">{name.length}/25 characters</p>
               </div>
 
               {/* Description - Only when creating */}
@@ -182,10 +194,11 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  maxLength={200}
-                  placeholder="Brush for at least 2 minutes..."
+                  maxLength={25}
+                  placeholder="2 minutes, twice daily"
                   className="mt-1"
                 />
+                <p className="text-xs text-gray-500 mt-1">{description.length}/25 characters</p>
               </div>
             </>
           )}

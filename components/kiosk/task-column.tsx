@@ -118,7 +118,12 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-gray-300 bg-white mr-4 flex-shrink-0 transition-all">
                 <Undo2 className="h-6 w-6 text-gray-700" />
               </div>
-              <span className="flex-1 text-xl font-semibold text-gray-900">{task.name}</span>
+              <div className="flex-1">
+                <div className="text-xl font-semibold text-gray-900">{task.name}</div>
+                {task.description && (
+                  <div className="text-sm text-gray-500 mt-1">{task.description}</div>
+                )}
+              </div>
               <span className="text-sm text-gray-500 flex-shrink-0">({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})</span>
             </div>
           </button>
@@ -131,7 +136,12 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-green-500 bg-green-500 mr-4 flex-shrink-0 transition-all">
                 <Check className="h-6 w-6 text-white" />
               </div>
-              <span className="flex-1 text-xl font-semibold text-gray-900">{task.name}</span>
+              <div className="flex-1">
+                <div className="text-xl font-semibold text-gray-900">{task.name}</div>
+                {task.description && (
+                  <div className="text-sm text-gray-500 mt-1">{task.description}</div>
+                )}
+              </div>
             </div>
           </button>
         ) : (
@@ -142,7 +152,12 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
           >
             <div className="flex items-center">
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-gray-300 bg-white mr-4 flex-shrink-0 transition-all"></div>
-              <span className="flex-1 text-xl font-semibold text-gray-900">{task.name}</span>
+              <div className="flex-1">
+                <div className="text-xl font-semibold text-gray-900">{task.name}</div>
+                {task.description && (
+                  <div className="text-sm text-gray-500 mt-1">{task.description}</div>
+                )}
+              </div>
             </div>
           </button>
         );
@@ -158,7 +173,12 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-blue-300 bg-blue-50 mr-4 flex-shrink-0 transition-all">
                 <Plus className="h-6 w-6 text-blue-600" />
               </div>
-              <span className="flex-1 text-xl font-semibold text-gray-900">{task.name}</span>
+              <div className="flex-1">
+                <div className="text-xl font-semibold text-gray-900">{task.name}</div>
+                {task.description && (
+                  <div className="text-sm text-gray-500 mt-1">{task.description}</div>
+                )}
+              </div>
               <span className="text-sm text-gray-500 flex-shrink-0">({(task.entryNumber || task.completionCount || 0)}/9)</span>
             </div>
           </button>

@@ -107,10 +107,10 @@ export const CODE_GENERATION = {
 export const VALIDATION = {
   name: {
     minLength: 1,
-    maxLength: 100,
+    maxLength: 25,
   },
   description: {
-    maxLength: 500,
+    maxLength: 25,
     marketplaceMaxLength: 1000,
   },
   email: {
