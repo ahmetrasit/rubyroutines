@@ -77,8 +77,8 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   ) || [];
 
   const completeMutation = trpc.task.complete.useMutation({
-    onSuccess: () => {
-      utils.person.getById.invalidate();
+    onSuccess: async () => {
+      await utils.person.getById.refetch({ id: personId });
       toast({
         title: 'Success',
         description: 'Task completed!',
@@ -95,8 +95,8 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   });
 
   const undoMutation = trpc.task.undoCompletion.useMutation({
-    onSuccess: () => {
-      utils.person.getById.invalidate();
+    onSuccess: async () => {
+      await utils.person.getById.refetch({ id: personId });
       toast({
         title: 'Success',
         description: 'Task undone',
