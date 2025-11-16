@@ -114,7 +114,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             variant="outline"
             onClick={() => handleUndo(task)}
             disabled={isTaskPending}
-            className="w-full h-20 text-2xl rounded-[40px]"
+            className="w-full h-20 text-2xl rounded-full"
           >
             <span className="flex-1 text-left">{task.name}</span>
             <Undo2 className="h-6 w-6 mx-2 flex-shrink-0" />
@@ -125,7 +125,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             size="sm"
             variant="outline"
             disabled
-            className="w-full h-20 text-2xl rounded-[40px] bg-green-50 border-green-300 text-green-700 opacity-70"
+            className="w-full h-20 text-2xl rounded-full bg-green-50 border-green-300 text-green-700 opacity-70"
           >
             <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-green-600 bg-white mr-3 flex-shrink-0">
               <Check className="h-5 w-5 text-green-700" />
@@ -137,7 +137,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             size="sm"
             onClick={() => handleComplete(task)}
             disabled={isTaskPending}
-            className="w-full h-20 text-2xl rounded-[40px]"
+            className="w-full h-20 text-2xl rounded-full"
           >
             <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-gray-400 bg-white mr-3 flex-shrink-0"></div>
             <span className="flex-1 text-left">{task.name}</span>

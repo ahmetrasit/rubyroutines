@@ -6,10 +6,12 @@ import { SessionTimeout } from '@/components/kiosk/session-timeout';
 import { TaskColumn } from '@/components/kiosk/task-column';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
-import { Loader2, LogOut, Check } from 'lucide-react';
+import { Loader2, LogOut, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TaskType } from '@/lib/types/prisma-enums';
 import { usePageVisibility } from '@/hooks/use-page-visibility';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Progress } from '@/components/ui/progress';
 
 interface Task {
   id: string;
@@ -48,6 +50,12 @@ export default function KioskModePage() {
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const isPageVisible = usePageVisibility();
+
+  // State for collapsible sections
+  const [goalsOpen, setGoalsOpen] = useState(false);
+  const [simpleOpen, setSimpleOpen] = useState(false);
+  const [multiOpen, setMultiOpen] = useState(false);
+  const [progressOpen, setProgressOpen] = useState(false);
 
   useEffect(() => {
     // Verify session from localStorage
@@ -493,27 +501,149 @@ export default function KioskModePage() {
                     const multiTasks = tasks.filter((t: Task) => t.type === TaskType.MULTIPLE_CHECKIN);
                     const progressTasks = tasks.filter((t: Task) => t.type === TaskType.PROGRESS);
 
-                    const columns = [
-                      simpleTasks.length > 0 && { title: 'Simple Tasks', tasks: simpleTasks, type: 'SIMPLE' },
-                      multiTasks.length > 0 && { title: 'Check-ins', tasks: multiTasks, type: 'MULTI' },
-                      progressTasks.length > 0 && { title: 'Progress', tasks: progressTasks, type: 'PROGRESS' }
-                    ].filter(Boolean);
-
-                    const columnCount = columns.length;
+                    // Calculate stats for Simple tasks
+                    const simpleCompleted = simpleTasks.filter((t: Task) => t.isComplete).length;
+                    const simpleTotal = simpleTasks.length;
 
                     return (
-                      <div className="h-full grid gap-4" style={{ gridTemplateColumns: `repeat(${columnCount}, 1fr)` }}>
-                        {columns.map((column: any) => (
-                          <TaskColumn
-                            key={column.type}
-                            title={column.title}
-                            tasks={column.tasks}
-                            personId={selectedPersonId!}
-                            onComplete={handleComplete}
-                            onUndo={handleUndo}
-                            isPending={completeMutation.isPending || undoMutation.isPending}
-                          />
-                        ))}
+                      <div className="space-y-3">
+                        {/* Goals Section */}
+                        <Collapsible open={goalsOpen} onOpenChange={setGoalsOpen}>
+                          <div className="border-2 border-gray-300 rounded-lg bg-white">
+                            <CollapsibleTrigger asChild>
+                              <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-lg font-bold text-gray-900">🎯 Goals</h3>
+                                    <span className="text-sm text-gray-500">(Coming soon)</span>
+                                  </div>
+                                  <div className="mt-2">
+                                    <Progress value={0} max={100} className="h-2" />
+                                    <p className="text-xs text-gray-500 mt-1">0% Complete</p>
+                                  </div>
+                                </div>
+                                {goalsOpen ? (
+                                  <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                                )}
+                              </button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="p-4 pt-0 border-t">
+                                <p className="text-sm text-gray-500 text-center py-8">
+                                  Goal tracking coming soon...
+                                </p>
+                              </div>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+
+                        {/* Simple Tasks Section */}
+                        {simpleTasks.length > 0 && (
+                          <Collapsible open={simpleOpen} onOpenChange={setSimpleOpen}>
+                            <div className="border-2 border-gray-300 rounded-lg bg-white">
+                              <CollapsibleTrigger asChild>
+                                <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                  <div className="flex-1">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">✓ Simple Tasks</h3>
+                                    <div>
+                                      <Progress value={simpleCompleted} max={simpleTotal} className="h-2" />
+                                      <p className="text-xs text-gray-500 mt-1">
+                                        {simpleCompleted} of {simpleTotal} completed
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {simpleOpen ? (
+                                    <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                                  ) : (
+                                    <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                                  )}
+                                </button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="p-4 pt-0 border-t">
+                                  <TaskColumn
+                                    title=""
+                                    tasks={simpleTasks}
+                                    personId={selectedPersonId!}
+                                    onComplete={handleComplete}
+                                    onUndo={handleUndo}
+                                    isPending={completeMutation.isPending || undoMutation.isPending}
+                                  />
+                                </div>
+                              </CollapsibleContent>
+                            </div>
+                          </Collapsible>
+                        )}
+
+                        {/* Multi Check-in Tasks Section */}
+                        {multiTasks.length > 0 && (
+                          <Collapsible open={multiOpen} onOpenChange={setMultiOpen}>
+                            <div className="border-2 border-gray-300 rounded-lg bg-white">
+                              <CollapsibleTrigger asChild>
+                                <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                  <div className="flex-1">
+                                    <h3 className="text-lg font-bold text-gray-900">
+                                      ✔️ Check-ins ({multiTasks.length})
+                                    </h3>
+                                  </div>
+                                  {multiOpen ? (
+                                    <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                                  ) : (
+                                    <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                                  )}
+                                </button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="p-4 pt-0 border-t">
+                                  <TaskColumn
+                                    title=""
+                                    tasks={multiTasks}
+                                    personId={selectedPersonId!}
+                                    onComplete={handleComplete}
+                                    onUndo={handleUndo}
+                                    isPending={completeMutation.isPending || undoMutation.isPending}
+                                  />
+                                </div>
+                              </CollapsibleContent>
+                            </div>
+                          </Collapsible>
+                        )}
+
+                        {/* Progress Tasks Section */}
+                        {progressTasks.length > 0 && (
+                          <Collapsible open={progressOpen} onOpenChange={setProgressOpen}>
+                            <div className="border-2 border-gray-300 rounded-lg bg-white">
+                              <CollapsibleTrigger asChild>
+                                <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                  <div className="flex-1">
+                                    <h3 className="text-lg font-bold text-gray-900">
+                                      📊 Progress ({progressTasks.length})
+                                    </h3>
+                                  </div>
+                                  {progressOpen ? (
+                                    <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                                  ) : (
+                                    <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                                  )}
+                                </button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="p-4 pt-0 border-t">
+                                  <TaskColumn
+                                    title=""
+                                    tasks={progressTasks}
+                                    personId={selectedPersonId!}
+                                    onComplete={handleComplete}
+                                    onUndo={handleUndo}
+                                    isPending={completeMutation.isPending || undoMutation.isPending}
+                                  />
+                                </div>
+                              </CollapsibleContent>
+                            </div>
+                          </Collapsible>
+                        )}
                       </div>
                     );
                   })()
