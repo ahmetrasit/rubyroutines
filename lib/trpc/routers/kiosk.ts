@@ -14,7 +14,7 @@ import {
   calculateSummedValue,
   validateProgressValue
 } from '@/lib/services/task-completion';
-import { calculateNextReset } from '@/lib/services/reset-period';
+import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { TRPCError } from '@trpc/server';
 import { kioskRateLimitedProcedure } from '../middleware/ratelimit';
 
@@ -348,7 +348,7 @@ export const kioskRouter = router({
       }
 
       // Calculate reset date for current period
-      const resetDate = calculateNextReset(task.routine.resetPeriod, task.routine.resetDay);
+      const resetDate = getResetPeriodStart(task.routine.resetPeriod, task.routine.resetDay);
 
       // Calculate entry number for this completion
       const entryNumber = calculateEntryNumber(task.completions, resetDate, task.type as any);

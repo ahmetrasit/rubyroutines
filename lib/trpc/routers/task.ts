@@ -22,7 +22,7 @@ import {
   calculateSummedValue,
   validateProgressValue
 } from '@/lib/services/task-completion';
-import { calculateNextReset } from '@/lib/services/reset-period';
+import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
 
 export const taskRouter = router({
@@ -56,7 +56,7 @@ export const taskRouter = router({
 
       // Add aggregation data for each task
       return tasks.map((task: any) => {
-        const resetDate = calculateNextReset(
+        const resetDate = getResetPeriodStart(
           task.routine.resetPeriod,
           task.routine.resetDay
         );
@@ -345,7 +345,7 @@ export const taskRouter = router({
       }
 
       // Calculate reset date for current period
-      const resetDate = calculateNextReset(task.routine.resetPeriod, task.routine.resetDay);
+      const resetDate = getResetPeriodStart(task.routine.resetPeriod, task.routine.resetDay);
 
       // Calculate entry number for this completion
       const entryNumber = calculateEntryNumber(task.completions, resetDate, task.type);
