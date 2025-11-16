@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, CheckCircle } from 'lucide-react';
 import { useState, memo } from 'react';
 import { PersonForm } from './person-form';
+import { PersonCheckinModal } from './person-checkin-modal';
 import { trpc } from '@/lib/trpc/client';
 import { useAvatar } from '@/lib/hooks';
 import { useDeleteMutation } from '@/lib/hooks';
@@ -18,6 +19,7 @@ interface PersonCardProps {
 
 export const PersonCard = memo(function PersonCard({ person, onSelect, classroomId }: PersonCardProps) {
   const [showEdit, setShowEdit] = useState(false);
+  const [showCheckin, setShowCheckin] = useState(false);
   const utils = trpc.useUtils();
 
   // Parse avatar data using custom hook
@@ -80,8 +82,7 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
 
   const handleCheckIn = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // FEATURE: Quick check-in from person card planned for future
-    alert('Check-in feature coming soon!');
+    setShowCheckin(true);
   };
 
   // FEATURE: Real-time task and goal completion stats to be implemented
@@ -214,6 +215,15 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
         <PersonForm
           person={person}
           onClose={() => setShowEdit(false)}
+        />
+      )}
+
+      {showCheckin && (
+        <PersonCheckinModal
+          personId={person.id}
+          personName={person.name}
+          isOpen={showCheckin}
+          onClose={() => setShowCheckin(false)}
         />
       )}
     </>
