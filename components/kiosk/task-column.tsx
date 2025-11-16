@@ -39,7 +39,6 @@ interface TaskColumnProps {
 export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPending }: TaskColumnProps) {
   const [progressValues, setProgressValues] = useState<Record<string, string>>({});
   const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
-  const [feedbackMessages, setFeedbackMessages] = useState<Record<string, string>>({});
 
   // Split tasks into incomplete and complete
   const incompleteTasks = tasks.filter(t => !t.isComplete);
@@ -73,36 +72,8 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
       }
       onComplete(task.id, value);
       setProgressValues({ ...progressValues, [task.id]: '' });
-
-      // Show feedback for PROGRESS
-      const message = `+${value} ${task.unit || 'points'}`;
-      setFeedbackMessages({ ...feedbackMessages, [task.id]: message });
-
-      // Auto-dismiss after 3 seconds
-      setTimeout(() => {
-        setFeedbackMessages((prev) => {
-          const newMessages = { ...prev };
-          delete newMessages[task.id];
-          return newMessages;
-        });
-      }, 3000);
     } else {
       onComplete(task.id);
-
-      // Show feedback for MULTI check-ins
-      if (task.type === TaskType.MULTIPLE_CHECKIN) {
-        const message = '+1 check-in';
-        setFeedbackMessages({ ...feedbackMessages, [task.id]: message });
-
-        // Auto-dismiss after 3 seconds
-        setTimeout(() => {
-          setFeedbackMessages((prev) => {
-            const newMessages = { ...prev };
-            delete newMessages[task.id];
-            return newMessages;
-          });
-        }, 3000);
-      }
     }
   };
 
@@ -125,59 +96,50 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             variant="outline"
             onClick={() => handleUndo(task)}
             disabled={isPending}
-            className="w-full h-12 text-sm"
+            className="w-full h-14 text-base rounded-xl"
           >
             <Undo2 className="h-4 w-4 mr-2" />
             Undo ({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})
           </Button>
+        ) : task.isComplete ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled
+            className="w-full h-14 text-base rounded-xl bg-green-50 border-green-300 text-green-700"
+          >
+            <Check className="h-5 w-5 mr-2" />
+            {task.name}
+          </Button>
         ) : (
-          <div className="flex items-center gap-2">
-            <div
-              className={`flex items-center justify-center w-8 h-8 rounded border-2 transition-all ${
-                task.isComplete
-                  ? 'bg-green-500 border-green-500'
-                  : 'border-gray-300'
-              }`}
-            >
-              {task.isComplete && <Check className="h-5 w-5 text-white" />}
-            </div>
-            {!task.isComplete && (
-              <Button
-                size="sm"
-                onClick={() => handleComplete(task)}
-                disabled={isPending}
-                className="flex-1 h-12"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                Mark Done
-              </Button>
-            )}
-          </div>
+          <Button
+            size="sm"
+            onClick={() => handleComplete(task)}
+            disabled={isPending}
+            className="w-full h-14 text-base rounded-xl"
+          >
+            <Check className="h-4 w-4 mr-2" />
+            {task.name}
+          </Button>
         );
 
       case TaskType.MULTIPLE_CHECKIN:
         return (
-          <>
-            <Button
-              size="sm"
-              onClick={() => handleComplete(task)}
-              disabled={isPending}
-              className="w-full h-12 text-sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {task.name} ({(task.entryNumber || task.completionCount || 0)}/9)
-            </Button>
-            {feedbackMessages[task.id] && (
-              <div className="mt-2 p-2 bg-green-100 text-green-800 rounded-md text-center text-sm font-semibold animate-pulse">
-                {feedbackMessages[task.id]}
-              </div>
-            )}
-          </>
+          <Button
+            size="sm"
+            onClick={() => handleComplete(task)}
+            disabled={isPending}
+            className="w-full h-16 text-lg font-semibold rounded-xl"
+          >
+            <Plus className="h-5 w-5 mr-2 flex-shrink-0" />
+            <span className="flex-1">{task.name}</span>
+            <span className="text-sm ml-2 opacity-70">({(task.entryNumber || task.completionCount || 0)}/9)</span>
+          </Button>
         );
 
       case TaskType.PROGRESS:
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex gap-2">
               <Input
                 type="number"
@@ -188,23 +150,18 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                   setProgressValues({ ...progressValues, [task.id]: e.target.value })
                 }
                 placeholder="0"
-                className="text-base h-12"
+                className="text-base h-14 rounded-xl"
               />
               <Button
                 size="sm"
                 onClick={() => handleComplete(task)}
                 disabled={isPending}
-                className="h-12 px-4 text-sm whitespace-nowrap"
+                className="h-14 px-6 text-base whitespace-nowrap rounded-xl"
               >
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="h-5 w-5 mr-2" />
                 Add {task.unit}
               </Button>
             </div>
-            {feedbackMessages[task.id] && (
-              <div className="p-2 bg-green-100 text-green-800 rounded-md text-center text-sm font-semibold animate-pulse">
-                {feedbackMessages[task.id]}
-              </div>
-            )}
             <div className="text-center">
               <div className="text-lg font-semibold text-gray-900">
                 Total: {task.summedValue || task.totalValue || 0} {task.unit}
@@ -231,12 +188,14 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             key={task.id}
             className="bg-white rounded-xl shadow-md p-3 hover:shadow-lg transition-shadow"
           >
-            <div className="mb-2">
-              <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
-              {task.description && (
-                <p className="text-xs text-gray-600 mt-1">{task.description}</p>
-              )}
-            </div>
+            {task.type !== TaskType.MULTIPLE_CHECKIN && (
+              <div className="mb-2">
+                <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
+                {task.description && (
+                  <p className="text-xs text-gray-600 mt-1">{task.description}</p>
+                )}
+              </div>
+            )}
             {renderTaskButton(task)}
           </div>
         ))}
@@ -252,12 +211,14 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                 key={task.id}
                 className="bg-white rounded-xl shadow-md p-3 opacity-50 transition-shadow"
               >
-                <div className="mb-2">
-                  <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
-                  {task.description && (
-                    <p className="text-xs text-gray-600 mt-1">{task.description}</p>
-                  )}
-                </div>
+                {task.type !== TaskType.MULTIPLE_CHECKIN && (
+                  <div className="mb-2">
+                    <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
+                    {task.description && (
+                      <p className="text-xs text-gray-600 mt-1">{task.description}</p>
+                    )}
+                  </div>
+                )}
                 {renderTaskButton(task)}
               </div>
             ))}
