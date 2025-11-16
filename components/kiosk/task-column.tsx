@@ -39,6 +39,7 @@ interface TaskColumnProps {
 export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPending }: TaskColumnProps) {
   const [progressValues, setProgressValues] = useState<Record<string, string>>({});
   const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
+  const [feedbackMessages, setFeedbackMessages] = useState<Record<string, string>>({});
 
   // Split tasks into incomplete and complete
   const incompleteTasks = tasks.filter(t => !t.isComplete);
@@ -72,8 +73,36 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
       }
       onComplete(task.id, value);
       setProgressValues({ ...progressValues, [task.id]: '' });
+
+      // Show feedback for PROGRESS
+      const message = `+${value} ${task.unit || 'points'}`;
+      setFeedbackMessages({ ...feedbackMessages, [task.id]: message });
+
+      // Auto-dismiss after 3 seconds
+      setTimeout(() => {
+        setFeedbackMessages((prev) => {
+          const newMessages = { ...prev };
+          delete newMessages[task.id];
+          return newMessages;
+        });
+      }, 3000);
     } else {
       onComplete(task.id);
+
+      // Show feedback for MULTI check-ins
+      if (task.type === TaskType.MULTIPLE_CHECKIN) {
+        const message = '+1 check-in';
+        setFeedbackMessages({ ...feedbackMessages, [task.id]: message });
+
+        // Auto-dismiss after 3 seconds
+        setTimeout(() => {
+          setFeedbackMessages((prev) => {
+            const newMessages = { ...prev };
+            delete newMessages[task.id];
+            return newMessages;
+          });
+        }, 3000);
+      }
     }
   };
 
@@ -128,15 +157,22 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
 
       case TaskType.MULTIPLE_CHECKIN:
         return (
-          <Button
-            size="sm"
-            onClick={() => handleComplete(task)}
-            disabled={isPending}
-            className="w-full h-12 text-sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Check In ({task.entryNumber || task.completionCount || 0})
-          </Button>
+          <>
+            <Button
+              size="sm"
+              onClick={() => handleComplete(task)}
+              disabled={isPending}
+              className="w-full h-12 text-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Check In ({task.entryNumber || task.completionCount || 0})
+            </Button>
+            {feedbackMessages[task.id] && (
+              <div className="mt-2 p-2 bg-green-100 text-green-800 rounded-md text-center text-sm font-semibold animate-pulse">
+                {feedbackMessages[task.id]}
+              </div>
+            )}
+          </>
         );
 
       case TaskType.PROGRESS:
@@ -164,6 +200,11 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                 Add {task.unit}
               </Button>
             </div>
+            {feedbackMessages[task.id] && (
+              <div className="p-2 bg-green-100 text-green-800 rounded-md text-center text-sm font-semibold animate-pulse">
+                {feedbackMessages[task.id]}
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div
