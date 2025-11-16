@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TaskType } from '@/lib/types/prisma-enums';
 import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
+import { usePageVisibility } from '@/hooks/use-page-visibility';
 
 interface Task {
   id: string;
@@ -49,6 +50,7 @@ export default function KioskModePage() {
   const [lastCheckedAt, setLastCheckedAt] = useState<Date>(new Date());
   const { toast } = useToast();
   const utils = trpc.useUtils();
+  const isPageVisible = usePageVisibility();
 
   useEffect(() => {
     // Verify session from localStorage
@@ -132,9 +134,9 @@ export default function KioskModePage() {
     )
   );
 
-  // Optimized polling: check for updates every 10 seconds
+  // Optimized polling: check for updates every 15 seconds, pause when page not visible
   useEffect(() => {
-    if (!sessionData?.codeId) return;
+    if (!sessionData?.codeId || !isPageVisible) return;
 
     const interval = setInterval(async () => {
       try {
@@ -151,10 +153,10 @@ export default function KioskModePage() {
       } catch (error) {
         console.error('Error checking for updates:', error);
       }
-    }, 10000); // Check every 10 seconds
+    }, 15000); // Check every 15 seconds (optimized from 10s)
 
     return () => clearInterval(interval);
-  }, [sessionData?.codeId, lastCheckedAt, utils]);
+  }, [sessionData?.codeId, lastCheckedAt, utils, isPageVisible]);
 
   const completeMutation = trpc.kiosk.completeTask.useMutation({
     onSuccess: () => {

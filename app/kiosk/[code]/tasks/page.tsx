@@ -7,6 +7,7 @@ import { SessionTimeout } from '@/components/kiosk/session-timeout';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Loader2 } from 'lucide-react';
+import { usePageVisibility } from '@/hooks/use-page-visibility';
 
 export default function KioskTasksPage() {
   const router = useRouter();
@@ -15,8 +16,10 @@ export default function KioskTasksPage() {
   const code = params.code as string;
   const personId = searchParams.get('personId');
   const [sessionData, setSessionData] = useState<any>(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState<Date>(new Date());
   const { toast } = useToast();
   const utils = trpc.useUtils();
+  const isPageVisible = usePageVisibility();
 
   useEffect(() => {
     // Verify session from localStorage
@@ -63,15 +66,39 @@ export default function KioskTasksPage() {
     { kioskCodeId: sessionData?.codeId!, personId: personId! },
     {
       enabled: !!sessionData && !!personId,
-      refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
+      refetchInterval: false, // Disable auto refetch, using optimized polling instead
     }
   );
 
   const tasks = personTasksData?.tasks || [];
 
+  // Optimized polling: check for updates every 15 seconds, pause when page not visible
+  useEffect(() => {
+    if (!sessionData?.codeId || !personId || !isPageVisible) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const result = await utils.kiosk.checkRoleUpdates.fetch({
+          kioskCodeId: sessionData.codeId,
+          lastCheckedAt
+        });
+
+        if (result.hasUpdates) {
+          utils.kiosk.getPersonTasks.invalidate();
+          setLastCheckedAt(result.lastUpdatedAt);
+        }
+      } catch (error) {
+        console.error('Error checking for updates:', error);
+      }
+    }, 15000); // Check every 15 seconds (optimized from 5s)
+
+    return () => clearInterval(interval);
+  }, [sessionData?.codeId, personId, lastCheckedAt, utils, isPageVisible]);
+
   const completeMutation = trpc.kiosk.completeTask.useMutation({
     onSuccess: () => {
       utils.kiosk.getPersonTasks.invalidate();
+      setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
     },
     onError: (error) => {
       toast({
@@ -90,6 +117,7 @@ export default function KioskTasksPage() {
         variant: 'success',
       });
       utils.kiosk.getPersonTasks.invalidate();
+      setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
     },
     onError: (error) => {
       toast({

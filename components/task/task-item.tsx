@@ -4,7 +4,7 @@ import { TaskType } from '@/lib/types/prisma-enums';
 import type { Task } from "@/lib/types/task";
 type TaskCompletion = any;
 type Person = any;
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ interface TaskItemProps {
   personId: string;
 }
 
-export function TaskItem({ task, personId }: TaskItemProps) {
+export const TaskItem = memo(function TaskItem({ task, personId }: TaskItemProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [progressValue, setProgressValue] = useState('');
@@ -283,4 +283,4 @@ export function TaskItem({ task, personId }: TaskItemProps) {
       />
     </>
   );
-}
+});
