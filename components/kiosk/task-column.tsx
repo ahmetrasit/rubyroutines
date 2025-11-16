@@ -116,8 +116,9 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             disabled={isTaskPending}
             className="w-full h-20 text-2xl rounded-full"
           >
-            <Undo2 className="h-6 w-6 mr-3" />
-            Undo ({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})
+            <span className="flex-1 text-left">{task.name}</span>
+            <Undo2 className="h-6 w-6 mx-2 flex-shrink-0" />
+            <span className="text-base flex-shrink-0">({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})</span>
           </Button>
         ) : task.isComplete ? (
           <Button
@@ -126,10 +127,10 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             disabled
             className="w-full h-20 text-2xl rounded-full bg-green-50 border-green-300 text-green-700 opacity-70"
           >
-            <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-green-600 bg-green-100 mr-3 flex-shrink-0">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-green-600 bg-white mr-3 flex-shrink-0">
               <Check className="h-5 w-5 text-green-700" />
             </div>
-            {task.name}
+            <span className="flex-1 text-left">{task.name}</span>
           </Button>
         ) : (
           <Button
@@ -138,8 +139,8 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             disabled={isTaskPending}
             className="w-full h-20 text-2xl rounded-full"
           >
-            <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-gray-400 mr-3 flex-shrink-0"></div>
-            {task.name}
+            <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-gray-400 bg-white mr-3 flex-shrink-0"></div>
+            <span className="flex-1 text-left">{task.name}</span>
           </Button>
         );
 
