@@ -109,59 +109,65 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
     switch (task.type) {
       case TaskType.SIMPLE:
         return canUndo ? (
-          <Button
-            size="sm"
-            variant="outline"
+          <button
             onClick={() => handleUndo(task)}
             disabled={isTaskPending}
-            className="w-full h-20 text-2xl rounded-full"
+            className="w-full text-left p-6 rounded-xl border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
           >
-            <span className="flex-1 text-left">{task.name}</span>
-            <Undo2 className="h-6 w-6 mx-2 flex-shrink-0" />
-            <span className="text-base flex-shrink-0">({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})</span>
-          </Button>
-        ) : task.isComplete ? (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled
-            className="w-full h-20 text-2xl rounded-full bg-green-50 border-green-300 text-green-700 opacity-70"
-          >
-            <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-green-600 bg-white mr-3 flex-shrink-0">
-              <Check className="h-5 w-5 text-green-700" />
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-gray-300 bg-white mr-4 flex-shrink-0 transition-all">
+                <Undo2 className="h-6 w-6 text-gray-700" />
+              </div>
+              <span className="flex-1 text-xl font-semibold text-gray-900">{task.name}</span>
+              <span className="text-sm text-gray-500 flex-shrink-0">({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})</span>
             </div>
-            <span className="flex-1 text-left">{task.name}</span>
-          </Button>
+          </button>
+        ) : task.isComplete ? (
+          <button
+            disabled
+            className="w-full text-left p-6 rounded-xl border-2 transition-all bg-green-50 border-green-500 shadow-md opacity-70"
+          >
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-green-500 bg-green-500 mr-4 flex-shrink-0 transition-all">
+                <Check className="h-6 w-6 text-white" />
+              </div>
+              <span className="flex-1 text-xl font-semibold text-gray-900">{task.name}</span>
+            </div>
+          </button>
         ) : (
-          <Button
-            size="sm"
+          <button
             onClick={() => handleComplete(task)}
             disabled={isTaskPending}
-            className="w-full h-20 text-2xl rounded-full"
+            className="w-full text-left p-6 rounded-xl border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
           >
-            <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-gray-400 bg-white mr-3 flex-shrink-0"></div>
-            <span className="flex-1 text-left">{task.name}</span>
-          </Button>
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-gray-300 bg-white mr-4 flex-shrink-0 transition-all"></div>
+              <span className="flex-1 text-xl font-semibold text-gray-900">{task.name}</span>
+            </div>
+          </button>
         );
 
       case TaskType.MULTIPLE_CHECKIN:
         return (
-          <Button
-            size="sm"
+          <button
             onClick={() => handleComplete(task)}
             disabled={isTaskPending}
-            className="w-full h-16 text-lg font-semibold rounded-xl"
+            className="w-full text-left p-6 rounded-xl border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
           >
-            <Plus className="h-5 w-5 mr-2 flex-shrink-0" />
-            <span className="flex-1">{task.name}</span>
-            <span className="text-sm ml-2 opacity-70">({(task.entryNumber || task.completionCount || 0)}/9)</span>
-          </Button>
+            <div className="flex items-center">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-blue-300 bg-blue-50 mr-4 flex-shrink-0 transition-all">
+                <Plus className="h-6 w-6 text-blue-600" />
+              </div>
+              <span className="flex-1 text-xl font-semibold text-gray-900">{task.name}</span>
+              <span className="text-sm text-gray-500 flex-shrink-0">({(task.entryNumber || task.completionCount || 0)}/9)</span>
+            </div>
+          </button>
         );
 
       case TaskType.PROGRESS:
         return (
           <div className="space-y-3">
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Input
                 type="number"
                 min="1"
@@ -171,17 +177,18 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                   setProgressValues({ ...progressValues, [task.id]: e.target.value })
                 }
                 placeholder="0"
-                className="text-base h-14 rounded-xl"
+                className="flex-1 text-lg h-16 rounded-xl border-2 px-4"
               />
-              <Button
-                size="sm"
+              <button
                 onClick={() => handleComplete(task)}
                 disabled={isTaskPending}
-                className="h-14 px-6 text-base whitespace-nowrap rounded-xl"
+                className="px-6 h-16 text-base font-semibold whitespace-nowrap rounded-xl border-2 transition-all bg-purple-500 text-white border-purple-500 hover:bg-purple-600 hover:border-purple-600 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
               >
-                <Plus className="h-5 w-5 mr-2" />
-                Add {task.unit}
-              </Button>
+                <div className="flex items-center">
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add {task.unit}
+                </div>
+              </button>
             </div>
             <div className="text-center">
               <div className="text-lg font-semibold text-gray-900">
