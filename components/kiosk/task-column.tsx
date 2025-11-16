@@ -187,6 +187,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                 <div className="flex items-center">
                   <Plus className="h-5 w-5 mr-2" />
                   Add {task.unit}
+                  <span className="ml-2 text-sm">({(task.entryNumber || task.completionCount || 0)}/20)</span>
                 </div>
               </button>
             </div>
