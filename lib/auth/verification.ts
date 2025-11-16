@@ -1,12 +1,20 @@
 import { prisma } from '@/lib/prisma';
 import { CodeType, CodeStatus } from '@/lib/types/prisma-enums';
 import bcrypt from 'bcryptjs';
+import {
+  CODE_GENERATION,
+  VERIFICATION_CODE_EXPIRATION,
+  VERIFICATION_COOLDOWN,
+  LOCKOUT_DURATION,
+  RATE_LIMIT_WINDOW,
+  TIME,
+} from '@/lib/utils/constants';
 
 /**
  * Generate a random 6-digit verification code
  */
 export function generateVerificationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(CODE_GENERATION.VERIFICATION_MIN + Math.random() * (CODE_GENERATION.VERIFICATION_MAX - CODE_GENERATION.VERIFICATION_MIN + 1)).toString();
 }
 
 /**

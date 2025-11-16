@@ -6,6 +6,8 @@
  * Get free Redis from: https://console.upstash.com/
  */
 
+import { RATE_LIMITS, TIME } from '@/lib/utils/constants';
+
 interface RateLimitEntry {
   count: number;
   resetTime: number;
@@ -45,7 +47,7 @@ class InMemoryRateLimiter {
           this.store.delete(key);
         }
       }
-    }, 60000);
+    }, RATE_LIMITS.CLEANUP_INTERVAL);
   }
 
   async check(
@@ -192,22 +194,8 @@ function createRateLimiter() {
 const rateLimiter = createRateLimiter();
 
 // Rate limit configurations
-export const RATE_LIMITS = {
-  // Auth endpoints: 5 attempts per 2 minutes (reduced for better UX)
-  AUTH: { limit: 5, windowMs: 2 * 60 * 1000 },
-
-  // Verification code: 5 attempts per 5 minutes (increased attempts, reduced window)
-  VERIFICATION: { limit: 5, windowMs: 5 * 60 * 1000 },
-
-  // Kiosk code validation: 10 attempts per hour
-  KIOSK: { limit: 10, windowMs: 60 * 60 * 1000 },
-
-  // API endpoints: 100 requests per minute
-  API: { limit: 100, windowMs: 60 * 1000 },
-
-  // Global: 1000 requests per minute per IP
-  GLOBAL: { limit: 1000, windowMs: 60 * 1000 },
-};
+// Export RATE_LIMITS from constants for convenience
+export { RATE_LIMITS };
 
 /**
  * Rate limit helper for tRPC procedures

@@ -5,13 +5,39 @@
  */
 
 // ============================================================================
+// Time Conversion Constants
+// ============================================================================
+
+export const TIME = {
+  MS_PER_SECOND: 1000,
+  SECONDS_PER_MINUTE: 60,
+  MINUTES_PER_HOUR: 60,
+  HOURS_PER_DAY: 24,
+  DAYS_PER_MONTH: 30, // Approximate
+  DAYS_PER_YEAR: 365, // Approximate
+} as const;
+
+// Calculated time constants in milliseconds
+export const MS_PER_MINUTE = TIME.SECONDS_PER_MINUTE * TIME.MS_PER_SECOND;
+export const MS_PER_HOUR = TIME.MINUTES_PER_HOUR * MS_PER_MINUTE;
+export const MS_PER_DAY = TIME.HOURS_PER_DAY * MS_PER_HOUR;
+export const SECONDS_PER_HOUR = TIME.SECONDS_PER_MINUTE * TIME.MINUTES_PER_HOUR;
+export const SECONDS_PER_DAY = SECONDS_PER_HOUR * TIME.HOURS_PER_DAY;
+
+// ============================================================================
 // Session & Timeout Constants
 // ============================================================================
 
-export const KIOSK_SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
+export const KIOSK_SESSION_TIMEOUT = 5 * MS_PER_MINUTE; // 5 minutes
+export const KIOSK_SESSION_DURATION = 3 * MS_PER_HOUR; // 3 hours
+export const KIOSK_INACTIVITY_TIMEOUT = 60 * TIME.MS_PER_SECOND; // 60 seconds
 export const CODE_EXPIRATION_MINUTES = 30;
 export const VERIFICATION_CODE_LENGTH = 6;
 export const KIOSK_CODE_LENGTH = 6;
+export const VERIFICATION_CODE_EXPIRATION = 15 * MS_PER_MINUTE; // 15 minutes
+export const VERIFICATION_COOLDOWN = 60 * TIME.MS_PER_SECOND; // 60 seconds
+export const LOCKOUT_DURATION = 15 * MS_PER_MINUTE; // 15 minutes
+export const RATE_LIMIT_WINDOW = 60 * MS_PER_MINUTE; // 1 hour
 
 // ============================================================================
 // Pagination Constants
@@ -64,6 +90,17 @@ export const TIER_LIMITS = {
 } as const;
 
 // ============================================================================
+// Code Generation Constants
+// ============================================================================
+
+export const CODE_GENERATION = {
+  VERIFICATION_MIN: 100000,
+  VERIFICATION_MAX: 999999,
+  CONNECTION_MIN: 100000,
+  CONNECTION_MAX: 999999,
+} as const;
+
+// ============================================================================
 // Validation Constants
 // ============================================================================
 
@@ -74,6 +111,7 @@ export const VALIDATION = {
   },
   description: {
     maxLength: 500,
+    marketplaceMaxLength: 1000,
   },
   email: {
     maxLength: 255,
@@ -91,14 +129,28 @@ export const VALIDATION = {
   task: {
     maxOrder: 9999,
   },
+  auditLog: {
+    maxRecords: 1000, // Max audit logs to fetch for GDPR export
+  },
+} as const;
+
+// ============================================================================
+// Polling & Refresh Constants
+// ============================================================================
+
+export const POLLING = {
+  VISIBILITY_OVERRIDE: 30 * TIME.MS_PER_SECOND, // 30 seconds
+  KIOSK_UPDATES: 15 * TIME.MS_PER_SECOND, // 15 seconds
+  COUNTDOWN_TIMER: 1 * TIME.MS_PER_SECOND, // 1 second
+  ROLE_UPDATES_CHECK: 5 * MS_PER_MINUTE, // 5 minutes ago threshold
 } as const;
 
 // ============================================================================
 // UI Constants
 // ============================================================================
 
-export const TOAST_DURATION = 3000; // 3 seconds
-export const CONFETTI_DURATION = 3000; // 3 seconds
+export const TOAST_DURATION = 3 * TIME.MS_PER_SECOND; // 3 seconds
+export const CONFETTI_DURATION = 3 * TIME.MS_PER_SECOND; // 3 seconds
 export const DEBOUNCE_DELAY = 300; // milliseconds
 
 // ============================================================================
@@ -180,9 +232,23 @@ export const MARKETPLACE = {
 // ============================================================================
 
 export const API = {
-  timeout: 30000, // 30 seconds
+  timeout: 30 * TIME.MS_PER_SECOND, // 30 seconds
   retryAttempts: 3,
-  retryDelay: 1000, // 1 second
+  retryDelay: 1 * TIME.MS_PER_SECOND, // 1 second
+} as const;
+
+// ============================================================================
+// Rate Limiting Constants
+// ============================================================================
+
+export const RATE_LIMITS = {
+  AUTH: { limit: 5, windowMs: 2 * MS_PER_MINUTE },
+  PASSWORD_RESET: { limit: 3, windowMs: 15 * MS_PER_MINUTE },
+  VERIFICATION: { limit: 5, windowMs: 5 * MS_PER_MINUTE },
+  KIOSK: { limit: 10, windowMs: 1 * MS_PER_HOUR },
+  API: { limit: 100, windowMs: 1 * MS_PER_MINUTE },
+  GLOBAL: { limit: 1000, windowMs: 1 * MS_PER_MINUTE },
+  CLEANUP_INTERVAL: 60 * TIME.MS_PER_SECOND, // 1 minute
 } as const;
 
 // ============================================================================
