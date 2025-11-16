@@ -360,7 +360,7 @@ export const kioskRouter = router({
 
       // Check entry limits
       if (!isWithinEntryLimit(entryNumber, task.type as any)) {
-        const maxEntries = task.type === 'MULTIPLE_CHECKIN' ? 9 : 99;
+        const maxEntries = task.type === 'MULTIPLE_CHECKIN' ? 9 : 20;
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `Maximum ${maxEntries} check-ins reached for this period`

@@ -352,7 +352,7 @@ export const taskRouter = router({
 
       // Check entry limits
       if (!isWithinEntryLimit(entryNumber, task.type)) {
-        const maxEntries = task.type === TaskType.MULTIPLE_CHECKIN ? 9 : 99;
+        const maxEntries = task.type === TaskType.MULTIPLE_CHECKIN ? 9 : 20;
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `Maximum ${maxEntries} check-ins reached for this period`

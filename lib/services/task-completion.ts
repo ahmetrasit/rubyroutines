@@ -77,7 +77,7 @@ export function isWithinEntryLimit(entryNumber: number, taskType: TaskType): boo
     return entryNumber <= 9;
   }
   if (taskType === TaskType.PROGRESS) {
-    return entryNumber < 100; // Max 99 entries
+    return entryNumber <= 20; // Max 20 entries
   }
   return true; // SIMPLE has no limit (but should only have 1 per period)
 }
