@@ -51,15 +51,29 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
 
   // Flatten all tasks from all routines assigned to this person
   const tasks: Task[] = person?.assignments?.flatMap((assignment: any) =>
-    assignment.routine.tasks.map((task: any) => ({
-      ...task,
-      routineName: assignment.routine.name,
-      // Add aggregation data that would normally come from kiosk query
-      isComplete: false, // TODO: calculate from completions
-      completionCount: 0, // TODO: calculate from completions
-      entryNumber: 0,
-      summedValue: 0
-    }))
+    assignment.routine.tasks.map((task: any) => {
+      // Get today's completions for this task
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayCompletions = (task.completions || []).filter((c: any) => {
+        const completedDate = new Date(c.completedAt);
+        completedDate.setHours(0, 0, 0, 0);
+        return completedDate.getTime() === today.getTime();
+      });
+
+      const lastCompletion = todayCompletions[0];
+      const isComplete = task.type === 'SIMPLE' && todayCompletions.length > 0;
+
+      return {
+        ...task,
+        routineName: assignment.routine.name,
+        isComplete,
+        completionCount: todayCompletions.length,
+        entryNumber: lastCompletion?.entryNumber || todayCompletions.length,
+        summedValue: lastCompletion?.summedValue || 0,
+        completions: todayCompletions, // Pass today's completions for undo functionality
+      };
+    })
   ) || [];
 
   const completeMutation = trpc.task.complete.useMutation({

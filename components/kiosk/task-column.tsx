@@ -205,19 +205,13 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                 {feedbackMessages[task.id]}
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-green-500 transition-all"
-                  style={{ width: `${Math.min(100, task.progress || 0)}%` }}
-                />
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900">
+                Total: {task.summedValue || task.totalValue || 0} {task.unit}
               </div>
-              <span className="text-sm font-semibold text-gray-700 whitespace-nowrap">
-                {task.summedValue || task.totalValue || 0} {task.unit}
-              </span>
-            </div>
-            <div className="text-xs text-gray-500 text-center">
-              Entry #{task.entryNumber || task.completionCount || 0}
+              <div className="text-xs text-gray-500 mt-1">
+                Entry #{task.entryNumber || task.completionCount || 0}
+              </div>
             </div>
           </div>
         );
