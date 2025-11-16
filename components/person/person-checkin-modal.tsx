@@ -11,6 +11,7 @@ import { TaskType } from '@/lib/types/prisma-enums';
 import { useToast } from '@/components/ui/toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
+import { getResetPeriodStart } from '@/lib/services/reset-period';
 
 interface Task {
   id: string;
@@ -52,26 +53,28 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   // Flatten all tasks from all routines assigned to this person
   const tasks: Task[] = person?.assignments?.flatMap((assignment: any) =>
     assignment.routine.tasks.map((task: any) => {
-      // Get today's completions for this task
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayCompletions = (task.completions || []).filter((c: any) => {
-        const completedDate = new Date(c.completedAt);
-        completedDate.setHours(0, 0, 0, 0);
-        return completedDate.getTime() === today.getTime();
+      // Get the reset period start for this routine
+      const resetPeriodStart = getResetPeriodStart(
+        assignment.routine.resetPeriod,
+        assignment.routine.resetDay
+      );
+
+      // Filter completions by reset period (not just today)
+      const periodCompletions = (task.completions || []).filter((c: any) => {
+        return new Date(c.completedAt) >= resetPeriodStart;
       });
 
-      const lastCompletion = todayCompletions[0];
-      const isComplete = task.type === 'SIMPLE' && todayCompletions.length > 0;
+      const lastCompletion = periodCompletions[0];
+      const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
 
       return {
         ...task,
         routineName: assignment.routine.name,
         isComplete,
-        completionCount: todayCompletions.length,
-        entryNumber: lastCompletion?.entryNumber || todayCompletions.length,
+        completionCount: periodCompletions.length,
+        entryNumber: lastCompletion?.entryNumber || periodCompletions.length,
         summedValue: lastCompletion?.summedValue || 0,
-        completions: todayCompletions, // Pass today's completions for undo functionality
+        completions: periodCompletions, // Pass period completions for undo functionality
       };
     })
   ) || [];

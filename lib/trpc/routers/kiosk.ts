@@ -187,7 +187,7 @@ export const kioskRouter = router({
     }),
 
   /**
-   * Get today's tasks for person in kiosk mode (public)
+   * Get tasks for person in kiosk mode (public)
    */
   getPersonTasks: publicProcedure
     .input(z.object({
@@ -204,11 +204,6 @@ export const kioskRouter = router({
           message: validation.error || 'Invalid kiosk session'
         });
       }
-      const date = input.date || new Date();
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
 
       // Get person's routines and tasks
       const person = await ctx.prisma.person.findUnique({
@@ -226,13 +221,10 @@ export const kioskRouter = router({
                     include: {
                       completions: {
                         where: {
-                          personId: input.personId,
-                          completedAt: {
-                            gte: startOfDay,
-                            lte: endOfDay
-                          }
+                          personId: input.personId
                         },
-                        orderBy: { completedAt: 'desc' }
+                        orderBy: { completedAt: 'desc' },
+                        take: 10 // Get last 10 completions for filtering by reset period
                       }
                     },
                     orderBy: { order: 'asc' }
@@ -254,12 +246,23 @@ export const kioskRouter = router({
       // Flatten tasks with completion status
       const tasks = person.assignments.flatMap((assignment: any) =>
         assignment.routine.tasks.map((task: any) => {
-          const lastCompletion = task.completions[0];
+          // Calculate reset period start for this routine
+          const resetPeriodStart = getResetPeriodStart(
+            assignment.routine.resetPeriod,
+            assignment.routine.resetDay
+          );
+
+          // Filter completions by reset period
+          const periodCompletions = task.completions.filter((c: any) =>
+            new Date(c.completedAt) >= resetPeriodStart
+          );
+
+          const lastCompletion = periodCompletions[0];
           return {
             ...task,
             routineName: assignment.routine.name,
-            isCompleted: task.completions.length > 0,
-            completionCount: task.completions.length,
+            isCompleted: periodCompletions.length > 0,
+            completionCount: periodCompletions.length,
             lastCompletedAt: lastCompletion?.completedAt,
             entryNumber: lastCompletion?.entryNumber,
             summedValue: lastCompletion?.summedValue
