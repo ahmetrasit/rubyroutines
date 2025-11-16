@@ -39,6 +39,7 @@ interface TaskColumnProps {
 export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPending }: TaskColumnProps) {
   const [progressValues, setProgressValues] = useState<Record<string, string>>({});
   const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
+  const [pendingTasks, setPendingTasks] = useState<Set<string>>(new Set());
 
   // Split tasks into incomplete and complete
   const incompleteTasks = tasks.filter(t => !t.isComplete);
@@ -64,10 +65,17 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
   }, [tasks, personId]);
 
   const handleComplete = (task: Task) => {
+    setPendingTasks(prev => new Set(prev).add(task.id));
+
     if (task.type === TaskType.PROGRESS) {
       const value = progressValues[task.id];
       if (!value || parseInt(value, 10) <= 0) {
         alert('Please enter a value');
+        setPendingTasks(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(task.id);
+          return newSet;
+        });
         return;
       }
       onComplete(task.id, value);
@@ -75,6 +83,15 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
     } else {
       onComplete(task.id);
     }
+
+    // Clear pending state after a delay (mutation should complete by then)
+    setTimeout(() => {
+      setPendingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(task.id);
+        return newSet;
+      });
+    }, 1000);
   };
 
   const handleUndo = (task: Task) => {
@@ -87,6 +104,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
   const renderTaskButton = (task: Task) => {
     const undoTime = undoTimers[task.id];
     const canUndo = task.type === TaskType.SIMPLE && task.isComplete && undoTime !== undefined && undoTime > 0;
+    const isTaskPending = pendingTasks.has(task.id);
 
     switch (task.type) {
       case TaskType.SIMPLE:
@@ -95,10 +113,10 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             size="sm"
             variant="outline"
             onClick={() => handleUndo(task)}
-            disabled={isPending}
-            className="w-full h-14 text-base rounded-xl"
+            disabled={isTaskPending}
+            className="w-full h-20 text-2xl rounded-full"
           >
-            <Undo2 className="h-4 w-4 mr-2" />
+            <Undo2 className="h-6 w-6 mr-3" />
             Undo ({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})
           </Button>
         ) : task.isComplete ? (
@@ -106,19 +124,21 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             size="sm"
             variant="outline"
             disabled
-            className="w-full h-14 text-base rounded-xl bg-green-50 border-green-300 text-green-700"
+            className="w-full h-20 text-2xl rounded-full bg-green-50 border-green-300 text-green-700 opacity-70"
           >
-            <Check className="h-5 w-5 mr-2" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-green-600 bg-green-100 mr-3 flex-shrink-0">
+              <Check className="h-5 w-5 text-green-700" />
+            </div>
             {task.name}
           </Button>
         ) : (
           <Button
             size="sm"
             onClick={() => handleComplete(task)}
-            disabled={isPending}
-            className="w-full h-14 text-base rounded-xl"
+            disabled={isTaskPending}
+            className="w-full h-20 text-2xl rounded-full"
           >
-            <Check className="h-4 w-4 mr-2" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-full border-2 border-gray-400 mr-3 flex-shrink-0"></div>
             {task.name}
           </Button>
         );
@@ -128,7 +148,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
           <Button
             size="sm"
             onClick={() => handleComplete(task)}
-            disabled={isPending}
+            disabled={isTaskPending}
             className="w-full h-16 text-lg font-semibold rounded-xl"
           >
             <Plus className="h-5 w-5 mr-2 flex-shrink-0" />
@@ -155,7 +175,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
               <Button
                 size="sm"
                 onClick={() => handleComplete(task)}
-                disabled={isPending}
+                disabled={isTaskPending}
                 className="h-14 px-6 text-base whitespace-nowrap rounded-xl"
               >
                 <Plus className="h-5 w-5 mr-2" />
@@ -188,7 +208,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             key={task.id}
             className="bg-white rounded-xl shadow-md p-3 hover:shadow-lg transition-shadow"
           >
-            {task.type !== TaskType.MULTIPLE_CHECKIN && (
+            {task.type === TaskType.PROGRESS && (
               <div className="mb-2">
                 <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
                 {task.description && (
@@ -209,9 +229,9 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             {completeTasks.map((task) => (
               <div
                 key={task.id}
-                className="bg-white rounded-xl shadow-md p-3 opacity-50 transition-shadow"
+                className="bg-white rounded-xl shadow-md p-3 transition-shadow"
               >
-                {task.type !== TaskType.MULTIPLE_CHECKIN && (
+                {task.type === TaskType.PROGRESS && (
                   <div className="mb-2">
                     <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
                     {task.description && (
