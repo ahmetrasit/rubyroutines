@@ -52,6 +52,85 @@ export function getCompletionCount(
 }
 
 /**
+ * Calculate the next entry number for a task completion
+ * @param completions Existing completions in the current period
+ * @param taskType Type of task (MULTI max 9, PROGRESS max 99)
+ * @returns Next entry number (1-based)
+ */
+export function calculateEntryNumber(
+  completions: Array<{ completedAt: Date }>,
+  resetDate: Date,
+  taskType: TaskType
+): number {
+  const periodCompletions = completions.filter((c) => c.completedAt >= resetDate);
+  return periodCompletions.length + 1;
+}
+
+/**
+ * Validate entry number limits based on task type
+ * @param entryNumber The calculated entry number
+ * @param taskType Type of task
+ * @returns true if within limits
+ */
+export function isWithinEntryLimit(entryNumber: number, taskType: TaskType): boolean {
+  if (taskType === TaskType.MULTIPLE_CHECKIN) {
+    return entryNumber <= 9;
+  }
+  if (taskType === TaskType.PROGRESS) {
+    return entryNumber < 100; // Max 99 entries
+  }
+  return true; // SIMPLE has no limit (but should only have 1 per period)
+}
+
+/**
+ * Calculate summed value for PROGRESS tasks
+ * @param completions Existing completions in the current period
+ * @param resetDate Start of current period
+ * @param newValue New value being added
+ * @returns Cumulative sum including new value
+ */
+export function calculateSummedValue(
+  completions: Array<{ value: string | null; completedAt: Date }>,
+  resetDate: Date,
+  newValue: string
+): number {
+  const periodCompletions = completions.filter((c) => c.completedAt >= resetDate);
+
+  const existingSum = periodCompletions.reduce((sum, c) => {
+    const value = parseFloat(c.value || '0');
+    return sum + (isNaN(value) ? 0 : value);
+  }, 0);
+
+  const parsedNewValue = parseFloat(newValue);
+  return existingSum + (isNaN(parsedNewValue) ? 0 : parsedNewValue);
+}
+
+/**
+ * Validate PROGRESS task value (must be integer 1-999)
+ */
+export function validateProgressValue(value: string): { valid: boolean; error?: string } {
+  const parsed = parseInt(value, 10);
+
+  if (isNaN(parsed)) {
+    return { valid: false, error: 'Value must be a number' };
+  }
+
+  if (parsed.toString() !== value) {
+    return { valid: false, error: 'Value must be an integer (no decimals)' };
+  }
+
+  if (parsed < 1) {
+    return { valid: false, error: 'Value must be at least 1' };
+  }
+
+  if (parsed > 999) {
+    return { valid: false, error: 'Value cannot exceed 999' };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Calculate progress percentage for PROGRESS tasks
  */
 export function calculateProgress(

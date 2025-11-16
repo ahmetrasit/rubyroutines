@@ -309,8 +309,10 @@ model TaskCompletion {
   taskId      String
   personId    String
   completedAt DateTime @default(now())
-  value       String?  // For PROGRESS type
+  value       String?  // For PROGRESS type - stores integer as string
   notes       String?
+  entryNumber Int      @default(1) // Sequential number within period (1-9 for MULTI, 1-99 for PROGRESS)
+  summedValue Float?   // Cumulative sum for PROGRESS type within period
   createdAt   DateTime @default(now())
 
   // Relations
@@ -320,6 +322,7 @@ model TaskCompletion {
   @@index([taskId])
   @@index([personId])
   @@index([completedAt])
+  @@index([taskId, personId, completedAt]) // Composite index for period queries
   @@map("task_completions")
 }
 

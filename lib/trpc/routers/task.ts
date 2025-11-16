@@ -14,7 +14,14 @@ import {
   getTaskCompletionsSchema,
 } from '@/lib/validation/task';
 import { checkTierLimit, mapDatabaseLimitsToComponentFormat } from '@/lib/services/tier-limits';
-import { canUndoCompletion, getTaskAggregation } from '@/lib/services/task-completion';
+import {
+  canUndoCompletion,
+  getTaskAggregation,
+  calculateEntryNumber,
+  isWithinEntryLimit,
+  calculateSummedValue,
+  validateProgressValue
+} from '@/lib/services/task-completion';
 import { calculateNextReset } from '@/lib/services/reset-period';
 import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
 
@@ -298,6 +305,18 @@ export const taskRouter = router({
       await verifyTaskOwnership(ctx.user.id, input.taskId, ctx.prisma);
       const task = await ctx.prisma.task.findUnique({
         where: { id: input.taskId },
+        include: {
+          routine: {
+            select: {
+              resetPeriod: true,
+              resetDay: true
+            }
+          },
+          completions: {
+            where: { personId: input.personId },
+            orderBy: { completedAt: 'desc' }
+          }
+        }
       });
 
       if (!task) {
@@ -308,11 +327,42 @@ export const taskRouter = router({
       }
 
       // Validate value for PROGRESS tasks
-      if (task.type === TaskType.PROGRESS && !input.value) {
+      if (task.type === TaskType.PROGRESS) {
+        if (!input.value) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Progress tasks require a value',
+          });
+        }
+
+        const validation = validateProgressValue(input.value);
+        if (!validation.valid) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: validation.error || 'Invalid progress value'
+          });
+        }
+      }
+
+      // Calculate reset date for current period
+      const resetDate = calculateNextReset(task.routine.resetPeriod, task.routine.resetDay);
+
+      // Calculate entry number for this completion
+      const entryNumber = calculateEntryNumber(task.completions, resetDate, task.type);
+
+      // Check entry limits
+      if (!isWithinEntryLimit(entryNumber, task.type)) {
+        const maxEntries = task.type === TaskType.MULTIPLE_CHECKIN ? 9 : 99;
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Progress tasks require a value',
+          message: `Maximum ${maxEntries} check-ins reached for this period`
         });
+      }
+
+      // Calculate summed value for PROGRESS tasks
+      let summedValue: number | undefined = undefined;
+      if (task.type === TaskType.PROGRESS && input.value) {
+        summedValue = calculateSummedValue(task.completions, resetDate, input.value);
       }
 
       const completion = await ctx.prisma.taskCompletion.create({
@@ -321,6 +371,8 @@ export const taskRouter = router({
           personId: input.personId,
           value: input.value,
           notes: input.notes,
+          entryNumber,
+          summedValue
         },
         include: {
           task: true,

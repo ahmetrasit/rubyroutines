@@ -8,6 +8,13 @@ import {
   markCodeAsUsed,
   validateKioskSession
 } from '@/lib/services/kiosk-code';
+import {
+  calculateEntryNumber,
+  isWithinEntryLimit,
+  calculateSummedValue,
+  validateProgressValue
+} from '@/lib/services/task-completion';
+import { calculateNextReset } from '@/lib/services/reset-period';
 import { TRPCError } from '@trpc/server';
 import { kioskRateLimitedProcedure } from '../middleware/ratelimit';
 
@@ -246,13 +253,18 @@ export const kioskRouter = router({
 
       // Flatten tasks with completion status
       const tasks = person.assignments.flatMap((assignment: any) =>
-        assignment.routine.tasks.map((task: any) => ({
-          ...task,
-          routineName: assignment.routine.name,
-          isCompleted: task.completions.length > 0,
-          completionCount: task.completions.length,
-          lastCompletedAt: task.completions[0]?.completedAt
-        }))
+        assignment.routine.tasks.map((task: any) => {
+          const lastCompletion = task.completions[0];
+          return {
+            ...task,
+            routineName: assignment.routine.name,
+            isCompleted: task.completions.length > 0,
+            completionCount: task.completions.length,
+            lastCompletedAt: lastCompletion?.completedAt,
+            entryNumber: lastCompletion?.entryNumber,
+            summedValue: lastCompletion?.summedValue
+          };
+        })
       );
 
       return {
@@ -282,7 +294,19 @@ export const kioskRouter = router({
         });
       }
       const task = await ctx.prisma.task.findUnique({
-        where: { id: input.taskId }
+        where: { id: input.taskId },
+        include: {
+          routine: {
+            select: {
+              resetPeriod: true,
+              resetDay: true
+            }
+          },
+          completions: {
+            where: { personId: input.personId },
+            orderBy: { completedAt: 'desc' }
+          }
+        }
       });
 
       if (!task) {
@@ -293,11 +317,21 @@ export const kioskRouter = router({
       }
 
       // Validate value for PROGRESS tasks
-      if (task.type === 'PROGRESS' && !input.value) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Progress value required'
-        });
+      if (task.type === 'PROGRESS') {
+        if (!input.value) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Progress value required'
+          });
+        }
+
+        const validation = validateProgressValue(input.value);
+        if (!validation.valid) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: validation.error || 'Invalid progress value'
+          });
+        }
       }
 
       // Get person to access roleId for timestamp update
@@ -310,6 +344,21 @@ export const kioskRouter = router({
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Person not found'
+        });
+      }
+
+      // Calculate reset date for current period
+      const resetDate = calculateNextReset(task.routine.resetPeriod, task.routine.resetDay);
+
+      // Calculate entry number for this completion
+      const entryNumber = calculateEntryNumber(task.completions, resetDate, task.type as any);
+
+      // Check entry limits
+      if (!isWithinEntryLimit(entryNumber, task.type as any)) {
+        const maxEntries = task.type === 'MULTIPLE_CHECKIN' ? 9 : 99;
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Maximum ${maxEntries} check-ins reached for this period`
         });
       }
 
@@ -339,6 +388,12 @@ export const kioskRouter = router({
         }
       }
 
+      // Calculate summed value for PROGRESS tasks
+      let summedValue: number | undefined = undefined;
+      if (task.type === 'PROGRESS' && input.value) {
+        summedValue = calculateSummedValue(task.completions, resetDate, input.value);
+      }
+
       // Create completion and update role + person timestamps in a transaction
       const now = new Date();
       const [completion] = await ctx.prisma.$transaction([
@@ -348,7 +403,9 @@ export const kioskRouter = router({
             personId: input.personId,
             completedAt: now,
             value: input.value,
-            notes: input.notes
+            notes: input.notes,
+            entryNumber,
+            summedValue
           }
         }),
         ctx.prisma.role.update({
