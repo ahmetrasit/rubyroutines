@@ -368,6 +368,7 @@ export default function KioskModePage() {
             size="lg"
             variant="outline"
             onClick={() => handleUndo(task)}
+            disabled={undoMutation.isPending}
             className="w-full h-16 text-lg"
           >
             <Undo2 className="h-6 w-6 mr-3" />
@@ -377,7 +378,7 @@ export default function KioskModePage() {
           <Button
             size="lg"
             onClick={() => handleComplete(task)}
-            disabled={task.isComplete}
+            disabled={task.isComplete || completeMutation.isPending}
             className={`w-full h-16 text-lg ${task.isComplete ? 'bg-green-600' : ''}`}
           >
             <Check className="h-6 w-6 mr-3" />
@@ -390,6 +391,7 @@ export default function KioskModePage() {
           <Button
             size="lg"
             onClick={() => handleComplete(task)}
+            disabled={completeMutation.isPending}
             className="w-full h-16 text-lg"
           >
             <Plus className="h-6 w-6 mr-3" />
@@ -416,6 +418,7 @@ export default function KioskModePage() {
               <Button
                 size="lg"
                 onClick={() => handleComplete(task)}
+                disabled={completeMutation.isPending}
                 className="h-16 px-8 text-lg"
               >
                 <Plus className="h-6 w-6 mr-2" />

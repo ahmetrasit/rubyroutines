@@ -129,6 +129,9 @@ export default function KioskTasksPage() {
   });
 
   const handleComplete = (taskId: string, value?: string) => {
+    // Prevent double submissions during mutation
+    if (completeMutation.isPending) return;
+
     completeMutation.mutate({
       kioskCodeId: sessionData!.codeId,
       taskId,
@@ -138,6 +141,9 @@ export default function KioskTasksPage() {
   };
 
   const handleUndo = (completionId: string) => {
+    // Prevent double submissions during mutation
+    if (undoMutation.isPending) return;
+
     undoMutation.mutate({ kioskCodeId: sessionData!.codeId, completionId });
   };
 
