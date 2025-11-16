@@ -48,6 +48,15 @@ export const personRouter = router({
                 include: {
                   tasks: {
                     where: { status: EntityStatus.ACTIVE },
+                    include: {
+                      completions: {
+                        where: {
+                          personId: input.id,
+                        },
+                        orderBy: { completedAt: 'desc' },
+                        take: 10, // Last 10 completions
+                      },
+                    },
                     orderBy: { order: 'asc' },
                   },
                 },

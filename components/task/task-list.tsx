@@ -76,35 +76,28 @@ export function TaskList({ routineId, personId = '', effectiveLimits = null }: T
             key={task.id}
             task={task}
             personId={personId}
-            onMoveUp={() => moveTask(index, 'up')}
-            onMoveDown={() => moveTask(index, 'down')}
-            canMoveUp={index > 0 && !reorderMutation.isPending}
-            canMoveDown={index < tasks.length - 1 && !reorderMutation.isPending}
           />
         ))}
 
         {/* Add Task Card - Always visible */}
         <div
           onClick={canAddTask ? () => setShowForm(true) : undefined}
-          className={`bg-white rounded-lg border-2 border-dashed p-4 flex items-center justify-center min-h-[150px] ${
+          className={`bg-white rounded-lg border-2 border-dashed p-2 flex items-center justify-center min-h-[40px] ${
             canAddTask
               ? 'border-gray-300 cursor-pointer transition-all hover:border-primary-400 hover:bg-gray-50'
               : 'border-gray-200 cursor-not-allowed bg-gray-50'
           }`}
         >
-          <div className="flex flex-col items-center text-center gap-2">
+          <div className="flex items-center gap-2">
             {canAddTask ? (
               <>
-                <Plus className="h-8 w-8 text-gray-400" />
+                <Plus className="h-5 w-5 text-gray-400" />
                 <span className="text-sm font-medium text-gray-400">Add Task</span>
               </>
             ) : (
-              <>
-                <div className="text-2xl mb-1">🔒</div>
-                <span className="text-xs font-medium text-gray-500">Upgrade to increase</span>
-                <span className="text-xs text-gray-400">your task limit</span>
-                <span className="text-xs text-gray-400 mt-1">({currentTaskCount}/{taskLimit})</span>
-              </>
+              <span className="text-sm text-gray-500">
+                {currentTaskCount}/{taskLimit} tasks
+              </span>
             )}
           </div>
         </div>

@@ -80,22 +80,26 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const taskData = {
-      name,
-      description: description || undefined,
-      type,
-      unit: type === TaskType.PROGRESS && unit ? unit : undefined,
-      isSmart,
-      emoji,
-      color,
-    };
-
     if (task) {
+      // When editing, allow changing emoji, color, and description
       updateMutation.mutate({
         id: task.id,
-        ...taskData,
+        emoji,
+        color,
+        description: description || undefined,
       });
     } else if (routineId) {
+      // When creating, all fields are available
+      const taskData = {
+        name,
+        description: description || undefined,
+        type,
+        unit: type === TaskType.PROGRESS && unit ? unit : undefined,
+        isSmart,
+        emoji,
+        color,
+      };
+
       createMutation.mutate({
         routineId,
         ...taskData,
@@ -113,53 +117,91 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Emoji and Name Row */}
-          <div className="grid grid-cols-12 gap-3">
-            <div className="col-span-2 relative">
-              <Label htmlFor="emoji">Icon</Label>
-              <button
-                type="button"
-                onClick={() => togglePicker('emoji')}
-                className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
-              >
-                <RenderIconEmoji value={emoji || '✅'} className="h-6 w-6" />
-              </button>
-              {isPickerOpen('emoji') && (
-                <div ref={pickerRef} className="absolute z-50 top-full mt-2 left-0">
-                  <IconEmojiPicker
-                    selectedValue={emoji || '✅'}
-                    onSelect={setEmoji}
-                    onClose={closePicker}
-                  />
-                </div>
-              )}
-            </div>
-            <div className="col-span-10">
-              <Label htmlFor="name">Task Name *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                maxLength={200}
-                placeholder="Brush teeth"
-                className="mt-1"
-              />
-            </div>
+          {/* Emoji Picker - Always editable */}
+          <div className="relative">
+            <Label htmlFor="emoji">Icon</Label>
+            <button
+              type="button"
+              onClick={() => togglePicker('emoji')}
+              className="mt-2 w-full h-12 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
+            >
+              <RenderIconEmoji value={emoji || '✅'} className="h-8 w-8" />
+            </button>
+            {isPickerOpen('emoji') && (
+              <div ref={pickerRef} className="absolute z-50 top-full mt-2 left-0">
+                <IconEmojiPicker
+                  selectedValue={emoji || '✅'}
+                  onSelect={setEmoji}
+                  onClose={closePicker}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Description - Single Line */}
-          <div>
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={200}
-              placeholder="Brush for at least 2 minutes..."
-              className="mt-1"
-            />
-          </div>
+          {/* Show name and type as read-only when editing, but allow description editing */}
+          {task ? (
+            <>
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="mb-3">
+                  <Label className="text-xs text-gray-500">Task Name (cannot be changed)</Label>
+                  <p className="text-base font-semibold text-gray-900 mt-1">{name}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Task Type (cannot be changed)</Label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">
+                    {type === TaskType.SIMPLE && 'Simple (Once per period)'}
+                    {type === TaskType.MULTIPLE_CHECKIN && 'Multiple Check-in (Track count)'}
+                    {type === TaskType.PROGRESS && `Progress (Track ${unit})`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Description - Editable when editing */}
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  maxLength={25}
+                  placeholder="Add a brief description..."
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">{description.length}/25 characters</p>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Name - Only when creating */}
+              <div>
+                <Label htmlFor="name">Task Name *</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  maxLength={25}
+                  placeholder="Brush teeth"
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">{name.length}/25 characters</p>
+              </div>
+
+              {/* Description - Only when creating */}
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  maxLength={25}
+                  placeholder="2 minutes, twice daily"
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">{description.length}/25 characters</p>
+              </div>
+            </>
+          )}
 
           {/* Color Picker */}
           <div className="relative">
@@ -186,98 +228,76 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
             )}
           </div>
 
-          {/* Task Type - Label and Select on Same Row */}
-          <div className="flex items-center gap-3">
-            <Label htmlFor="type" className="whitespace-nowrap">Task Type:</Label>
-            <select
-              id="type"
-              value={type}
-              onChange={(e) => setType(e.target.value as TaskType)}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2"
-            >
-              <option value={TaskType.SIMPLE}>Simple (Once per period)</option>
-              <option value={TaskType.MULTIPLE_CHECKIN}>
-                Multiple Check-in (Track count)
-              </option>
-              <option value={TaskType.PROGRESS}>Progress (Track value)</option>
-            </select>
-          </div>
-
-          {type === TaskType.SIMPLE && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                Simple tasks can be checked off once per reset period and can be undone within 5 minutes.
-              </p>
-            </div>
-          )}
-
-          {type === TaskType.MULTIPLE_CHECKIN && (
-            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-              <p className="text-sm text-purple-800">
-                Multiple check-in tasks can be completed multiple times per reset period.
-              </p>
-            </div>
-          )}
-
-          {type === TaskType.PROGRESS && (
-            <div>
-              <Label htmlFor="unit">Unit (e.g., pages, minutes) *</Label>
-              <Input
-                id="unit"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                required
-                maxLength={50}
-                placeholder="pages"
-                className="mt-1"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                What unit are you tracking? (e.g., pages, minutes, cups)
-              </p>
-            </div>
-          )}
-
-          {/* Smart Task Checkbox - No Subtitle */}
-          <div className="border-t pt-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="isSmart"
-                checked={isSmart}
-                onChange={(e) => setIsSmart(e.target.checked)}
-                className="w-4 h-4 text-blue-500 rounded"
-              />
-              <Label htmlFor="isSmart" className="cursor-pointer">
-                Make this a Smart Task
-              </Label>
-            </div>
-
-            {task && isSmart && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-blue-800 mb-2">
-                  <strong>Condition Management</strong>
-                </p>
-                <p className="text-xs text-blue-700 mb-3">
-                  Define when this task should appear. Task will be visible when conditions are met.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-blue-700 border-blue-300 hover:bg-blue-100"
-                  onClick={() => {
-                    // FEATURE: Visual condition builder UI planned for future release
-                    toast({
-                      title: 'Coming Soon',
-                      description: 'Condition builder UI will be available soon',
-                    });
-                  }}
+          {/* Task Type and related fields - Only shown when creating */}
+          {!task && (
+            <>
+              <div className="flex items-center gap-3">
+                <Label htmlFor="type" className="whitespace-nowrap">Task Type:</Label>
+                <select
+                  id="type"
+                  value={type}
+                  onChange={(e) => setType(e.target.value as TaskType)}
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2"
                 >
-                  {task.conditionId ? 'Edit Conditions' : 'Set Conditions'}
-                </Button>
+                  <option value={TaskType.SIMPLE}>Simple (Once per period)</option>
+                  <option value={TaskType.MULTIPLE_CHECKIN}>
+                    Multiple Check-in (Track count)
+                  </option>
+                  <option value={TaskType.PROGRESS}>Progress (Track value)</option>
+                </select>
               </div>
-            )}
-          </div>
+
+              {type === TaskType.SIMPLE && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    Simple tasks can be checked off once per reset period and can be undone within 5 minutes.
+                  </p>
+                </div>
+              )}
+
+              {type === TaskType.MULTIPLE_CHECKIN && (
+                <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                  <p className="text-sm text-purple-800">
+                    Multiple check-in tasks can be completed multiple times per reset period.
+                  </p>
+                </div>
+              )}
+
+              {type === TaskType.PROGRESS && (
+                <div>
+                  <Label htmlFor="unit">Unit (e.g., pages, minutes) *</Label>
+                  <Input
+                    id="unit"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    required
+                    maxLength={50}
+                    placeholder="pages"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    What unit are you tracking? (e.g., pages, minutes, cups)
+                  </p>
+                </div>
+              )}
+
+              {/* Smart Task Checkbox - Only when creating */}
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="isSmart"
+                    checked={isSmart}
+                    onChange={(e) => setIsSmart(e.target.checked)}
+                    className="w-4 h-4 text-blue-500 rounded"
+                  />
+                  <Label htmlFor="isSmart" className="cursor-pointer">
+                    Make this a Smart Task
+                  </Label>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Preview */}
           <div className="border-t pt-4">

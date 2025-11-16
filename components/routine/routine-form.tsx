@@ -49,15 +49,30 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const [visibility, setVisibility] = useState<Visibility>(
     routine?.visibility || Visibility.ALWAYS
   );
+  const [visibleDays, setVisibleDays] = useState<number[]>(routine?.visibleDays || []);
+  const [daySelection, setDaySelection] = useState<'everyday' | 'specific'>(
+    routine?.visibleDays && routine.visibleDays.length > 0 && routine.visibleDays.length < 7 ? 'specific' : 'everyday'
+  );
+  const [timeSelection, setTimeSelection] = useState<'allday' | 'limited'>(
+    routine?.startTime && routine?.endTime ? 'limited' : 'allday'
+  );
   const [startTime, setStartTime] = useState<string>(routine?.startTime || '08:00');
   const [endTime, setEndTime] = useState<string>(routine?.endTime || '17:00');
   const [color, setColor] = useState<string>(routine?.color || '#3B82F6');
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [isSmart, setIsSmart] = useState(routine?.type === 'SMART' || false);
+  const [showConditionsModal, setShowConditionsModal] = useState(false);
 
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Fetch tier limits to check smart routine quota
+  const { data: tierLimits } = trpc.role.getTierLimits.useQuery(
+    { roleId: roleId! },
+    { enabled: !!roleId }
+  );
 
   // Reset visibility if it's invalid for Daily period
   useEffect(() => {
@@ -143,8 +158,27 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
 
     const finalName = emoji ? `${emoji} ${name}` : name;
 
-    // Only include time fields for Daily routines with Limited visibility
-    const shouldIncludeTime = resetPeriod === ResetPeriod.DAILY && visibility === Visibility.DAYS_OF_WEEK;
+    // Calculate visibleDays based on selection
+    let finalVisibleDays: number[] = [];
+    if (resetPeriod === ResetPeriod.WEEKLY) {
+      if (daySelection === 'specific') {
+        finalVisibleDays = visibleDays;
+        if (finalVisibleDays.length === 0) {
+          toast({
+            title: 'Day Selection Required',
+            description: 'Please select at least one day of the week.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      } else {
+        // everyday = all 7 days
+        finalVisibleDays = [0, 1, 2, 3, 4, 5, 6];
+      }
+    }
+
+    // Determine if time restriction should be included
+    const shouldIncludeTime = timeSelection === 'limited';
 
     // Validate time fields
     if (shouldIncludeTime && startTime && endTime) {
@@ -163,9 +197,11 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
         id: routine.id,
         name: finalName || undefined,
         description: description || null,
+        type: isSmart ? 'SMART' : 'REGULAR',
         resetPeriod,
         resetDay,
         visibility,
+        visibleDays: finalVisibleDays,
         startTime: shouldIncludeTime ? startTime : null,
         endTime: shouldIncludeTime ? endTime : null,
         color: color || null,
@@ -175,10 +211,11 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
         roleId,
         name: finalName,
         description: description || undefined,
+        type: isSmart ? 'SMART' : 'REGULAR',
         resetPeriod,
         resetDay,
         visibility,
-        visibleDays: [],
+        visibleDays: finalVisibleDays,
         personIds,
         startTime: shouldIncludeTime ? startTime : null,
         endTime: shouldIncludeTime ? endTime : null,
@@ -285,6 +322,7 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
             )}
           </div>
 
+          {/* Period Selection - Inline with Reset Day for WEEKLY */}
           <div className="flex items-center gap-3">
             <Label htmlFor="resetPeriod" className="whitespace-nowrap">Period:</Label>
             <select
@@ -295,108 +333,308 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
             >
               <option value={ResetPeriod.DAILY}>Daily</option>
               <option value={ResetPeriod.WEEKLY}>Weekly</option>
-              <option value={ResetPeriod.MONTHLY}>Monthly</option>
             </select>
+            {resetPeriod === ResetPeriod.WEEKLY && (
+              <>
+                <Label htmlFor="resetDay" className="whitespace-nowrap">Resets on:</Label>
+                <select
+                  id="resetDay"
+                  value={resetDay || 0}
+                  onChange={(e) => setResetDay(parseInt(e.target.value))}
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2"
+                >
+                  <option value={0}>Sunday</option>
+                  <option value={1}>Monday</option>
+                  <option value={2}>Tuesday</option>
+                  <option value={3}>Wednesday</option>
+                  <option value={4}>Thursday</option>
+                  <option value={5}>Friday</option>
+                  <option value={6}>Saturday</option>
+                </select>
+              </>
+            )}
           </div>
 
+          {/* Visibility Options for WEEKLY Period */}
           {resetPeriod === ResetPeriod.WEEKLY && (
-            <div>
-              <Label htmlFor="resetDay">Reset Day *</Label>
-              <select
-                id="resetDay"
-                value={resetDay || 0}
-                onChange={(e) => setResetDay(parseInt(e.target.value))}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-              >
-                <option value={0}>Sunday</option>
-                <option value={1}>Monday</option>
-                <option value={2}>Tuesday</option>
-                <option value={3}>Wednesday</option>
-                <option value={4}>Thursday</option>
-                <option value={5}>Friday</option>
-                <option value={6}>Saturday</option>
-              </select>
-            </div>
-          )}
+            <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
+              <div className="text-sm font-medium text-gray-900">Visibility</div>
 
-          {resetPeriod === ResetPeriod.MONTHLY && (
-            <div>
-              <Label htmlFor="resetDay">Reset Day *</Label>
-              <Input
-                id="resetDay"
-                type="number"
-                min={1}
-                max={28}
-                value={resetDay || 1}
-                onChange={(e) => setResetDay(parseInt(e.target.value))}
-                placeholder="1-28 or 99 for last day"
-              />
-              <p className="text-xs text-gray-500 mt-1">Use 99 for last day of month</p>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3">
-            <Label htmlFor="visibility" className="whitespace-nowrap">Visibility:</Label>
-            <select
-              id="visibility"
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value as Visibility)}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2"
-            >
-              <option value={Visibility.ALWAYS}>Always</option>
-              {resetPeriod === ResetPeriod.DAILY && (
-                <option value={Visibility.DAYS_OF_WEEK}>Limited</option>
-              )}
-              {resetPeriod !== ResetPeriod.DAILY && (
-                <>
-                  <option value={Visibility.DAYS_OF_WEEK}>Specific Days</option>
-                  <option value={Visibility.DATE_RANGE}>Date Range</option>
-                </>
-              )}
-            </select>
-          </div>
-
-          {/* Time Period Selection for Daily Limited Routines */}
-          {resetPeriod === ResetPeriod.DAILY && visibility === Visibility.DAYS_OF_WEEK && (
-            <div className="space-y-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-sm font-medium text-blue-900">Time Period</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="startTime" className="text-xs">Start Time</Label>
-                  <select
-                    id="startTime"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                  >
-                    {timeOptions.map((time) => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
+              {/* Day Selection */}
+              <div>
+                <Label className="text-xs mb-2 block">Which days?</Label>
+                <div className="flex gap-3 mb-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="daySelection"
+                      value="everyday"
+                      checked={daySelection === 'everyday'}
+                      onChange={() => setDaySelection('everyday')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Every day</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="daySelection"
+                      value="specific"
+                      checked={daySelection === 'specific'}
+                      onChange={() => setDaySelection('specific')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Specific days</span>
+                  </label>
                 </div>
-                <div>
-                  <Label htmlFor="endTime" className="text-xs">End Time</Label>
-                  <select
-                    id="endTime"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                  >
-                    {timeOptions.map((time) => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
+
+                {daySelection === 'specific' && (
+                  <div className="grid grid-cols-7 gap-2 mt-2">
+                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
+                      <label
+                        key={index}
+                        className={`flex items-center justify-center h-10 rounded-md border-2 cursor-pointer transition-colors ${
+                          visibleDays.includes(index)
+                            ? 'bg-blue-100 border-blue-500 text-blue-900'
+                            : 'border-gray-300 text-gray-700 hover:border-blue-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={visibleDays.includes(index)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setVisibleDays([...visibleDays, index].sort());
+                            } else {
+                              setVisibleDays(visibleDays.filter((d) => d !== index));
+                            }
+                          }}
+                          className="sr-only"
+                        />
+                        <span className="text-sm font-medium">{day}</span>
+                      </label>
                     ))}
-                  </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Time Selection */}
+              <div className="pt-3 border-t">
+                <Label className="text-xs mb-2 block">What time?</Label>
+                <div className="flex gap-3 mb-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="timeSelection"
+                      value="allday"
+                      checked={timeSelection === 'allday'}
+                      onChange={() => setTimeSelection('allday')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">All day</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="timeSelection"
+                      value="limited"
+                      checked={timeSelection === 'limited'}
+                      onChange={() => setTimeSelection('limited')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Limited time</span>
+                  </label>
+                </div>
+
+                {timeSelection === 'limited' && (
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div>
+                      <Label htmlFor="startTime" className="text-xs">Start</Label>
+                      <select
+                        id="startTime"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      >
+                        {timeOptions.map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label htmlFor="endTime" className="text-xs">End</Label>
+                      <select
+                        id="endTime"
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      >
+                        {timeOptions.map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Time Selection for DAILY Period */}
+          {resetPeriod === ResetPeriod.DAILY && (
+            <div className="space-y-3 p-4 bg-gray-50 rounded-lg border">
+              <Label className="text-xs mb-2 block">What time?</Label>
+              <div className="flex gap-3 mb-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="timeSelection"
+                    value="allday"
+                    checked={timeSelection === 'allday'}
+                    onChange={() => setTimeSelection('allday')}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">All day</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="timeSelection"
+                    value="limited"
+                    checked={timeSelection === 'limited'}
+                    onChange={() => setTimeSelection('limited')}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">Limited time</span>
+                </label>
+              </div>
+
+              {timeSelection === 'limited' && (
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <div>
+                    <Label htmlFor="startTime" className="text-xs">Start</Label>
+                    <select
+                      id="startTime"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    >
+                      {timeOptions.map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="endTime" className="text-xs">End</Label>
+                    <select
+                      id="endTime"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    >
+                      {timeOptions.map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Smart Routine Checkbox */}
+          <div className="border-t pt-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="isSmart"
+                checked={isSmart}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  // Check tier limit before allowing smart routine
+                  if (checked && tierLimits) {
+                    const currentSmartCount = tierLimits.usage?.smartRoutines || 0;
+                    const maxSmartRoutines = tierLimits.limits?.smart_routines || 0;
+
+                    if (currentSmartCount >= maxSmartRoutines) {
+                      toast({
+                        title: 'Limit Reached',
+                        description: 'Upgrade to add more smart routines',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+                  }
+                  setIsSmart(checked);
+                  if (checked) {
+                    setShowConditionsModal(true);
+                  }
+                }}
+                disabled={
+                  tierLimits &&
+                  !isSmart &&
+                  (tierLimits.usage?.smartRoutines || 0) >= (tierLimits.limits?.smart_routines || 0)
+                }
+                className="w-4 h-4 text-blue-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <Label htmlFor="isSmart" className="cursor-pointer">
+                Make this a Smart Routine
+              </Label>
+              {tierLimits &&
+                !isSmart &&
+                (tierLimits.usage?.smartRoutines || 0) >= (tierLimits.limits?.smart_routines || 0) && (
+                  <span className="text-xs text-gray-500 italic">
+                    (Upgrade to add more smart routines)
+                  </span>
+                )}
+            </div>
+
+            {isSmart && (
+              <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <p className="text-sm text-purple-800 mb-2">
+                  <strong>Smart Routine</strong>
+                </p>
+                <p className="text-xs text-purple-700 mb-3">
+                  This routine will be visible based on specific conditions. Set conditions to control when it appears.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-purple-700 border-purple-300 hover:bg-purple-100"
+                  onClick={() => {
+                    setShowConditionsModal(true);
+                  }}
+                >
+                  {routine?.type === 'SMART' ? 'Edit Conditions' : 'Set Conditions'}
+                </Button>
+              </div>
+            )}
+
+            {/* Conditions Modal Placeholder */}
+            {showConditionsModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                  <h3 className="text-lg font-bold mb-2">Conditions</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Condition builder coming soon. You can still create a smart routine, but conditions will need to be
+                    configured later.
+                  </p>
+                  <Button onClick={() => setShowConditionsModal(false)}>
+                    Got it
+                  </Button>
                 </div>
               </div>
-              <p className="text-xs text-blue-700">
-                Routine will be visible from {startTime} to {endTime} daily. Times are in 24-hour format.
-              </p>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={onClose}>
