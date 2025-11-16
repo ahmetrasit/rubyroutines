@@ -343,7 +343,7 @@ export default function KioskModePage() {
         expiresAt={new Date(sessionData.expiresAt)}
         onTimeout={handleTimeout}
       />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+      <div className="h-screen overflow-hidden bg-gradient-to-br from-blue-50 to-purple-50 p-6">
         <div className="h-[calc(100vh-3rem)] flex gap-6 items-center justify-center">
           {/* Screen Part 1: Person List - Only visible in group scope */}
           {isGroupScope && (
@@ -463,7 +463,7 @@ export default function KioskModePage() {
 
               {/* Screen Part 3: Tasks (Bottom 4/5) - Split by type horizontally */}
               <div
-                className="h-[80%] border-4 rounded-2xl bg-white p-4 overflow-hidden"
+                className="h-[80%] border-4 rounded-2xl bg-white p-4 overflow-auto"
                 style={{ borderColor: selectedPersonColor }}
                 onClick={resetInactivityTimer}
                 onScroll={resetInactivityTimer}
