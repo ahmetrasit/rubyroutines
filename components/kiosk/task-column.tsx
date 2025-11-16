@@ -112,7 +112,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
           <button
             onClick={() => handleUndo(task)}
             disabled={isTaskPending}
-            className="w-full text-left p-6 rounded-xl border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
+            className="w-full text-left p-6 rounded-full border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
           >
             <div className="flex items-center">
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-gray-300 bg-white mr-4 flex-shrink-0 transition-all">
@@ -125,7 +125,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
         ) : task.isComplete ? (
           <button
             disabled
-            className="w-full text-left p-6 rounded-xl border-2 transition-all bg-green-50 border-green-500 shadow-md opacity-70"
+            className="w-full text-left p-6 rounded-full border-2 transition-all bg-green-50 border-green-500 shadow-md opacity-70"
           >
             <div className="flex items-center">
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-green-500 bg-green-500 mr-4 flex-shrink-0 transition-all">
@@ -138,7 +138,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
           <button
             onClick={() => handleComplete(task)}
             disabled={isTaskPending}
-            className="w-full text-left p-6 rounded-xl border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
+            className="w-full text-left p-6 rounded-full border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
           >
             <div className="flex items-center">
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-gray-300 bg-white mr-4 flex-shrink-0 transition-all"></div>
@@ -152,7 +152,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
           <button
             onClick={() => handleComplete(task)}
             disabled={isTaskPending}
-            className="w-full text-left p-6 rounded-xl border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
+            className="w-full text-left p-6 rounded-full border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
           >
             <div className="flex items-center">
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-blue-300 bg-blue-50 mr-4 flex-shrink-0 transition-all">
