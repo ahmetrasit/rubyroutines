@@ -478,8 +478,8 @@ export default function KioskModePage() {
             <div className={`${selectedPersonId ? 'w-2/3' : 'w-full max-w-6xl'} border-4 border-blue-500 rounded-2xl bg-white p-6 overflow-auto`}>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-3xl font-bold text-gray-900">Who is checking-in?</h2>
-                <Button variant="outline" onClick={handleExit} size="lg" className="px-4">
-                  <LogOut className="h-5 w-5" />
+                <Button variant="outline" onClick={handleExit} size="lg" className="px-4" aria-label="Exit kiosk mode">
+                  <LogOut className="h-5 w-5" aria-hidden="true" />
                 </Button>
               </div>
               <div className="grid grid-cols-4 gap-4">
@@ -492,6 +492,8 @@ export default function KioskModePage() {
                     <button
                       key={person.id}
                       onClick={() => handlePersonSelect(person.id)}
+                      aria-label={`Select ${person.name}. Progress: ${progress.completed} of ${progress.total} tasks completed`}
+                      aria-pressed={isSelected}
                       className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-all transform hover:scale-105 active:scale-95 border-4 overflow-hidden ${
                         isSelected ? 'border-blue-500' : 'border-transparent'
                       }`}
@@ -516,6 +518,11 @@ export default function KioskModePage() {
                         <div
                           className="w-full h-2 bg-gray-200 rounded-full overflow-hidden border-2"
                           style={{ borderColor: darkenColor(avatarColor) }}
+                          role="progressbar"
+                          aria-valuenow={Math.round(progress.percentage)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`Task completion progress: ${progress.completed} of ${progress.total} tasks`}
                         >
                           <div
                             className="h-full transition-all"
