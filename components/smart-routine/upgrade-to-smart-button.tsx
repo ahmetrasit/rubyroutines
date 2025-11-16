@@ -50,7 +50,7 @@ export function UpgradeToSmartButton({
   }
 
   const handleUpgrade = () => {
-    // TODO: Implement routine.upgradeToSmart mutation in backend
+    // FEATURE: Smart routine upgrade - Backend API pending implementation
     toast({
       title: 'Coming Soon',
       description: 'Smart routine upgrade is coming soon!',

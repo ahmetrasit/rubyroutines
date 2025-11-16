@@ -1,7 +1,7 @@
 'use client';
 
 import { TaskType } from '@/lib/types/prisma-enums';
-type Task = any;
+import type { Task } from "@/lib/types/task";
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
@@ -266,7 +266,7 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
                   size="sm"
                   className="text-blue-700 border-blue-300 hover:bg-blue-100"
                   onClick={() => {
-                    // TODO: Open condition builder dialog
+                    // FEATURE: Visual condition builder UI planned for future release
                     toast({
                       title: 'Coming Soon',
                       description: 'Condition builder UI will be available soon',

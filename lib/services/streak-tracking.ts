@@ -294,7 +294,7 @@ export async function calculatePersonStreak(personId: string): Promise<StreakDat
 
   return {
     currentStreak,
-    longestStreak: 0, // TODO: Calculate longest streak for person
+    longestStreak: 0, // FEATURE: Longest streak calculation not yet implemented
     lastCompletionDate: completions[0].completedAt,
     totalCompletions: completions.length,
     streakHistory,

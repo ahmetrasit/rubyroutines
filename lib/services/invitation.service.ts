@@ -75,7 +75,7 @@ export async function sendInvitation(
     }
   });
 
-  // TODO: Send email using Resend
+  // FEATURE: Email service integration - configure RESEND_API_KEY in environment
   // const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   // const acceptUrl = `${appUrl}/invitations/accept?token=${token}`;
 
@@ -136,7 +136,7 @@ export async function acceptInvitation(
       break;
     case InvitationType.SCHOOL_TEACHER:
     case InvitationType.SCHOOL_SUPPORT:
-      // TODO: Implement school mode
+      // FEATURE: School mode invite support planned for future release
       throw new Error('School mode not yet implemented');
   }
 

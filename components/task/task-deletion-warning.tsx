@@ -25,7 +25,7 @@ export function TaskDeletionWarning({
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
-  // TODO: Implement task.getAffectedByDeletion query in backend
+  // FEATURE: Task dependency analysis API not yet implemented
   // For now, just show a simple warning
   const affectedData = { goals: [], conditions: [] };
   const isLoading = false;

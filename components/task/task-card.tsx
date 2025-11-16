@@ -1,7 +1,7 @@
 'use client';
 
 import { TaskType } from '@/lib/types/prisma-enums';
-type Task = any;
+import type { Task } from "@/lib/types/task";
 type TaskCompletion = any;
 type Person = any;
 import { useState } from 'react';

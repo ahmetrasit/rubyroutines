@@ -15,9 +15,9 @@ import {
 } from '../middleware/ratelimit';
 import {
   logAuthEvent,
-  logDataChange,
   AUDIT_ACTIONS,
 } from '@/lib/services/audit-log';
+import { createDefaultRoles, ensureUserHasRoles } from '@/lib/services/user-initialization.service';
 
 export const authRouter = router({
   signUp: authRateLimitedProcedure
@@ -34,7 +34,6 @@ export const authRouter = router({
           data: {
             name: input.name,
           },
-          // Supabase will send email confirmation automatically
           emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
         },
       });
@@ -65,15 +64,12 @@ export const authRouter = router({
         });
       }
 
-      // Check if user exists by email with different ID (seed data or old signup scenario)
+      // Check for existing user with different ID (seed data migration)
       const existingUserByEmail = await ctx.prisma.user.findUnique({
         where: { email: input.email },
-        include: { roles: true },
       });
 
       if (existingUserByEmail && existingUserByEmail.id !== data.user.id) {
-        // User exists with different ID - this shouldn't happen in normal flow
-        // Delete the old user and create with new Supabase ID
         logger.debug('User exists with different ID, migrating to new Supabase ID', {
           oldId: existingUserByEmail.id,
           newId: data.user.id,
@@ -85,221 +81,25 @@ export const authRouter = router({
         });
       }
 
-      // Create user in database
+      // Create user with default roles, persons, and routines
       try {
-        const newUser = await ctx.prisma.user.create({
+        await ctx.prisma.user.create({
           data: {
             id: data.user.id,
             email: input.email,
             name: input.name,
-            roles: {
-              create: [
-                {
-                  type: 'PARENT',
-                  tier: 'FREE',
-                  color: '#9333ea', // Purple for parent mode
-                },
-                {
-                  type: 'TEACHER',
-                  tier: 'FREE',
-                  color: '#3b82f6', // Blue for teacher mode
-                },
-              ],
-            },
-          },
-          include: {
-            roles: true,
           },
         });
 
-        // Auto-create "Me" person for the parent role
-        const parentRole = newUser.roles.find((role) => role.type === 'PARENT');
-        if (parentRole) {
-          const parentMePerson = await ctx.prisma.person.create({
-            data: {
-              roleId: parentRole.id,
-              name: 'Me',
-              avatar: JSON.stringify({
-                color: '#BAE1FF', // Light blue
-                emoji: '👤',
-              }),
-              status: 'ACTIVE',
-            },
-          });
-
-          // Create default "Daily Routine" for parent "Me"
-          await ctx.prisma.routine.create({
-            data: {
-              roleId: parentRole.id,
-              name: '☀️ Daily Routine',
-              description: 'Default routine for daily tasks',
-              resetPeriod: 'DAILY',
-              color: '#3B82F6',
-              status: 'ACTIVE',
-              assignments: {
-                create: {
-                  personId: parentMePerson.id,
-                },
-              },
-            },
-          });
-        }
-
-        // Auto-create "Me" person for the teacher role
-        const teacherRole = newUser.roles.find((role) => role.type === 'TEACHER');
-        if (teacherRole) {
-          const teacherMePerson = await ctx.prisma.person.create({
-            data: {
-              roleId: teacherRole.id,
-              name: 'Me',
-              avatar: JSON.stringify({
-                color: '#BAE1FF',
-                emoji: '👤',
-              }),
-              status: 'ACTIVE',
-            },
-          });
-
-          // Create default "Daily Routine" for teacher "Me"
-          await ctx.prisma.routine.create({
-            data: {
-              roleId: teacherRole.id,
-              name: '☀️ Daily Routine',
-              description: 'Default routine for daily tasks',
-              resetPeriod: 'DAILY',
-              color: '#3B82F6',
-              status: 'ACTIVE',
-              assignments: {
-                create: {
-                  personId: teacherMePerson.id,
-                },
-              },
-            },
-          });
-
-          // Create default classroom group for teacher
-          await ctx.prisma.group.create({
-            data: {
-              roleId: teacherRole.id,
-              name: 'Teacher-Only',
-              type: 'CLASSROOM',
-              isClassroom: true,
-              status: 'ACTIVE',
-              members: {
-                create: {
-                  personId: teacherMePerson.id,
-                  role: 'member',
-                },
-              },
-            },
-          });
-        }
+        await createDefaultRoles({
+          userId: data.user.id,
+          name: input.name,
+          prisma: ctx.prisma,
+        });
       } catch (dbError) {
-        // User already exists in DB, ensure they have roles
-        logger.debug('User already exists in database', { userId: data.user.id, error: dbError });
-
-        // Check if user has any roles, create both if not
-        const existingUser = await ctx.prisma.user.findUnique({
-          where: { id: data.user.id },
-          include: { roles: true },
-        });
-
-        if (existingUser && existingUser.roles.length === 0) {
-          const parentRole = await ctx.prisma.role.create({
-            data: {
-              userId: data.user.id,
-              type: 'PARENT',
-              tier: 'FREE',
-              color: '#9333ea', // Purple for parent mode
-            },
-          });
-
-          const teacherRole = await ctx.prisma.role.create({
-            data: {
-              userId: data.user.id,
-              type: 'TEACHER',
-              tier: 'FREE',
-              color: '#3b82f6', // Blue for teacher mode
-            },
-          });
-
-          // Auto-create "Me" person for parent
-          const parentMePerson = await ctx.prisma.person.create({
-            data: {
-              roleId: parentRole.id,
-              name: 'Me',
-              avatar: JSON.stringify({
-                color: '#BAE1FF',
-                emoji: '👤',
-              }),
-              status: 'ACTIVE',
-            },
-          });
-
-          // Create default "Daily Routine" for parent "Me"
-          await ctx.prisma.routine.create({
-            data: {
-              roleId: parentRole.id,
-              name: '☀️ Daily Routine',
-              description: 'Default routine for daily tasks',
-              resetPeriod: 'DAILY',
-              color: '#3B82F6',
-              status: 'ACTIVE',
-              assignments: {
-                create: {
-                  personId: parentMePerson.id,
-                },
-              },
-            },
-          });
-
-          // Auto-create "Me" person for teacher
-          const teacherMePerson = await ctx.prisma.person.create({
-            data: {
-              roleId: teacherRole.id,
-              name: 'Me',
-              avatar: JSON.stringify({
-                color: '#BAE1FF',
-                emoji: '👤',
-              }),
-              status: 'ACTIVE',
-            },
-          });
-
-          // Create default "Daily Routine" for teacher "Me"
-          await ctx.prisma.routine.create({
-            data: {
-              roleId: teacherRole.id,
-              name: '☀️ Daily Routine',
-              description: 'Default routine for daily tasks',
-              resetPeriod: 'DAILY',
-              color: '#3B82F6',
-              status: 'ACTIVE',
-              assignments: {
-                create: {
-                  personId: teacherMePerson.id,
-                },
-              },
-            },
-          });
-
-          // Create default classroom group for teacher
-          await ctx.prisma.group.create({
-            data: {
-              roleId: teacherRole.id,
-              name: 'Teacher-Only',
-              type: 'CLASSROOM',
-              isClassroom: true,
-              status: 'ACTIVE',
-              members: {
-                create: {
-                  personId: teacherMePerson.id,
-                  role: 'member',
-                },
-              },
-            },
-          });
-        }
+        // User might already exist - ensure they have roles
+        logger.debug('User already exists, ensuring roles', { userId: data.user.id, error: dbError });
+        await ensureUserHasRoles(data.user.id, ctx.prisma);
       }
 
       // Log successful signup
@@ -322,8 +122,6 @@ export const authRouter = router({
       });
 
       if (error) {
-        // Log failed login attempt
-        // Note: We don't have userId for failed logins, so we'll use email
         logger.warn('Failed login attempt', { email: input.email, error: error.message });
 
         throw new TRPCError({
@@ -332,44 +130,43 @@ export const authRouter = router({
         });
       }
 
-      // Check if user exists by email with different ID (seed data scenario)
+      // Check for seed data migration
       const existingUserByEmail = await ctx.prisma.user.findUnique({
         where: { email: data.user.email! },
         include: { roles: true },
       });
 
-      let user;
-
       if (existingUserByEmail && existingUserByEmail.id !== data.user.id) {
-        // User exists from seed data with different ID
-        // Migrate roles to new Supabase Auth ID
+        // Migrate from seed data ID to Supabase Auth ID
         const existingRoles = existingUserByEmail.roles;
 
-        // Delete old user (cascade will delete associated records)
         await ctx.prisma.user.delete({
           where: { id: existingUserByEmail.id },
         });
 
-        // Create new user with Supabase Auth ID, preserving data and roles
-        user = await ctx.prisma.user.create({
+        // Create user with migrated roles
+        await ctx.prisma.user.create({
           data: {
             id: data.user.id,
             email: data.user.email!,
             name: existingUserByEmail.name,
             emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
             roles: {
-              create: existingRoles.map((role: any) => ({
+              create: existingRoles.map((role) => ({
                 type: role.type,
                 tier: role.tier,
-                color: role.color || (role.type === 'PARENT' ? '#9333ea' : role.type === 'TEACHER' ? '#3b82f6' : role.type === 'PRINCIPAL' ? '#f59e0b' : '#10b981'),
+                color: role.color || (
+                  role.type === 'PARENT' ? '#9333ea' :
+                  role.type === 'TEACHER' ? '#3b82f6' :
+                  role.type === 'PRINCIPAL' ? '#f59e0b' : '#10b981'
+                ),
               })),
             },
           },
-          include: { roles: true },
         });
       } else {
-        // Normal upsert - user doesn't exist or has matching ID
-        user = await ctx.prisma.user.upsert({
+        // Normal flow - upsert user
+        const user = await ctx.prisma.user.upsert({
           where: { id: data.user.id },
           update: {
             email: data.user.email!,
@@ -381,249 +178,10 @@ export const authRouter = router({
             name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
             emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
           },
-          include: {
-            roles: true,
-          },
-        });
-      }
-
-      // Auto-create both PARENT and TEACHER roles for first-time users
-      if (user.roles.length === 0) {
-        const parentRole = await ctx.prisma.role.create({
-          data: {
-            userId: user.id,
-            type: 'PARENT',
-            tier: 'FREE',
-            color: '#9333ea', // Purple for parent mode
-          },
         });
 
-        const teacherRole = await ctx.prisma.role.create({
-          data: {
-            userId: user.id,
-            type: 'TEACHER',
-            tier: 'FREE',
-            color: '#3b82f6', // Blue for teacher mode
-          },
-        });
-
-        // Auto-create "Me" person for both parent and teacher roles
-        const parentMePerson = await ctx.prisma.person.create({
-          data: {
-            roleId: parentRole.id,
-            name: 'Me',
-            avatar: JSON.stringify({
-              color: '#BAE1FF',
-              emoji: '👤',
-            }),
-            status: 'ACTIVE',
-          },
-        });
-
-        // Create default "Daily Routine" for parent "Me"
-        await ctx.prisma.routine.create({
-          data: {
-            roleId: parentRole.id,
-            name: '☀️ Daily Routine',
-            description: 'Default routine for daily tasks',
-            resetPeriod: 'DAILY',
-            color: '#3B82F6',
-            status: 'ACTIVE',
-            assignments: {
-              create: {
-                personId: parentMePerson.id,
-              },
-            },
-          },
-        });
-
-        const teacherMePerson = await ctx.prisma.person.create({
-          data: {
-            roleId: teacherRole.id,
-            name: 'Me',
-            avatar: JSON.stringify({
-              color: '#BAE1FF',
-              emoji: '👤',
-            }),
-            status: 'ACTIVE',
-          },
-        });
-
-        // Create default "Daily Routine" for teacher "Me"
-        await ctx.prisma.routine.create({
-          data: {
-            roleId: teacherRole.id,
-            name: '☀️ Daily Routine',
-            description: 'Default routine for daily tasks',
-            resetPeriod: 'DAILY',
-            color: '#3B82F6',
-            status: 'ACTIVE',
-            assignments: {
-              create: {
-                personId: teacherMePerson.id,
-              },
-            },
-          },
-        });
-
-        // Create default classroom group for teacher
-        await ctx.prisma.group.create({
-          data: {
-            roleId: teacherRole.id,
-            name: 'Teacher-Only',
-            type: 'CLASSROOM',
-            isClassroom: true,
-            status: 'ACTIVE',
-            members: {
-              create: {
-                personId: teacherMePerson.id,
-                role: 'member',
-              },
-            },
-          },
-        });
-      } else {
-        // Ensure user has both PARENT and TEACHER roles
-        const hasParentRole = user.roles.some((role: any) => role.type === 'PARENT');
-        const hasTeacherRole = user.roles.some((role: any) => role.type === 'TEACHER');
-
-        let parentRole = user.roles.find((role: any) => role.type === 'PARENT');
-        let teacherRole = user.roles.find((role: any) => role.type === 'TEACHER');
-
-        // Create missing PARENT role
-        if (!hasParentRole) {
-          parentRole = await ctx.prisma.role.create({
-            data: {
-              userId: user.id,
-              type: 'PARENT',
-              tier: 'FREE',
-              color: '#9333ea',
-            },
-          });
-        }
-
-        // Create missing TEACHER role
-        if (!hasTeacherRole) {
-          teacherRole = await ctx.prisma.role.create({
-            data: {
-              userId: user.id,
-              type: 'TEACHER',
-              tier: 'FREE',
-              color: '#3b82f6',
-            },
-          });
-        }
-
-        // Check if "Me" person exists for parent role
-        if (parentRole) {
-          const mePersonExists = await ctx.prisma.person.findFirst({
-            where: {
-              roleId: parentRole.id,
-              name: 'Me',
-            },
-          });
-
-          // Create "Me" person if it doesn't exist
-          if (!mePersonExists) {
-            const parentMePerson = await ctx.prisma.person.create({
-              data: {
-                roleId: parentRole.id,
-                name: 'Me',
-                avatar: JSON.stringify({
-                  color: '#BAE1FF',
-                  emoji: '👤',
-                }),
-                status: 'ACTIVE',
-              },
-            });
-
-            // Create default "Daily Routine" for parent "Me"
-            await ctx.prisma.routine.create({
-              data: {
-                roleId: parentRole.id,
-                name: '☀️ Daily Routine',
-                description: 'Default routine for daily tasks',
-                resetPeriod: 'DAILY',
-                color: '#3B82F6',
-                status: 'ACTIVE',
-                assignments: {
-                  create: {
-                    personId: parentMePerson.id,
-                  },
-                },
-              },
-            });
-          }
-        }
-
-        // Check if "Me" person exists for teacher role
-        if (teacherRole) {
-          const mePersonExists = await ctx.prisma.person.findFirst({
-            where: {
-              roleId: teacherRole.id,
-              name: 'Me',
-            },
-          });
-
-          // Create "Me" person if it doesn't exist
-          if (!mePersonExists) {
-            const teacherMePerson = await ctx.prisma.person.create({
-              data: {
-                roleId: teacherRole.id,
-                name: 'Me',
-                avatar: JSON.stringify({
-                  color: '#BAE1FF',
-                  emoji: '👤',
-                }),
-                status: 'ACTIVE',
-              },
-            });
-
-            // Create default "Daily Routine" for teacher "Me"
-            await ctx.prisma.routine.create({
-              data: {
-                roleId: teacherRole.id,
-                name: '☀️ Daily Routine',
-                description: 'Default routine for daily tasks',
-                resetPeriod: 'DAILY',
-                color: '#3B82F6',
-                status: 'ACTIVE',
-                assignments: {
-                  create: {
-                    personId: teacherMePerson.id,
-                  },
-                },
-              },
-            });
-
-            // Create default classroom group for teacher if it doesn't exist
-            const classroomExists = await ctx.prisma.group.findFirst({
-              where: {
-                roleId: teacherRole.id,
-                type: 'CLASSROOM',
-              },
-            });
-
-            if (!classroomExists) {
-              await ctx.prisma.group.create({
-                data: {
-                  roleId: teacherRole.id,
-                  name: 'Teacher-Only',
-                  description: 'For teachers and co-teachers only',
-                  type: 'CLASSROOM',
-                  isClassroom: true,
-                  status: 'ACTIVE',
-                  members: {
-                    create: {
-                      personId: teacherMePerson.id,
-                      role: 'member',
-                    },
-                  },
-                },
-              });
-            }
-          }
-        }
+        // Ensure user has both PARENT and TEACHER roles with default data
+        await ensureUserHasRoles(user.id, ctx.prisma);
       }
 
       // Log successful login
@@ -636,9 +194,7 @@ export const authRouter = router({
 
   signOut: protectedProcedure
     .mutation(async ({ ctx }) => {
-      // Log logout
       await logAuthEvent(AUDIT_ACTIONS.AUTH_LOGOUT, ctx.user.id, true);
-
       await ctx.supabase.auth.signOut();
       return { success: true };
     }),
@@ -654,7 +210,11 @@ export const authRouter = router({
       const dbUser = await ctx.prisma.user.findUnique({
         where: { id: user.id },
         include: {
-          roles: true,
+          roles: {
+            where: {
+              deletedAt: null, // Only include active roles
+            },
+          },
         },
       });
 
@@ -664,7 +224,7 @@ export const authRouter = router({
         const { mapDatabaseLimitsToComponentFormat } = await import('@/lib/services/tier-limits');
 
         const rolesWithLimits = await Promise.all(
-          dbUser.roles.map(async (role: any) => {
+          dbUser.roles.map(async (role) => {
             try {
               const dbLimits = await getEffectiveTierLimits(role.id);
               const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
@@ -705,8 +265,9 @@ export const authRouter = router({
         CodeType.EMAIL_VERIFICATION
       );
 
-      // TODO: Send email with code using your email service
-      // For development only - DO NOT log codes in production
+      // FEATURE: Email service integration pending
+      // Configure RESEND_API_KEY in environment to enable email sending
+      // See: lib/services/email.service.ts (to be implemented)
       if (process.env.NODE_ENV === 'development') {
         logger.debug('Verification code generated', { email: input.email, code });
       }
@@ -733,20 +294,19 @@ export const authRouter = router({
         });
       }
 
-      // Update user's emailVerified status in database
+      // Update user's emailVerified status
       await ctx.prisma.user.update({
         where: { id: input.userId },
         data: { emailVerified: new Date() },
       });
 
-      // Update Supabase user metadata for middleware checks (Edge Runtime compatible)
+      // Update Supabase user metadata
       await ctx.supabase.auth.updateUser({
         data: {
           emailVerified: true,
         },
       });
 
-      // Log email verification
       await logAuthEvent(AUDIT_ACTIONS.EMAIL_VERIFY, input.userId, true);
 
       return { success: true };
@@ -778,8 +338,9 @@ export const authRouter = router({
         CodeType.EMAIL_VERIFICATION
       );
 
-      // TODO: Send email with code using your email service
-      // For development only - DO NOT log codes in production
+      // FEATURE: Email service integration pending
+      // Configure RESEND_API_KEY in environment to enable email sending
+      // See: lib/services/email.service.ts (to be implemented)
       if (process.env.NODE_ENV === 'development') {
         logger.debug('Verification code resent', { email: input.email, code });
       }

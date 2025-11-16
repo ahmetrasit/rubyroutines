@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
 import { ResetPeriod, EntityStatus } from '@/lib/types/prisma-enums';
-import { calculateGoalProgress } from '@/lib/services/goal-progress';
+import { calculateGoalProgress, calculateGoalProgressBatch } from '@/lib/services/goal-progress';
 import { checkTierLimit, mapDatabaseLimitsToComponentFormat } from '@/lib/services/tier-limits';
 import { TRPCError } from '@trpc/server';
 import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
@@ -48,16 +48,14 @@ export const goalRouter = router({
         orderBy: { createdAt: 'desc' }
       });
 
-      // Calculate progress for each goal
-      const goalsWithProgress = await Promise.all(
-        goals.map(async (goal: any) => {
-          const progress = await calculateGoalProgress(goal.id);
-          return {
-            ...goal,
-            progress
-          };
-        })
-      );
+      // Calculate progress for all goals in one batch (avoids N+1 query problem)
+      const goalIds = goals.map((g) => g.id);
+      const progressMap = await calculateGoalProgressBatch(goalIds);
+
+      const goalsWithProgress = goals.map((goal) => ({
+        ...goal,
+        progress: progressMap.get(goal.id) || { current: 0, target: goal.target, percentage: 0, achieved: false },
+      }));
 
       return goalsWithProgress;
     }),
@@ -435,16 +433,14 @@ export const goalRouter = router({
         .filter((link: any) => link.goal && link.goal.role.userId === ctx.user.id)
         .map((link: any) => link.goal);
 
-      // Calculate progress for each goal
-      const goalsWithProgress = await Promise.all(
-        goals.map(async (goal: any) => {
-          const progress = await calculateGoalProgress(goal.id);
-          return {
-            ...goal,
-            progress
-          };
-        })
-      );
+      // Calculate progress for all goals in one batch (avoids N+1 query problem)
+      const goalIds = goals.map((g: any) => g.id);
+      const progressMap = await calculateGoalProgressBatch(goalIds);
+
+      const goalsWithProgress = goals.map((goal: any) => ({
+        ...goal,
+        progress: progressMap.get(goal.id) || { current: 0, target: goal.target, percentage: 0, achieved: false },
+      }));
 
       return goalsWithProgress;
     }),
@@ -474,16 +470,14 @@ export const goalRouter = router({
         .filter((link: any) => link.goal && link.goal.role.userId === ctx.user.id)
         .map((link: any) => link.goal);
 
-      // Calculate progress for each goal
-      const goalsWithProgress = await Promise.all(
-        goals.map(async (goal: any) => {
-          const progress = await calculateGoalProgress(goal.id);
-          return {
-            ...goal,
-            progress
-          };
-        })
-      );
+      // Calculate progress for all goals in one batch (avoids N+1 query problem)
+      const goalIds = goals.map((g: any) => g.id);
+      const progressMap = await calculateGoalProgressBatch(goalIds);
+
+      const goalsWithProgress = goals.map((goal: any) => ({
+        ...goal,
+        progress: progressMap.get(goal.id) || { current: 0, target: goal.target, percentage: 0, achieved: false },
+      }));
 
       return goalsWithProgress;
     })
