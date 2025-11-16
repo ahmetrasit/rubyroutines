@@ -389,6 +389,163 @@ async function main() {
 
   console.log('Created goal');
 
+  // Create marketplace items
+  const marketplaceItem1 = await prisma.marketplaceItem.upsert({
+    where: { id: 'test-marketplace-item-1' },
+    update: {},
+    create: {
+      id: 'test-marketplace-item-1',
+      type: 'ROUTINE',
+      sourceId: morningRoutine.id,
+      authorRoleId: parentRole.id,
+      name: 'Morning Routine for Kids',
+      description: 'A comprehensive morning routine that helps kids start their day right. Includes brushing teeth, getting dressed, eating breakfast, and packing for school.',
+      visibility: 'PUBLIC',
+      category: 'Morning Routine',
+      ageGroup: 'Elementary (6-11)',
+      tags: ['morning', 'school', 'healthy', 'independent'],
+      content: JSON.stringify({
+        tasks: [
+          { name: 'Brush Teeth', description: 'Brush for 2 minutes', order: 1 },
+          { name: 'Get Dressed', description: 'Put on school clothes', order: 2 },
+          { name: 'Eat Breakfast', description: 'Finish your meal', order: 3 },
+          { name: 'Pack Backpack', description: 'Get ready for school', order: 4 },
+        ],
+      }),
+      forkCount: 12,
+      averageRating: 4.5,
+      ratingCount: 8,
+    },
+  });
+
+  const marketplaceItem2 = await prisma.marketplaceItem.upsert({
+    where: { id: 'test-marketplace-item-2' },
+    update: {},
+    create: {
+      id: 'test-marketplace-item-2',
+      type: 'ROUTINE',
+      sourceId: classroomRoutine.id,
+      authorRoleId: teacherRole.id,
+      name: 'Reading Time Setup',
+      description: 'Perfect routine for preparing students for reading group. Helps create a calm and organized transition.',
+      visibility: 'PUBLIC',
+      category: 'Reading',
+      ageGroup: 'Elementary (6-11)',
+      tags: ['educational', 'reading', 'classroom', 'quiet'],
+      content: JSON.stringify({
+        tasks: [
+          { name: 'Get Reading Book', description: 'Pick your book from shelf', order: 1 },
+          { name: 'Sit in Reading Circle', description: 'Find your spot quietly', order: 2 },
+        ],
+      }),
+      forkCount: 5,
+      averageRating: 5.0,
+      ratingCount: 3,
+    },
+  });
+
+  const marketplaceItem3 = await prisma.marketplaceItem.upsert({
+    where: { id: 'test-marketplace-item-3' },
+    update: {},
+    create: {
+      id: 'test-marketplace-item-3',
+      type: 'ROUTINE',
+      sourceId: morningRoutine.id,
+      authorRoleId: teacherRole.id,
+      name: 'Bedtime Wind Down',
+      description: 'A calming bedtime routine to help children relax and prepare for sleep. Great for establishing healthy sleep habits.',
+      visibility: 'PUBLIC',
+      category: 'Bedtime Routine',
+      ageGroup: 'Preschool (3-5)',
+      tags: ['bedtime', 'calm', 'healthy', 'family'],
+      content: JSON.stringify({
+        tasks: [
+          { name: 'Put on Pajamas', description: 'Change into night clothes', order: 1 },
+          { name: 'Brush Teeth', description: 'Clean teeth before bed', order: 2 },
+          { name: 'Read Story', description: 'Pick a bedtime book', order: 3 },
+          { name: 'Lights Out', description: 'Time to sleep', order: 4 },
+        ],
+      }),
+      forkCount: 18,
+      averageRating: 4.7,
+      ratingCount: 11,
+    },
+  });
+
+  console.log('Created marketplace items');
+
+  // Create ratings
+  await prisma.marketplaceRating.upsert({
+    where: { marketplaceItemId_userId: { marketplaceItemId: marketplaceItem1.id, userId: parentUser.id } },
+    update: {},
+    create: {
+      marketplaceItemId: marketplaceItem1.id,
+      userId: parentUser.id,
+      rating: 5,
+    },
+  });
+
+  await prisma.marketplaceRating.upsert({
+    where: { marketplaceItemId_userId: { marketplaceItemId: marketplaceItem1.id, userId: teacherUser.id } },
+    update: {},
+    create: {
+      marketplaceItemId: marketplaceItem1.id,
+      userId: teacherUser.id,
+      rating: 4,
+    },
+  });
+
+  await prisma.marketplaceRating.upsert({
+    where: { marketplaceItemId_userId: { marketplaceItemId: marketplaceItem2.id, userId: parentUser.id } },
+    update: {},
+    create: {
+      marketplaceItemId: marketplaceItem2.id,
+      userId: parentUser.id,
+      rating: 5,
+    },
+  });
+
+  console.log('Created marketplace ratings');
+
+  // Create comments
+  const comment1 = await prisma.marketplaceComment.upsert({
+    where: { id: 'test-marketplace-comment-1' },
+    update: {},
+    create: {
+      id: 'test-marketplace-comment-1',
+      marketplaceItemId: marketplaceItem1.id,
+      userId: parentUser.id,
+      text: 'This routine has been amazing for my daughter! She follows it every morning now.',
+      status: 'ACTIVE',
+    },
+  });
+
+  const comment2 = await prisma.marketplaceComment.upsert({
+    where: { id: 'test-marketplace-comment-2' },
+    update: {},
+    create: {
+      id: 'test-marketplace-comment-2',
+      marketplaceItemId: marketplaceItem1.id,
+      userId: teacherUser.id,
+      text: 'Great routine! I recommend it to all my students\' parents.',
+      status: 'ACTIVE',
+    },
+  });
+
+  const comment3 = await prisma.marketplaceComment.upsert({
+    where: { id: 'test-marketplace-comment-3' },
+    update: {},
+    create: {
+      id: 'test-marketplace-comment-3',
+      marketplaceItemId: marketplaceItem3.id,
+      userId: principalUser.id,
+      text: 'Works well but takes longer than expected.',
+      status: 'ACTIVE',
+    },
+  });
+
+  console.log('Created marketplace comments');
+
   console.log('Seed completed successfully!');
 }
 

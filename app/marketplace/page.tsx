@@ -7,7 +7,8 @@ import { SearchBar } from '@/components/marketplace/SearchBar';
 import { ItemCard } from '@/components/marketplace/ItemCard';
 import { PublishModal } from '@/components/marketplace/PublishModal';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 interface SearchFilters {
   keyword?: string;
@@ -118,6 +119,14 @@ function MarketplacePageContent({
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back Button */}
+        <Link href="/parent">
+          <Button variant="ghost" className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </Link>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
