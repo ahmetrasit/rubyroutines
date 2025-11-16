@@ -258,9 +258,11 @@ export const kioskRouter = router({
           );
 
           const lastCompletion = periodCompletions[0];
+          const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
           return {
             ...task,
             routineName: assignment.routine.name,
+            isComplete,
             isCompleted: periodCompletions.length > 0,
             completionCount: periodCompletions.length,
             lastCompletedAt: lastCompletion?.completedAt,
