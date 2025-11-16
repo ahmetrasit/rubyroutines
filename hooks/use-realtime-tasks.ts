@@ -20,8 +20,6 @@ export function useRealtimeTasks(routineId: string | undefined) {
       // Invalidate task queries to refetch data
       utils.task.invalidate();
       utils.routine.invalidate();
-
-      console.log(`Task ${event}:`, payload);
     });
 
     channelRef.current = channel;

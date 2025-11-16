@@ -211,7 +211,8 @@ export async function handleWebhook(event: Stripe.Event) {
       break;
 
     default:
-      console.log(`Unhandled event type: ${event.type}`);
+      // Unhandled event type
+      break;
   }
 }
 
@@ -237,8 +238,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       subscriptionStatus: 'ACTIVE',
     },
   });
-
-  console.log(`Checkout completed for role ${roleId}, upgraded to ${tier}`);
 }
 
 /**
@@ -263,8 +262,6 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       subscriptionStatus: subscription.status.toUpperCase(),
     },
   });
-
-  console.log(`Subscription created for role ${role.id}`);
 }
 
 /**
@@ -288,8 +285,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       subscriptionStatus: subscription.status.toUpperCase(),
     },
   });
-
-  console.log(`Subscription updated for role ${role.id}`);
 }
 
 /**
@@ -316,8 +311,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       subscriptionStatus: 'CANCELED',
     },
   });
-
-  console.log(`Subscription deleted for role ${role.id}, downgraded to FREE`);
 }
 
 /**
@@ -341,8 +334,6 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
       subscriptionStatus: 'PAYMENT_FAILED',
     },
   });
-
-  console.log(`Payment failed for role ${role.id}`);
 }
 
 /**

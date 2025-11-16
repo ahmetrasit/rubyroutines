@@ -80,7 +80,6 @@ function BillingPageContent({ roleId }: BillingPageContentProps) {
 
   const handleUpgrade = (tier: string) => {
     // The CheckoutButton component will handle the actual upgrade
-    console.log('Upgrading to:', tier);
   };
 
   return (

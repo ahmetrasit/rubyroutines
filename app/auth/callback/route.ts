@@ -30,8 +30,6 @@ export async function GET(request: Request) {
       }
 
       if (data.user) {
-        console.log('OAuth user authenticated:', data.user.email);
-
         // Check if user exists by email with different ID
         const existingUserByEmail = await prisma.user.findUnique({
           where: { email: data.user.email! },
@@ -86,10 +84,7 @@ export async function GET(request: Request) {
       }
 
         // Ensure user has both PARENT and TEACHER roles
-        console.log('User roles count:', user.roles.length);
-
         if (user.roles.length === 0) {
-          console.log('Creating both roles for new user');
           // Create both roles for new users
           const parentRole = await prisma.role.create({
           data: {
@@ -186,18 +181,15 @@ export async function GET(request: Request) {
           },
         });
         } else {
-          console.log('User has existing roles, checking for missing roles');
           // Ensure existing users have both roles
           const hasParentRole = user.roles.some((role: any) => role.type === 'PARENT');
           const hasTeacherRole = user.roles.some((role: any) => role.type === 'TEACHER');
-          console.log('Has PARENT role:', hasParentRole, '| Has TEACHER role:', hasTeacherRole);
 
         let parentRole = user.roles.find((role: any) => role.type === 'PARENT');
           let teacherRole = user.roles.find((role: any) => role.type === 'TEACHER');
 
           // Create missing PARENT role
           if (!hasParentRole) {
-            console.log('Creating missing PARENT role');
             parentRole = await prisma.role.create({
               data: {
                 userId: user.id,
@@ -210,7 +202,6 @@ export async function GET(request: Request) {
 
           // Create missing TEACHER role
           if (!hasTeacherRole) {
-            console.log('Creating missing TEACHER role');
             teacherRole = await prisma.role.create({
               data: {
                 userId: user.id,
@@ -330,8 +321,6 @@ export async function GET(request: Request) {
           }
         }
         }
-
-        console.log('✓ OAuth callback completed successfully for user:', data.user.email);
       }
     } catch (err) {
       console.error('Error in OAuth callback:', err);

@@ -182,7 +182,6 @@ function createRateLimiter() {
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (redisUrl && redisToken) {
-    console.log('✓ Using Redis-based rate limiter (production-ready)');
     return new RedisRateLimiter(redisUrl, redisToken);
   }
 
