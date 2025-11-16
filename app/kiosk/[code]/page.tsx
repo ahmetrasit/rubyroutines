@@ -416,10 +416,10 @@ export default function KioskModePage() {
 
           {/* Right Side Container - Only show if person is selected or not group scope */}
           {(selectedPersonId || !isGroupScope) && (
-            <div className={`${isGroupScope ? 'w-2/3' : 'w-full'} flex flex-col gap-6`}>
+            <div className={`${isGroupScope ? 'w-2/3' : 'w-full'} h-full flex flex-col gap-6`}>
               {/* Screen Part 2: Current Person (Top 1/5) */}
               <div
-                className="h-[20%] border-4 rounded-2xl bg-white p-6 flex items-center justify-between"
+                className="h-[20%] flex-shrink-0 border-4 rounded-2xl bg-white p-6 flex items-center justify-between"
                 style={{ borderColor: selectedPersonColor }}
               >
                 {selectedPerson ? (
@@ -463,7 +463,7 @@ export default function KioskModePage() {
 
               {/* Screen Part 3: Tasks (Bottom 4/5) - Split by type horizontally */}
               <div
-                className="h-[80%] border-4 rounded-2xl bg-white p-4 overflow-auto"
+                className="h-[80%] flex-shrink-0 border-4 rounded-2xl bg-white p-4 overflow-auto"
                 style={{ borderColor: selectedPersonColor }}
                 onClick={resetInactivityTimer}
                 onScroll={resetInactivityTimer}
