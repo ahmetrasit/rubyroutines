@@ -148,7 +148,21 @@ function validateUrls(): void {
 }
 
 /**
- * Get environment variable with fallback
+ * Get environment variable with fallback.
+ * Throws error if variable is not set and no fallback provided.
+ *
+ * @param name - Environment variable name
+ * @param fallback - Optional fallback value
+ *
+ * @returns Environment variable value or fallback
+ *
+ * @throws {EnvValidationError} If variable not set and no fallback
+ *
+ * @example
+ * ```typescript
+ * const apiUrl = getEnv('API_URL', 'http://localhost:3000');
+ * const requiredKey = getEnv('SECRET_KEY'); // throws if not set
+ * ```
  */
 export function getEnv(name: string, fallback?: string): string {
   const value = process.env[name];
@@ -159,21 +173,48 @@ export function getEnv(name: string, fallback?: string): string {
 }
 
 /**
- * Check if running in production
+ * Check if running in production environment.
+ *
+ * @returns True if NODE_ENV is 'production'
+ *
+ * @example
+ * ```typescript
+ * if (isProduction()) {
+ *   // Enable production-only features
+ * }
+ * ```
  */
 export function isProduction(): boolean {
   return process.env.NODE_ENV === 'production';
 }
 
 /**
- * Check if running in development
+ * Check if running in development environment.
+ *
+ * @returns True if NODE_ENV is 'development'
+ *
+ * @example
+ * ```typescript
+ * if (isDevelopment()) {
+ *   // Enable dev-only debugging
+ * }
+ * ```
  */
 export function isDevelopment(): boolean {
   return process.env.NODE_ENV === 'development';
 }
 
 /**
- * Check if running in test
+ * Check if running in test environment.
+ *
+ * @returns True if NODE_ENV is 'test'
+ *
+ * @example
+ * ```typescript
+ * if (isTest()) {
+ *   // Use test database
+ * }
+ * ```
  */
 export function isTest(): boolean {
   return process.env.NODE_ENV === 'test';
