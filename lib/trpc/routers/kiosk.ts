@@ -255,10 +255,11 @@ export const kioskRouter = router({
       const tasks = person.assignments.flatMap((assignment: any) =>
         assignment.routine.tasks.map((task: any) => {
           const lastCompletion = task.completions[0];
+          const isComplete = task.type === 'SIMPLE' && task.completions.length > 0;
           return {
             ...task,
             routineName: assignment.routine.name,
-            isCompleted: task.completions.length > 0,
+            isComplete,
             completionCount: task.completions.length,
             lastCompletedAt: lastCompletion?.completedAt,
             entryNumber: lastCompletion?.entryNumber,
