@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { SearchBar } from '@/components/marketplace/SearchBar';
 import { ItemCard } from '@/components/marketplace/ItemCard';
 import { PublishModal } from '@/components/marketplace/PublishModal';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 interface SearchFilters {
   keyword?: string;
@@ -108,16 +109,24 @@ function MarketplacePageContent({
     offset: page * limit,
   });
 
-  const handleSearch = (newFilters: SearchFilters) => {
+  const handleSearch = useCallback((newFilters: SearchFilters) => {
     setFilters(newFilters);
     setPage(0);
-  };
+  }, [setFilters, setPage]);
 
   const totalPages = data?.total ? Math.ceil(data.total / limit) : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back Button */}
+        <Link href="/parent">
+          <Button variant="ghost" className="mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </Link>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>

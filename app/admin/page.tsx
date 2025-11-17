@@ -4,7 +4,7 @@ import { AdminGuard } from '@/components/admin/AdminGuard';
 import { StatCard } from '@/components/admin/StatCard';
 import { ModeSwitcher } from '@/components/mode-switcher';
 import { trpc } from '@/lib/trpc/client';
-import { Users, UserCheck, Shield, BarChart3, Activity, Calendar } from 'lucide-react';
+import { Users, UserCheck, Shield, BarChart3, Activity, Calendar, Store } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -41,7 +41,7 @@ function DashboardContent() {
         </div>
 
         {/* Quick Navigation */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <Link href="/admin/users" className="block">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -62,6 +62,18 @@ function DashboardContent() {
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-muted-foreground">Configure tiers</div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/marketplace" className="block">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Marketplace</CardTitle>
+                <Store className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground">Moderation</div>
               </CardContent>
             </Card>
           </Link>
