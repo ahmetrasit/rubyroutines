@@ -15,6 +15,7 @@ import {
   createVisibilityOverrideSchema,
   cancelVisibilityOverrideSchema,
 } from '@/lib/validation/routine';
+import { generateRoutineShareCode } from '@/lib/services/routine-share-code';
 
 export const routineRouter = router({
   list: authorizedProcedure.input(listRoutinesSchema).query(async ({ ctx, input }) => {
@@ -313,5 +314,36 @@ export const routineRouter = router({
       });
 
       return override;
+    }),
+
+  generateShareCode: authorizedProcedure
+    .input(
+      z.object({
+        routineId: z.string().cuid(),
+        maxUses: z.number().int().positive().optional(),
+        expiresInDays: z.number().int().positive().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify routine ownership
+      await verifyRoutineOwnership(ctx.user.id, input.routineId, ctx.prisma);
+
+      const routine = await ctx.prisma.routine.findUnique({
+        where: { id: input.routineId },
+      });
+
+      if (!routine) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Routine not found' });
+      }
+
+      // Generate share code
+      const code = await generateRoutineShareCode(
+        input.routineId,
+        ctx.user.id,
+        input.maxUses,
+        input.expiresInDays
+      );
+
+      return { code };
     }),
 });

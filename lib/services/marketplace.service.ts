@@ -411,22 +411,97 @@ export async function forkMarketplaceItem(params: ForkMarketplaceItemParams) {
 }
 
 /**
- * Import marketplace item via share code
+ * Import marketplace item or routine via share code
+ * Handles both marketplace share codes and routine share codes
  */
 export async function importFromShareCode(params: ImportFromShareCodeParams) {
   const { shareCode, roleId, userId, targetId, targetType } = params;
 
-  // Validate share code
-  const validation = await validateMarketplaceShareCode(shareCode);
+  // First, try to validate as a routine share code
+  const { validateRoutineShareCode, incrementRoutineShareCodeUseCount } = await import('./routine-share-code');
+  const routineValidation = await validateRoutineShareCode(shareCode);
 
-  if (!validation.valid || !validation.shareCode) {
+  if (routineValidation.valid && routineValidation.shareCode) {
+    // This is a routine share code
+    const { routineId } = routineValidation.shareCode;
+
+    // Get the original routine
+    const routine = await prisma.routine.findUnique({
+      where: { id: routineId },
+      include: {
+        tasks: {
+          where: { status: 'ACTIVE' },
+          orderBy: { order: 'asc' },
+        },
+      },
+    });
+
+    if (!routine) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Routine not found',
+      });
+    }
+
+    // Create a copy of the routine for the target role
+    const newRoutine = await prisma.routine.create({
+      data: {
+        roleId,
+        name: routine.name,
+        description: routine.description,
+        type: routine.type,
+        resetPeriod: routine.resetPeriod,
+        resetDay: routine.resetDay,
+        visibility: routine.visibility,
+        visibleDays: routine.visibleDays,
+        startDate: routine.startDate,
+        endDate: routine.endDate,
+        color: routine.color,
+        tasks: {
+          create: routine.tasks.map((task: any) => ({
+            name: task.name,
+            description: task.description,
+            type: task.type || 'SIMPLE',
+            order: task.order || 0,
+            targetValue: task.targetValue,
+            unit: task.unit,
+          })),
+        },
+      },
+      include: {
+        tasks: true,
+      },
+    });
+
+    // Create RoutineAssignment to link routine to person/group
+    const assignment = await prisma.routineAssignment.create({
+      data: {
+        routineId: newRoutine.id,
+        ...(targetType === 'PERSON' ? { personId: targetId } : { groupId: targetId }),
+      },
+    });
+
+    // Increment share code use count
+    await incrementRoutineShareCodeUseCount(routineValidation.shareCode.id);
+
+    return {
+      entity: newRoutine,
+      type: 'ROUTINE',
+      assignments: [assignment],
+    };
+  }
+
+  // If not a routine code, try marketplace share code
+  const marketplaceValidation = await validateMarketplaceShareCode(shareCode);
+
+  if (!marketplaceValidation.valid || !marketplaceValidation.shareCode) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: validation.error || 'Invalid share code',
+      message: marketplaceValidation.error || 'Invalid share code',
     });
   }
 
-  const { marketplaceItemId } = validation.shareCode;
+  const { marketplaceItemId } = marketplaceValidation.shareCode;
 
   // Import the item using fork logic
   const result = await forkMarketplaceItem({
@@ -441,7 +516,7 @@ export async function importFromShareCode(params: ImportFromShareCodeParams) {
   await trackMarketplaceImport(marketplaceItemId, userId, targetId, targetType, true);
 
   // Increment share code use count
-  await incrementShareCodeUseCount(validation.shareCode.id);
+  await incrementShareCodeUseCount(marketplaceValidation.shareCode.id);
 
   return result;
 }

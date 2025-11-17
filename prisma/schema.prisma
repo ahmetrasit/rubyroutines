@@ -42,6 +42,7 @@ model User {
   commentFlags            CommentFlag[]
   marketplaceShareCodes   MarketplaceShareCode[]  // Share codes created by this user
   marketplaceImports      MarketplaceImport[]     // Items imported by this user
+  routineShareCodes       RoutineShareCode[]      // Routine share codes created by this user
   auditLogs               AuditLog[]
 
   @@index([isAdmin])
@@ -223,6 +224,7 @@ model Routine {
   targetConditionChecks     ConditionCheck[]       @relation("TargetRoutineConditionChecks")
   goalLinks                 GoalRoutineLink[]
   visibilityOverrides       VisibilityOverride[]
+  shareCodes                RoutineShareCode[]
 
   @@index([roleId])
   @@index([type])
@@ -806,6 +808,27 @@ model MarketplaceShareCode {
   @@index([expiresAt])
   @@index([active])
   @@map("marketplace_share_codes")
+}
+
+model RoutineShareCode {
+  id           String    @id @default(cuid())
+  routineId    String
+  shareCode    String    @unique // e.g., "happy-turtle-jump" (3-word lowercase code)
+  createdBy    String
+  useCount     Int       @default(0)
+  active       Boolean   @default(true)
+  maxUses      Int?      // null = unlimited
+  expiresAt    DateTime? // null = never expires
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  creator User    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([shareCode])
+  @@index([routineId])
+  @@map("routine_share_codes")
 }
 
 model MarketplaceImport {

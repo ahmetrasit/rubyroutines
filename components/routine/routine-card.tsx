@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Eye, EyeOff, Clock } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff, Clock, Share2 } from 'lucide-react';
 import { useState, memo } from 'react';
 import { RoutineForm } from './routine-form';
 import { VisibilityOverrideDialog } from './visibility-override-dialog';
@@ -13,6 +13,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { isRoutineVisible, formatVisibilityDescription } from '@/lib/services/visibility-rules';
 import { getResetDescription } from '@/lib/services/reset-period';
+import { RoutineShareModal } from './routine-share-modal';
 
 type RoutineWithRelations = {
   id: string;
@@ -38,6 +39,7 @@ interface RoutineCardProps {
 export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: RoutineCardProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [showOverride, setShowOverride] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -151,6 +153,17 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
               variant="ghost"
               onClick={(e) => {
                 e.stopPropagation();
+                setShowShare(true);
+              }}
+              title="Share routine"
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
                 setShowEdit(true);
               }}
             >
@@ -179,6 +192,15 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
         routineName={routine.name}
         isOpen={showOverride}
         onClose={() => setShowOverride(false)}
+      />
+
+      <RoutineShareModal
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        routine={{
+          id: routine.id,
+          name: routine.name,
+        }}
       />
     </>
   );
