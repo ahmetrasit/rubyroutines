@@ -181,7 +181,7 @@ export const adminMarketplaceRouter = router({
       z.object({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
-        visibility: z.enum(['PUBLIC', 'UNLISTED', 'PRIVATE']).optional(),
+        visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
       })
     )
     .query(async ({ input }) => {

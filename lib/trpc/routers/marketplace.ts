@@ -8,7 +8,9 @@ import {
   rateMarketplaceItem,
   addComment,
   flagComment,
+  importFromShareCode,
 } from '@/lib/services/marketplace.service';
+import { generateMarketplaceShareCode } from '@/lib/services/marketplace-share-code';
 
 export const marketplaceRouter = router({
   /**
@@ -23,7 +25,7 @@ export const marketplaceRouter = router({
         authorRoleId: z.string().cuid(),
         name: z.string().min(1).max(100),
         description: z.string().max(1000).default(''),
-        visibility: z.string().default('PUBLIC'),
+        visibility: z.enum(['PUBLIC', 'PRIVATE']).default('PUBLIC'),
         category: z.string().optional(),
         ageGroup: z.string().optional(),
         tags: z.array(z.string()).default([]),
@@ -61,11 +63,24 @@ export const marketplaceRouter = router({
       z.object({
         itemId: z.string().cuid(),
         roleId: z.string().cuid(),
+        targetId: z.string().cuid(),
+        targetType: z.enum(['PERSON', 'GROUP']),
       })
     )
-    .mutation(async ({ input }) => {
-      const entity = await forkMarketplaceItem(input);
-      return entity;
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new Error('User not found');
+      }
+
+      const result = await forkMarketplaceItem({
+        itemId: input.itemId,
+        roleId: input.roleId,
+        userId: ctx.user.id,
+        targetId: input.targetId,
+        targetType: input.targetType,
+      });
+
+      return result;
     }),
 
   /**
@@ -82,6 +97,7 @@ export const marketplaceRouter = router({
         sortBy: z.enum(['rating', 'forkCount', 'recent']).default('rating'),
         limit: z.number().min(1).max(100).default(20),
         offset: z.number().min(0).default(0),
+        userRoleType: z.enum(['PARENT', 'TEACHER']).optional(),
       })
     )
     .query(async ({ input }) => {
@@ -159,6 +175,60 @@ export const marketplaceRouter = router({
       });
 
       return result;
+    }),
+
+  /**
+   * Import marketplace item via share code
+   */
+  importFromCode: authorizedProcedure
+    .input(
+      z.object({
+        shareCode: z.string().min(1),
+        roleId: z.string().cuid(),
+        targetId: z.string().cuid(),
+        targetType: z.enum(['PERSON', 'GROUP']),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new Error('User not found');
+      }
+
+      const result = await importFromShareCode({
+        shareCode: input.shareCode,
+        roleId: input.roleId,
+        userId: ctx.user.id,
+        targetId: input.targetId,
+        targetType: input.targetType,
+      });
+
+      return result;
+    }),
+
+  /**
+   * Generate share code for a private marketplace item
+   */
+  generateShareCode: authorizedProcedure
+    .input(
+      z.object({
+        marketplaceItemId: z.string().cuid(),
+        maxUses: z.number().min(1).optional(),
+        expiresInDays: z.number().min(1).max(365).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new Error('User not found');
+      }
+
+      const code = await generateMarketplaceShareCode(
+        input.marketplaceItemId,
+        ctx.user.id,
+        input.maxUses,
+        input.expiresInDays
+      );
+
+      return { code };
     }),
 
   /**

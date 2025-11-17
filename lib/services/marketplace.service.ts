@@ -1,5 +1,11 @@
 import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
+import {
+  validateMarketplaceShareCode,
+  incrementShareCodeUseCount,
+  trackMarketplaceImport,
+  hasUserImportedItem
+} from './marketplace-share-code';
 
 interface PublishToMarketplaceParams {
   type: 'ROUTINE' | 'GOAL';
@@ -25,6 +31,17 @@ interface UpdateMarketplaceItemParams {
 interface ForkMarketplaceItemParams {
   itemId: string;
   roleId: string;
+  userId: string;
+  targetId: string;
+  targetType: 'PERSON' | 'GROUP';
+}
+
+interface ImportFromShareCodeParams {
+  shareCode: string;
+  roleId: string;
+  userId: string;
+  targetId: string;
+  targetType: 'PERSON' | 'GROUP';
 }
 
 interface SearchMarketplaceParams {
@@ -36,6 +53,7 @@ interface SearchMarketplaceParams {
   sortBy?: 'rating' | 'forkCount' | 'recent';
   limit?: number;
   offset?: number;
+  userRoleType?: 'PARENT' | 'TEACHER'; // Filter by target audience
 }
 
 interface RateMarketplaceItemParams {
@@ -156,6 +174,19 @@ export async function publishToMarketplace(params: PublishToMarketplaceParams) {
     tags = [],
   } = params;
 
+  // Get author role to detect target audience
+  const authorRole = await prisma.role.findUnique({
+    where: { id: authorRoleId },
+    select: { type: true },
+  });
+
+  if (!authorRole) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Author role not found' });
+  }
+
+  // Auto-detect target audience from author role type
+  const targetAudience = authorRole.type as 'PARENT' | 'TEACHER';
+
   // Serialize the content
   const content = await serializeContent(type, sourceId);
 
@@ -168,6 +199,7 @@ export async function publishToMarketplace(params: PublishToMarketplaceParams) {
       name,
       description,
       visibility,
+      targetAudience,
       category,
       ageGroup,
       tags,
@@ -225,9 +257,10 @@ export async function updateMarketplaceItem(params: UpdateMarketplaceItemParams)
 
 /**
  * Fork (import & customize) a marketplace item
+ * Supports Daily Routine merging and RoutineAssignment pattern
  */
 export async function forkMarketplaceItem(params: ForkMarketplaceItemParams) {
-  const { itemId, roleId } = params;
+  const { itemId, roleId, userId, targetId, targetType } = params;
 
   const item = await prisma.marketplaceItem.findUnique({
     where: { id: itemId },
@@ -240,32 +273,112 @@ export async function forkMarketplaceItem(params: ForkMarketplaceItemParams) {
   const contentData = JSON.parse(item.content);
 
   let createdEntity;
+  let assignments = [];
 
   if (item.type === 'ROUTINE') {
-    // Create routine from marketplace item
-    createdEntity = await prisma.routine.create({
-      data: {
-        roleId,
-        name: contentData.name,
-        description: contentData.description,
-        type: contentData.type || 'REGULAR',
-        resetPeriod: contentData.resetPeriod || 'DAILY',
-        resetDay: contentData.resetDay,
-        visibility: contentData.visibility || 'ALWAYS',
-        visibleDays: contentData.visibleDays || [],
-        sourceMarketplaceItemId: itemId,
-        tasks: {
-          create: (contentData.tasks || []).map((task: any) => ({
-            name: task.name,
-            description: task.description,
-            type: task.type || 'SIMPLE',
-            order: task.order || 0,
-            targetValue: task.targetValue,
-            unit: task.unit,
-          })),
+    const routineName = contentData.name;
+    const isDailyRoutine = routineName.toLowerCase() === 'daily routine';
+
+    if (isDailyRoutine) {
+      // Check if Daily Routine already exists for this role
+      const existingDailyRoutine = await prisma.routine.findFirst({
+        where: {
+          roleId,
+          name: 'Daily Routine',
+          status: 'ACTIVE',
         },
+        include: {
+          tasks: {
+            where: { status: 'ACTIVE' },
+            orderBy: { order: 'asc' },
+          },
+        },
+      });
+
+      if (existingDailyRoutine) {
+        // Merge tasks into existing Daily Routine
+        const maxOrder = existingDailyRoutine.tasks.length > 0
+          ? Math.max(...existingDailyRoutine.tasks.map((t) => t.order))
+          : -1;
+
+        // Create new tasks from marketplace item
+        const newTasks = (contentData.tasks || []).map((task: any, index: number) => ({
+          routineId: existingDailyRoutine.id,
+          name: task.name,
+          description: task.description,
+          type: task.type || 'SIMPLE',
+          order: maxOrder + 1 + index,
+          targetValue: task.targetValue,
+          unit: task.unit,
+        }));
+
+        await prisma.task.createMany({
+          data: newTasks,
+        });
+
+        createdEntity = existingDailyRoutine;
+      } else {
+        // Create new Daily Routine
+        createdEntity = await prisma.routine.create({
+          data: {
+            roleId,
+            name: routineName,
+            description: contentData.description,
+            type: contentData.type || 'REGULAR',
+            resetPeriod: contentData.resetPeriod || 'DAILY',
+            resetDay: contentData.resetDay,
+            visibility: contentData.visibility || 'ALWAYS',
+            visibleDays: contentData.visibleDays || [],
+            sourceMarketplaceItemId: itemId,
+            tasks: {
+              create: (contentData.tasks || []).map((task: any) => ({
+                name: task.name,
+                description: task.description,
+                type: task.type || 'SIMPLE',
+                order: task.order || 0,
+                targetValue: task.targetValue,
+                unit: task.unit,
+              })),
+            },
+          },
+        });
+      }
+    } else {
+      // Create regular routine (not Daily Routine)
+      createdEntity = await prisma.routine.create({
+        data: {
+          roleId,
+          name: routineName,
+          description: contentData.description,
+          type: contentData.type || 'REGULAR',
+          resetPeriod: contentData.resetPeriod || 'DAILY',
+          resetDay: contentData.resetDay,
+          visibility: contentData.visibility || 'ALWAYS',
+          visibleDays: contentData.visibleDays || [],
+          sourceMarketplaceItemId: itemId,
+          tasks: {
+            create: (contentData.tasks || []).map((task: any) => ({
+              name: task.name,
+              description: task.description,
+              type: task.type || 'SIMPLE',
+              order: task.order || 0,
+              targetValue: task.targetValue,
+              unit: task.unit,
+            })),
+          },
+        },
+      });
+    }
+
+    // Create RoutineAssignment to link routine to person/group
+    const assignment = await prisma.routineAssignment.create({
+      data: {
+        routineId: createdEntity.id,
+        ...(targetType === 'PERSON' ? { personId: targetId } : { groupId: targetId }),
       },
     });
+
+    assignments.push(assignment);
   } else {
     // Create goal from marketplace item
     createdEntity = await prisma.goal.create({
@@ -281,6 +394,9 @@ export async function forkMarketplaceItem(params: ForkMarketplaceItemParams) {
     });
   }
 
+  // Track import in MarketplaceImport table
+  await trackMarketplaceImport(itemId, userId, targetId, targetType, false);
+
   // Increment fork count
   await prisma.marketplaceItem.update({
     where: { id: itemId },
@@ -291,7 +407,43 @@ export async function forkMarketplaceItem(params: ForkMarketplaceItemParams) {
     },
   });
 
-  return createdEntity;
+  return { entity: createdEntity, assignments };
+}
+
+/**
+ * Import marketplace item via share code
+ */
+export async function importFromShareCode(params: ImportFromShareCodeParams) {
+  const { shareCode, roleId, userId, targetId, targetType } = params;
+
+  // Validate share code
+  const validation = await validateMarketplaceShareCode(shareCode);
+
+  if (!validation.valid || !validation.shareCode) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: validation.error || 'Invalid share code',
+    });
+  }
+
+  const { marketplaceItemId } = validation.shareCode;
+
+  // Import the item using fork logic
+  const result = await forkMarketplaceItem({
+    itemId: marketplaceItemId,
+    roleId,
+    userId,
+    targetId,
+    targetType,
+  });
+
+  // Update import record to mark as imported via code
+  await trackMarketplaceImport(marketplaceItemId, userId, targetId, targetType, true);
+
+  // Increment share code use count
+  await incrementShareCodeUseCount(validation.shareCode.id);
+
+  return result;
 }
 
 /**
@@ -307,11 +459,17 @@ export async function searchMarketplace(params: SearchMarketplaceParams) {
     sortBy = 'rating',
     limit = 20,
     offset = 0,
+    userRoleType,
   } = params;
 
   const where: any = {
     visibility: 'PUBLIC',
   };
+
+  // Filter by target audience based on user's role type
+  if (userRoleType) {
+    where.targetAudience = userRoleType;
+  }
 
   if (keyword) {
     where.OR = [
@@ -382,6 +540,7 @@ export async function searchMarketplace(params: SearchMarketplaceParams) {
 
 /**
  * Rate a marketplace item (1-5 stars)
+ * Restriction: Only users who have imported the item can rate it
  */
 export async function rateMarketplaceItem(params: RateMarketplaceItemParams) {
   const { itemId, userId, rating } = params;
@@ -390,6 +549,16 @@ export async function rateMarketplaceItem(params: RateMarketplaceItemParams) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'Rating must be between 1 and 5',
+    });
+  }
+
+  // Check if user has imported this item
+  const hasImported = await hasUserImportedItem(itemId, userId);
+
+  if (!hasImported) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You must import this item before you can rate it',
     });
   }
 

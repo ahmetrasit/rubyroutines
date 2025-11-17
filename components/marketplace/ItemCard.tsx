@@ -1,12 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, GitFork, Eye } from 'lucide-react';
 import Link from 'next/link';
-import { trpc } from '@/lib/trpc/client';
-import { useToast } from '@/components/ui/toast';
+import { ForkModal } from './ForkModal';
 
 interface MarketplaceItem {
   id: string;
@@ -32,32 +32,7 @@ interface ItemCardProps {
 }
 
 export function ItemCard({ item, roleId }: ItemCardProps) {
-  const { toast } = useToast();
-  const utils = trpc.useUtils();
-
-  const forkMutation = trpc.marketplace.fork.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: `${item.name} has been forked to your collection`,
-        variant: 'success',
-      });
-      utils.marketplace.search.invalidate();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const handleFork = () => {
-    if (confirm(`Fork "${item.name}" to your collection?`)) {
-      forkMutation.mutate({ itemId: item.id, roleId });
-    }
-  };
+  const [showForkModal, setShowForkModal] = useState(false);
 
   return (
     <Card className="p-5 hover:shadow-lg transition-shadow">
@@ -133,15 +108,26 @@ export function ItemCard({ item, roleId }: ItemCardProps) {
           </Link>
           <Button
             size="sm"
-            onClick={handleFork}
-            disabled={forkMutation.isPending}
+            onClick={() => setShowForkModal(true)}
             className="flex-1"
           >
             <GitFork className="h-4 w-4 mr-2" />
-            {forkMutation.isPending ? 'Forking...' : 'Fork'}
+            Import
           </Button>
         </div>
       </div>
+
+      {/* Fork Modal */}
+      <ForkModal
+        isOpen={showForkModal}
+        onClose={() => setShowForkModal(false)}
+        marketplaceItem={{
+          id: item.id,
+          name: item.name,
+          type: item.type,
+        }}
+        roleId={roleId}
+      />
     </Card>
   );
 }
