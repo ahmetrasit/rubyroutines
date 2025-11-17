@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "Routine" ADD COLUMN     "color" TEXT;
+ALTER TABLE "routines" ADD COLUMN     "color" TEXT;

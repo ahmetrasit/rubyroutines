@@ -67,6 +67,7 @@ import {
   verifyTaskOwnership,
   verifyGoalOwnership,
   verifyAdminStatus,
+  verifyTaskAccess,
 } from './middleware/auth';
 
 /**
@@ -114,4 +115,5 @@ export {
   verifyRoutineOwnership,
   verifyTaskOwnership,
   verifyGoalOwnership,
+  verifyTaskAccess,
 };

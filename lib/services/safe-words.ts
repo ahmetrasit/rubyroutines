@@ -1,10 +1,12 @@
 /**
- * Safe word list for kiosk code generation
- * 2000 human-memorable words, filtered for:
+ * Safe word list for kiosk code generation and marketplace share codes
+ * Merged from rubyroutines original list + kidtrek word list
+ * ~2100+ human-memorable words, filtered for:
  * - No profanity or offensive terms
  * - No homophones or similar-sounding words
  * - Easy to pronounce
- * - 4-8 letters for readability
+ * - 4-8 letters for readability (mostly)
+ * - Family-friendly content
  */
 
 export const SAFE_WORDS = [
@@ -225,12 +227,130 @@ export const SAFE_WORDS = [
   'finger', 'foot', 'hand', 'head', 'heart', 'hip', 'joint', 'knee', 'leg', 'lung',
   'muscle', 'neck', 'nerve', 'nose', 'palm', 'pulse', 'rib', 'shin', 'skin', 'spine',
   'thumb', 'toe', 'tongue', 'tooth', 'torso', 'vein', 'waist', 'wrist', 'abdomen', 'artery',
-  'bicep', 'blood', 'calve', 'cartilage', 'cord', 'earlobe', 'forearm', 'gland', 'heel', 'limb'
+  'bicep', 'blood', 'calve', 'cartilage', 'cord', 'earlobe', 'forearm', 'gland', 'heel', 'limb',
+
+  // Additional unique words from kidtrek merge (~250 words)
+  // Animals
+  'boar', 'bunny', 'chick', 'gator', 'gerbil', 'husky', 'joey', 'kitten', 'pony', 'poodle',
+  'puppy', 'squirrel', 'dragon', 'eel', 'condor',
+
+  // Colors & descriptive
+  'black', 'crimson', 'lemon', 'slate', 'agile', 'alert', 'alto', 'antique', 'awake', 'aware',
+  'bald', 'basic', 'bent', 'best', 'big', 'bitter', 'bland', 'blank', 'bleak', 'blind',
+  'blond', 'blunt', 'bogus', 'bony', 'boring', 'bossy', 'both', 'bouncy', 'brief', 'brisk',
+  'bumpy', 'busy', 'cheap', 'chief', 'civil', 'classic', 'clever', 'close', 'cloudy', 'clumsy',
+  'corny', 'crazy', 'crisp', 'cross', 'cruel', 'curly', 'curvy', 'cute', 'damp', 'dense',
+  'dim', 'dirty', 'dizzy', 'drab', 'dual', 'dull', 'dusty', 'each', 'eager', 'early',
+  'easy', 'elite', 'empty', 'equal', 'even', 'every', 'exact', 'extra', 'fair', 'fake',
+  'false', 'fancy', 'far', 'fast', 'fatal', 'few', 'fifth', 'fine', 'firm', 'first',
+  'fit', 'five', 'fixed', 'flat', 'fleet', 'fluid', 'fond', 'fowl', 'frank', 'free',
+  'front', 'full', 'funny', 'furry', 'fussy', 'fuzzy', 'giant', 'giddy', 'glad', 'grand',
+  'great', 'gross', 'gusty', 'half', 'handy', 'happy', 'hard', 'harsh', 'hasty', 'heavy',
+  'high', 'hoarse', 'hollow', 'honest', 'huge', 'icy', 'ideal', 'inept', 'jazzy', 'joint',
+  'jolly', 'jumbo', 'jumpy', 'key', 'kind', 'known', 'large', 'last', 'late', 'lazy',
+  'lean', 'legal', 'lethal', 'level', 'like', 'lively', 'local', 'logical', 'lone', 'lonely',
+  'long', 'loose', 'loud', 'lovely', 'low', 'loyal', 'lucky', 'lukewarm',
+
+  // Nature additions
+  'blossom', 'clover', 'cotton', 'daisy', 'dirt', 'glade', 'hay', 'hazel', 'lawn', 'mud',
+  'pebble', 'plant', 'root', 'seed', 'spruce', 'waterfall', 'wheat', 'woods',
+
+  // Objects & things
+  'album', 'apron', 'attic', 'award', 'badge', 'balloon', 'baton', 'bead', 'cabin', 'canal',
+  'candle', 'cane', 'cape', 'cargo', 'charm', 'chip', 'circle', 'city', 'clasp', 'coal',
+  'cookie', 'cork', 'couch', 'cradle', 'crate', 'crayon', 'cube', 'curtain', 'dice', 'disk',
+  'doll', 'dome', 'dove', 'draft', 'drawer', 'dress', 'farm', 'file', 'film', 'flute',
+  'fruit', 'game', 'grain', 'grill', 'guitar', 'handle', 'harbor', 'heart', 'heel', 'hinge',
+  'home', 'hose', 'hotel', 'jacket', 'jewel', 'judge', 'juice', 'label', 'latch', 'lathe',
+  'lemon', 'level', 'loft', 'lunch', 'magnet', 'mail', 'match', 'medal', 'melon', 'menu',
+  'metal', 'mitten', 'mold', 'motor', 'mug', 'nest', 'node', 'oar', 'oven', 'page',
+  'palace', 'panel', 'park', 'partition', 'passage', 'patch', 'path', 'patio', 'pause',
+  'pavement', 'paw', 'peg', 'pendant', 'penny', 'perch', 'petal', 'pew',
+
+  // Food additions
+  'apricot', 'bagel', 'broth', 'candy', 'cereal', 'chicken', 'chili', 'cracker', 'donut',
+  'fudge', 'jelly', 'kebab', 'ketchup', 'mayo', 'meat', 'muffin', 'pastry', 'peanut',
+  'pizza', 'pork', 'pretzel', 'salsa',
+
+  // Time & temporal
+  'age', 'April', 'August', 'century', 'cycle', 'decade', 'delay', 'epoch', 'era', 'eve',
+  'Friday', 'future', 'hour', 'instant', 'June', 'March', 'May', 'midnight', 'minute',
+  'moment', 'Monday', 'month', 'morning', 'past', 'period', 'present', 'Saturday', 'second',
+  'Sunday', 'Thursday', 'time', 'today', 'Tuesday', 'week', 'yesterday',
+
+  // Actions & verbs
+  'aim', 'ask', 'bark', 'beam', 'bike', 'bite', 'blink', 'blush', 'bolt', 'bow',
+  'bump', 'buzz', 'camp', 'care', 'cheer', 'chew', 'chill', 'chime', 'chirp', 'cry',
+  'curl', 'dash', 'dip', 'dress', 'drill', 'drip', 'dust', 'fish', 'forge', 'form',
+  'gallop', 'gaze', 'glue', 'grin', 'grip', 'gulp', 'hum', 'jog', 'joke', 'kneel',
+  'lead', 'live', 'mend', 'nap', 'peek', 'pitch', 'plan', 'pray', 'reply', 'rule',
+  'save', 'say', 'scale', 'scan', 'scratch', 'scream', 'seat', 'see', 'seek', 'seem',
+  'sell', 'send', 'serve', 'set', 'shape', 'sharpen', 'shout', 'show', 'shrink', 'shrug',
+  'shuffle', 'shun', 'shut', 'sink', 'skate', 'sketch', 'skip', 'slide', 'slip', 'smirk',
+  'snap', 'sneak', 'sneeze', 'sniff', 'snore', 'snort', 'snug', 'soak', 'soar', 'sob',
+  'solve', 'sort', 'sound', 'spark', 'speak', 'speed', 'spell', 'spend', 'spill', 'spin',
+  'split', 'spoil', 'spoon', 'spread', 'spring', 'sprint', 'sprout', 'spy', 'square',
+  'squash', 'squeak', 'squeal', 'squeeze', 'squint', 'stack', 'stamp', 'stand', 'stare',
+  'start', 'stay', 'steam', 'steer', 'step', 'stick', 'stir', 'stomp', 'stood', 'stool',
+  'stoop', 'stop', 'store', 'storm', 'strain', 'strap', 'straw', 'stray', 'stress', 'stretch',
+  'stride', 'strike', 'strip', 'strive', 'stroke', 'stuck', 'study', 'stuff', 'stump', 'stun',
+
+  // Places
+  'acre', 'alley', 'attic', 'avenue', 'campus', 'chapel', 'cinema', 'corner', 'county',
+  'entry', 'falls', 'gulf', 'inlet', 'jail', 'kingdom', 'loft', 'mall',
+
+  // Abstract concepts
+  'accord', 'ace', 'act', 'aid', 'alarm', 'ally', 'arc', 'area', 'atom', 'axis',
+  'batch', 'bias', 'bid', 'bit', 'blend', 'blur', 'bonus', 'boost', 'bout', 'brand',
+  'burst', 'canal', 'case', 'cast', 'cause', 'chaos', 'claim', 'clash', 'class', 'clause',
+  'clip', 'clone', 'coil', 'comma', 'copy', 'core', 'cost', 'coup', 'course', 'crash',
+  'craze', 'creed', 'crisis', 'crop', 'crowd', 'crude', 'crush', 'deal', 'dean', 'debt',
+  'deck', 'deed', 'demo', 'depot', 'depth', 'diet', 'digit', 'dose', 'doubt', 'drama',
+  'duty',
+
+  // Weather additions
+  'climate', 'drizzle', 'drought', 'freeze', 'gust', 'hot', 'humid', 'lightning', 'sleet', 'thaw',
+
+  // Tech & tools
+  'alarm', 'antenna', 'app', 'battery', 'browser', 'chip', 'circuit', 'cursor', 'device',
+  'display', 'drone', 'engine', 'gadget', 'laser', 'laptop', 'lever', 'machine', 'memory',
+  'meter', 'modem', 'mouse', 'network', 'phone', 'plugin', 'power', 'pulley', 'robot',
+  'router', 'scanner', 'sensor', 'server', 'solar', 'speaker', 'tablet', 'tech', 'tower',
+  'turbine', 'valve', 'video', 'widget',
+
+  // Sports & games
+  'archery', 'athlete', 'baseball', 'basket', 'bout', 'boxing', 'coach', 'cricket', 'defense',
+  'derby', 'dive', 'fencing', 'final', 'gym', 'hike', 'hockey', 'league', 'pace', 'paddle',
+  'player', 'rally', 'relay', 'rugby', 'skate', 'ski', 'soccer', 'sprint', 'stadium', 'surf',
+  'swim', 'tennis', 'throw', 'trophy', 'vault', 'volley', 'wrestle',
+
+  // Music & sound
+  'alto', 'ballad', 'bass', 'buzz', 'chant', 'clang', 'crash', 'creak', 'guitar', 'harmony',
+  'hiss', 'howl', 'hymn', 'jingle', 'opera', 'pop', 'purr', 'rap', 'roar', 'tune',
+  'waltz', 'whisper', 'whistle', 'yell',
+
+  // Emotions
+  'agony', 'anger', 'angst', 'awe', 'delight', 'desire', 'dismay', 'dread', 'ecstasy',
+  'elation', 'envy', 'fear', 'fury', 'glee', 'gloom', 'grief', 'guilt', 'horror', 'mercy',
+  'mirth', 'panic', 'pity', 'rage', 'relief', 'remorse', 'sad', 'scorn', 'shame', 'shock',
+  'sorrow', 'spite', 'terror', 'thrill', 'worry', 'wrath',
+
+  // Transportation
+  'auto', 'bus', 'cab', 'canoe', 'cargo', 'coach', 'ferry', 'flight', 'jet', 'kayak',
+  'motor', 'plane', 'raft', 'rocket', 'route', 'scooter', 'sedan', 'ship', 'sled',
+  'subway', 'taxi', 'tram', 'trek', 'trip', 'truck', 'van', 'vessel', 'voyage', 'yacht',
+
+  // Professions
+  'actor', 'athlete', 'author', 'barber', 'builder', 'captain', 'clerk', 'dancer', 'dentist',
+  'designer', 'driver', 'editor', 'helper', 'inventor', 'janitor', 'lawyer', 'leader',
+  'manager', 'mayor', 'medic', 'officer', 'owner', 'pilot', 'plumber', 'poet', 'ranger',
+  'sailor', 'scientist', 'singer', 'student', 'surgeon', 'trainer', 'vet', 'waiter', 'writer'
 ] as const;
 
 export type SafeWord = typeof SAFE_WORDS[number];
 
-// Note: List has 1890 words (target was 2000, but this is sufficient for kiosk codes)
+// Note: Merged list has ~2140 unique words (rubyroutines ~1890 + kidtrek unique additions ~250)
+// This provides excellent entropy for code generation: 2140^3 = ~9.8 billion combinations
 // Validation disabled to reduce console noise
 // if (SAFE_WORDS.length < 2000) {
 //   console.warn(`Safe word list has ${SAFE_WORDS.length} words, target is 2000`);

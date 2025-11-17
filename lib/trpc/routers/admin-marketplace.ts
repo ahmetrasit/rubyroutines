@@ -181,7 +181,7 @@ export const adminMarketplaceRouter = router({
       z.object({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
-        visibility: z.enum(['PUBLIC', 'UNLISTED', 'PRIVATE']).optional(),
+        visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
       })
     )
     .query(async ({ input }) => {
@@ -222,5 +222,117 @@ export const adminMarketplaceRouter = router({
         items,
         total,
       };
+    }),
+
+  /**
+   * Hide a marketplace item
+   */
+  hideItem: adminProcedure
+    .input(
+      z.object({
+        itemId: z.string().cuid(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const item = await prisma.marketplaceItem.findUnique({
+        where: { id: input.itemId },
+      });
+
+      if (!item) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Item not found' });
+      }
+
+      const updatedItem = await prisma.marketplaceItem.update({
+        where: { id: input.itemId },
+        data: {
+          hidden: true,
+          hiddenAt: new Date(),
+          hiddenBy: ctx.user.id,
+        },
+      });
+
+      return updatedItem;
+    }),
+
+  /**
+   * Unhide a marketplace item
+   */
+  unhideItem: adminProcedure
+    .input(
+      z.object({
+        itemId: z.string().cuid(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const item = await prisma.marketplaceItem.findUnique({
+        where: { id: input.itemId },
+      });
+
+      if (!item) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Item not found' });
+      }
+
+      const updatedItem = await prisma.marketplaceItem.update({
+        where: { id: input.itemId },
+        data: {
+          hidden: false,
+          hiddenAt: null,
+          hiddenBy: null,
+        },
+      });
+
+      return updatedItem;
+    }),
+
+  /**
+   * Bulk hide marketplace items
+   */
+  bulkHideItems: adminProcedure
+    .input(
+      z.object({
+        itemIds: z.array(z.string().cuid()).min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await prisma.marketplaceItem.updateMany({
+        where: {
+          id: {
+            in: input.itemIds,
+          },
+        },
+        data: {
+          hidden: true,
+          hiddenAt: new Date(),
+          hiddenBy: ctx.user.id,
+        },
+      });
+
+      return { count: result.count };
+    }),
+
+  /**
+   * Bulk unhide marketplace items
+   */
+  bulkUnhideItems: adminProcedure
+    .input(
+      z.object({
+        itemIds: z.array(z.string().cuid()).min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const result = await prisma.marketplaceItem.updateMany({
+        where: {
+          id: {
+            in: input.itemIds,
+          },
+        },
+        data: {
+          hidden: false,
+          hiddenAt: null,
+          hiddenBy: null,
+        },
+      });
+
+      return { count: result.count };
     }),
 });

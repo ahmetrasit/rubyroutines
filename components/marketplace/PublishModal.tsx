@@ -35,20 +35,20 @@ const AGE_GROUPS = [
   'Adult (18+)',
 ];
 
-const VISIBILITY_OPTIONS = [
-  { value: 'PUBLIC', label: 'Public - Anyone can find and fork' },
-  { value: 'UNLISTED', label: 'Unlisted - Only those with link can access' },
-  { value: 'PRIVATE', label: 'Private - Only you can see' },
-];
+type Visibility = 'PUBLIC' | 'PRIVATE';
 
 export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
   const [type, setType] = useState<'ROUTINE' | 'GOAL'>('ROUTINE');
   const [selectedItem, setSelectedItem] = useState('');
-  const [visibility, setVisibility] = useState('PUBLIC');
+  const [visibility, setVisibility] = useState<Visibility>('PUBLIC');
   const [category, setCategory] = useState('');
   const [ageGroup, setAgeGroup] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [maxUses, setMaxUses] = useState<number | undefined>(undefined);
+  const [expiresInDays, setExpiresInDays] = useState<number | undefined>(undefined);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [publishedItemId, setPublishedItemId] = useState<string | null>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -56,19 +56,48 @@ export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
   const { data: goals } = trpc.goal.list.useQuery({ roleId });
 
   const publishMutation = trpc.marketplace.publish.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Published to marketplace successfully',
-        variant: 'success',
-      });
-      utils.marketplace.search.invalidate();
-      handleClose();
+    onSuccess: (data) => {
+      if (visibility === 'PRIVATE') {
+        setPublishedItemId(data.id);
+        // Auto-generate share code for private items
+        generateShareCodeMutation.mutate({
+          marketplaceItemId: data.id,
+          maxUses,
+          expiresInDays,
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Published to marketplace successfully',
+          variant: 'success',
+        });
+        utils.marketplace.search.invalidate();
+        handleClose();
+      }
     },
     onError: (error) => {
       toast({
         title: 'Error',
         description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const generateShareCodeMutation = trpc.marketplace.generateShareCode.useMutation({
+    onSuccess: (data) => {
+      setGeneratedCode(data.code);
+      toast({
+        title: 'Success',
+        description: 'Published to marketplace and share code generated',
+        variant: 'success',
+      });
+      utils.marketplace.search.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Published but failed to generate share code: ${error.message}`,
         variant: 'destructive',
       });
     },
@@ -82,6 +111,10 @@ export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
     setAgeGroup('');
     setTagInput('');
     setTags([]);
+    setMaxUses(undefined);
+    setExpiresInDays(undefined);
+    setGeneratedCode(null);
+    setPublishedItemId(null);
     onClose();
   };
 
@@ -194,96 +227,191 @@ export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
               </Select>
             </div>
 
-            {/* Visibility */}
+            {/* Visibility Toggle */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Visibility
               </label>
-              <Select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
-                {VISIBILITY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category (optional)
-              </label>
-              <Select value={category} onChange={(e) => setCategory(e.target.value)}>
-                <option value="">-- None --</option>
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {/* Age Group */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Age Group (optional)
-              </label>
-              <Select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
-                <option value="">-- None --</option>
-                {AGE_GROUPS.map((age) => (
-                  <option key={age} value={age}>
-                    {age}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            {/* Tags */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tags (up to 10)
-              </label>
-              <div className="flex gap-2 mb-2">
-                <Input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Add a tag..."
-                  disabled={tags.length >= 10}
-                />
+              <div className="flex gap-3">
                 <Button
-                  onClick={handleAddTag}
-                  disabled={!tagInput.trim() || tags.length >= 10}
-                  variant="outline"
+                  type="button"
+                  variant={visibility === 'PUBLIC' ? 'default' : 'outline'}
+                  onClick={() => setVisibility('PUBLIC')}
+                  className="flex-1"
                 >
-                  Add
+                  Public
+                  <span className="ml-2 text-xs opacity-75">
+                    (Anyone can find)
+                  </span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={visibility === 'PRIVATE' ? 'default' : 'outline'}
+                  onClick={() => setVisibility('PRIVATE')}
+                  className="flex-1"
+                >
+                  Private
+                  <span className="ml-2 text-xs opacity-75">
+                    (Share with code)
+                  </span>
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Badge key={tag} variant="default" className="cursor-pointer">
-                    {tag}
-                    <button onClick={() => handleRemoveTag(tag)} className="ml-2">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
             </div>
+
+            {/* Public Visibility Options */}
+            {visibility === 'PUBLIC' && (
+              <>
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category (optional)
+                  </label>
+                  <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+                    <option value="">-- None --</option>
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                {/* Age Group */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Age Group (optional)
+                  </label>
+                  <Select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
+                    <option value="">-- None --</option>
+                    {AGE_GROUPS.map((age) => (
+                      <option key={age} value={age}>
+                        {age}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tags (up to 10)
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Add a tag..."
+                      disabled={tags.length >= 10}
+                    />
+                    <Button
+                      onClick={handleAddTag}
+                      disabled={!tagInput.trim() || tags.length >= 10}
+                      variant="outline"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <Badge key={tag} variant="default" className="cursor-pointer">
+                        {tag}
+                        <button onClick={() => handleRemoveTag(tag)} className="ml-2">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Private Visibility Options */}
+            {visibility === 'PRIVATE' && (
+              <>
+                {/* Share Code Options */}
+                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">
+                    A unique share code will be generated that you can share with others.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Max Uses (optional)
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={maxUses || ''}
+                        onChange={(e) => setMaxUses(e.target.value ? parseInt(e.target.value) : undefined)}
+                        placeholder="Unlimited"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Expires in (days)
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={expiresInDays || ''}
+                        onChange={(e) => setExpiresInDays(e.target.value ? parseInt(e.target.value) : undefined)}
+                        placeholder="Never"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Generated Code Display */}
+                  {generatedCode && (
+                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm font-medium text-green-900 mb-2">
+                        Share Code Generated:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 p-2 bg-white border border-green-300 rounded text-lg font-mono text-green-700">
+                          {generatedCode}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedCode);
+                            toast({
+                              title: 'Copied!',
+                              description: 'Share code copied to clipboard',
+                              variant: 'success',
+                            });
+                          }}
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3 pt-4 border-t">
               <Button onClick={handleClose} variant="outline" className="flex-1">
-                Cancel
+                {generatedCode ? 'Done' : 'Cancel'}
               </Button>
-              <Button
-                onClick={handlePublish}
-                disabled={!selectedItem || publishMutation.isPending}
-                className="flex-1"
-              >
-                {publishMutation.isPending ? 'Publishing...' : 'Publish'}
-              </Button>
+              {!generatedCode && (
+                <Button
+                  onClick={handlePublish}
+                  disabled={!selectedItem || publishMutation.isPending || generateShareCodeMutation.isPending}
+                  className="flex-1"
+                >
+                  {publishMutation.isPending || generateShareCodeMutation.isPending
+                    ? 'Publishing...'
+                    : 'Publish'}
+                </Button>
+              )}
             </div>
           </div>
         </div>

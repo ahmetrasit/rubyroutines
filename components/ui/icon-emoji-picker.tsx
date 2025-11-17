@@ -96,7 +96,7 @@ const ICON_CATEGORIES = {
     { name: 'ShoppingCart', icon: LucideIcons.ShoppingCart, label: 'Shopping' },
     { name: 'Recycle', icon: LucideIcons.Recycle, label: 'Recycle' },
     { name: 'Droplet', icon: LucideIcons.Droplet, label: 'Water' },
-    { name: 'Spray', icon: LucideIcons.Spray, label: 'Cleaning' },
+    { name: 'SprayCan', icon: LucideIcons.SprayCan, label: 'Cleaning' },
     { name: 'Wind', icon: LucideIcons.Wind, label: 'Vacuum' },
     { name: 'WashingMachine', icon: LucideIcons.WashingMachine, label: 'Washing' },
   ],

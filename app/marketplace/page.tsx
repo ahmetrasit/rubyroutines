@@ -63,9 +63,14 @@ export default function MarketplacePage() {
     );
   }
 
+  // Determine dashboard path based on role type
+  const dashboardPath = activeRole.type === 'PARENT' ? '/parent' : '/teacher';
+
   return (
     <MarketplacePageContent
       roleId={activeRole.id}
+      roleType={activeRole.type}
+      dashboardPath={dashboardPath}
       filters={filters}
       setFilters={setFilters}
       page={page}
@@ -79,6 +84,8 @@ export default function MarketplacePage() {
 
 interface MarketplacePageContentProps {
   roleId: string;
+  roleType: 'PARENT' | 'TEACHER';
+  dashboardPath: string;
   filters: SearchFilters;
   setFilters: (filters: SearchFilters) => void;
   page: number;
@@ -90,6 +97,8 @@ interface MarketplacePageContentProps {
 
 function MarketplacePageContent({
   roleId,
+  roleType,
+  dashboardPath,
   filters,
   setFilters,
   page,
@@ -107,6 +116,7 @@ function MarketplacePageContent({
     sortBy: filters.sortBy,
     limit,
     offset: page * limit,
+    userRoleType: roleType, // Add role type filtering
   });
 
   const handleSearch = useCallback((newFilters: SearchFilters) => {
@@ -120,7 +130,7 @@ function MarketplacePageContent({
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
-        <Link href="/parent">
+        <Link href={dashboardPath}>
           <Button variant="ghost" className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard

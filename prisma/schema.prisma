@@ -33,14 +33,18 @@ model User {
   twoFactorBackupCodes String[]
 
   // Relations
-  roles                Role[]
-  verificationCodes    VerificationCode[]
-  invitations          Invitation[]       @relation("InviterUser")
-  acceptedInvitations  Invitation[]       @relation("AcceptedUser")
-  marketplaceRatings   MarketplaceRating[]
-  marketplaceComments  MarketplaceComment[]
-  commentFlags         CommentFlag[]
-  auditLogs            AuditLog[]
+  roles                   Role[]
+  verificationCodes       VerificationCode[]
+  invitations             Invitation[]            @relation("InviterUser")
+  acceptedInvitations     Invitation[]            @relation("AcceptedUser")
+  marketplaceRatings      MarketplaceRating[]
+  marketplaceComments     MarketplaceComment[]
+  commentFlags            CommentFlag[]
+  marketplaceShareCodes   MarketplaceShareCode[]  // Share codes created by this user
+  marketplaceImports      MarketplaceImport[]     // Items imported by this user
+  routineShareCodes       RoutineShareCode[]      // Routine share codes created by this user
+  auditLogs               AuditLog[]
+  sharedWithConnections   PersonSharingConnection[] @relation("SharedWithUserSharingConnections")
 
   @@index([isAdmin])
   @@map("users")
@@ -78,6 +82,9 @@ model Role {
   connectionCodes             ConnectionCode[]
   marketplaceItems            MarketplaceItem[]
   schoolMemberships           SchoolMember[]
+  ownerSharingInvites         PersonSharingInvite[]      @relation("OwnerRoleSharingInvites")
+  ownerSharingConnections     PersonSharingConnection[]  @relation("OwnerRoleSharingConnections")
+  sharedWithConnections       PersonSharingConnection[]  @relation("SharedWithRoleSharingConnections")
 
   @@unique([userId, type])
   @@index([userId])
@@ -125,6 +132,8 @@ model Person {
   parentConnections       StudentParentConnection[] @relation("ParentPerson")
   connectionCodes         ConnectionCode[]
   codes                   Code[]                    // Individual kiosk codes for this person
+  ownerSharingInvites     PersonSharingInvite[]     @relation("OwnerPersonSharingInvites")
+  ownerSharingConnections PersonSharingConnection[] @relation("OwnerPersonSharingConnections")
 
   @@index([roleId])
   @@index([status])
@@ -221,6 +230,7 @@ model Routine {
   targetConditionChecks     ConditionCheck[]       @relation("TargetRoutineConditionChecks")
   goalLinks                 GoalRoutineLink[]
   visibilityOverrides       VisibilityOverride[]
+  shareCodes                RoutineShareCode[]
 
   @@index([roleId])
   @@index([type])
@@ -581,6 +591,18 @@ enum InvitationStatus {
   EXPIRED
 }
 
+enum ShareType {
+  PERSON              // Share a specific person (kid, student, etc.)
+  ROUTINE_ACCESS      // Share routine viewing/editing for a person
+  FULL_ROLE           // Share entire role access (co-parent/co-teacher)
+}
+
+enum PermissionLevel {
+  VIEW                // View task completions only
+  EDIT                // View + complete tasks
+  MANAGE              // View + Edit + manage routines/settings
+}
+
 model CoParent {
   id              String   @id @default(cuid())
   primaryRoleId   String
@@ -651,6 +673,82 @@ model StudentParentConnection {
   @@map("student_parent_connections")
 }
 
+model PersonSharingInvite {
+  id              String          @id @default(cuid())
+  inviteCode      String          @unique // 3-word code (e.g., "happy-turtle-jump")
+
+  // Who is sharing
+  ownerRoleId     String
+  ownerPersonId   String?         // Optional: specific person being shared
+
+  // What is being shared
+  shareType       ShareType
+  permissions     PermissionLevel @default(VIEW)
+
+  // Context for what's being shared
+  contextData     Json?           // Flexible data (e.g., specific routine IDs)
+
+  // Invite metadata
+  expiresAt       DateTime        // 90 days from creation
+  maxUses         Int?            // null = unlimited, 1 = single use
+  useCount        Int             @default(0)
+  status          CodeStatus      @default(ACTIVE) // ACTIVE, USED, EXPIRED, REVOKED
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  ownerRole         Role                      @relation("OwnerRoleSharingInvites", fields: [ownerRoleId], references: [id], onDelete: Cascade)
+  ownerPerson       Person?                   @relation("OwnerPersonSharingInvites", fields: [ownerPersonId], references: [id], onDelete: Cascade)
+  claimedConnections PersonSharingConnection[] @relation("ClaimedFromInvite")
+
+  @@index([inviteCode])
+  @@index([ownerRoleId])
+  @@index([ownerPersonId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("person_sharing_invites")
+}
+
+model PersonSharingConnection {
+  id                String          @id @default(cuid())
+
+  // Who is sharing
+  ownerRoleId       String
+  ownerPersonId     String?         // null for role-level sharing
+
+  // Who it's shared with
+  sharedWithRoleId  String
+  sharedWithUserId  String
+
+  // What is being shared
+  shareType         ShareType
+  permissions       PermissionLevel @default(VIEW)
+
+  // Metadata
+  contextData       Json?           // Flexible: classroom ID, routine IDs, etc.
+  inviteCodeId      String?         // Track which invite created this
+  status            String          @default("ACTIVE") // ACTIVE, REVOKED, EXPIRED
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  ownerRole         Role                  @relation("OwnerRoleSharingConnections", fields: [ownerRoleId], references: [id], onDelete: Cascade)
+  ownerPerson       Person?               @relation("OwnerPersonSharingConnections", fields: [ownerPersonId], references: [id], onDelete: Cascade)
+  sharedWithRole    Role                  @relation("SharedWithRoleSharingConnections", fields: [sharedWithRoleId], references: [id], onDelete: Cascade)
+  sharedWithUser    User                  @relation("SharedWithUserSharingConnections", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  claimedFromInvite PersonSharingInvite?  @relation("ClaimedFromInvite", fields: [inviteCodeId], references: [id], onDelete: SetNull)
+
+  @@unique([ownerRoleId, ownerPersonId, sharedWithRoleId, shareType]) // Prevent duplicate shares
+  @@index([ownerRoleId])
+  @@index([ownerPersonId])
+  @@index([sharedWithRoleId])
+  @@index([sharedWithUserId])
+  @@index([status])
+  @@map("person_sharing_connections")
+}
+
 // ============================================================================
 // SCHOOL MODE
 // ============================================================================
@@ -693,34 +791,42 @@ model SchoolMember {
 // ============================================================================
 
 model MarketplaceItem {
-  id          String   @id @default(cuid())
-  type        String   // ROUTINE or GOAL
-  sourceId    String   // ID of original routine/goal
-  authorRoleId String
-  name        String
-  description String   @default("")
-  visibility  String   @default("PUBLIC")
-  category    String?
-  ageGroup    String?
-  tags        String[] @default([])
-  version     String   @default("1.0.0")
-  content     String   // JSON snapshot of routine/goal
-  rating      Float    @default(0)
-  ratingCount Int      @default(0)
-  forkCount   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  type           String   // ROUTINE or GOAL
+  sourceId       String   // ID of original routine/goal
+  authorRoleId   String
+  name           String
+  description    String   @default("")
+  visibility     String   @default("PUBLIC") // PUBLIC or PRIVATE (removed UNLISTED)
+  targetAudience String   @default("PARENT") // PARENT or TEACHER - filters marketplace by role type
+  category       String?
+  ageGroup       String?
+  tags           String[] @default([])
+  version        String   @default("1.0.0")
+  content        String   // JSON snapshot of routine/goal
+  rating         Float     @default(0)
+  ratingCount    Int       @default(0)
+  forkCount      Int       @default(0)
+  hidden         Boolean   @default(false) // Admin moderation
+  hiddenAt       DateTime? // When item was hidden
+  hiddenBy       String?   // Admin user ID who hid it
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relations
-  authorRole Role                 @relation(fields: [authorRoleId], references: [id], onDelete: Cascade)
-  ratings    MarketplaceRating[]
-  comments   MarketplaceComment[]
+  authorRole  Role                    @relation(fields: [authorRoleId], references: [id], onDelete: Cascade)
+  ratings     MarketplaceRating[]
+  comments    MarketplaceComment[]
+  shareCodes  MarketplaceShareCode[]  // For private sharing with codes
+  imports     MarketplaceImport[]     // Track who imported this item
 
   @@index([authorRoleId])
   @@index([type])
   @@index([visibility])
   @@index([category])
   @@index([rating])
+  @@index([targetAudience])
+  @@index([hidden])
   @@map("marketplace_items")
 }
 
@@ -777,6 +883,70 @@ model CommentFlag {
   @@index([commentId])
   @@index([userId])
   @@map("comment_flags")
+}
+
+model MarketplaceShareCode {
+  id                String    @id @default(cuid())
+  marketplaceItemId String
+  shareCode         String    @unique // e.g., "happy-turtle-jump" (3-word lowercase code)
+  createdBy         String
+  useCount          Int       @default(0)
+  active            Boolean   @default(true)
+  maxUses           Int?      // null = unlimited
+  expiresAt         DateTime? // null = never expires
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  marketplaceItem MarketplaceItem @relation(fields: [marketplaceItemId], references: [id], onDelete: Cascade)
+  creator         User            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([shareCode])
+  @@index([marketplaceItemId])
+  @@index([expiresAt])
+  @@index([active])
+  @@map("marketplace_share_codes")
+}
+
+model RoutineShareCode {
+  id           String    @id @default(cuid())
+  routineId    String
+  shareCode    String    @unique // e.g., "happy-turtle-jump" (3-word lowercase code)
+  createdBy    String
+  useCount     Int       @default(0)
+  active       Boolean   @default(true)
+  maxUses      Int?      // null = unlimited
+  expiresAt    DateTime? // null = never expires
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  creator User    @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([shareCode])
+  @@index([routineId])
+  @@map("routine_share_codes")
+}
+
+model MarketplaceImport {
+  id                String   @id @default(cuid())
+  marketplaceItemId String
+  importedBy        String
+  targetId          String   // personId or groupId
+  targetType        String   // PERSON or GROUP
+  viaCode           Boolean  @default(false) // true if imported via share code, false if from marketplace
+  createdAt         DateTime @default(now())
+
+  // Relations
+  marketplaceItem MarketplaceItem @relation(fields: [marketplaceItemId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [importedBy], references: [id], onDelete: Cascade)
+
+  @@unique([marketplaceItemId, importedBy, targetId]) // Prevent duplicate imports to same target
+  @@index([marketplaceItemId])
+  @@index([importedBy])
+  @@index([targetId])
+  @@map("marketplace_imports")
 }
 
 // ============================================================================
