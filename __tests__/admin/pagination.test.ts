@@ -1,21 +1,23 @@
 import { prismaMock, setupCommonMocks } from '../utils/prisma-mock'
 import { createMockUser, createMockMarketplaceItem } from '../utils/test-factories'
 
+// Helper function to create mock items
+const createMockItems = (count: number) => {
+  return Array.from({ length: count }, (_, i) =>
+    createMockMarketplaceItem({
+      id: `item-${i + 1}`,
+      title: `Item ${i + 1}`,
+      createdAt: new Date(Date.now() - i * 1000 * 60 * 60), // Stagger creation times
+    })
+  )
+}
+
 describe('Admin Pagination', () => {
   beforeEach(() => {
     setupCommonMocks()
   })
 
   describe('Page Navigation', () => {
-    const createMockItems = (count: number) => {
-      return Array.from({ length: count }, (_, i) =>
-        createMockMarketplaceItem({
-          id: `item-${i + 1}`,
-          title: `Item ${i + 1}`,
-          createdAt: new Date(Date.now() - i * 1000 * 60 * 60), // Stagger creation times
-        })
-      )
-    }
 
     it('should navigate to first page', async () => {
       const items = createMockItems(50)

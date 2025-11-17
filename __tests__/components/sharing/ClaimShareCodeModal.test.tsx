@@ -1,280 +1,144 @@
-import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { ClaimShareCodeModal } from '@/components/sharing/ClaimShareCodeModal'
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { ClaimShareCodeModal } from '@/components/sharing/ClaimShareCodeModal';
 
 // Mock the tRPC client
+const mockValidateMutate = jest.fn();
+const mockClaimMutate = jest.fn();
+
 jest.mock('@/lib/trpc/client', () => ({
   trpc: {
     personSharing: {
+      validateInvite: {
+        useMutation: jest.fn((callbacks) => ({
+          mutate: mockValidateMutate,
+          isPending: false,
+          isLoading: false,
+        })),
+      },
       claimInvite: {
-        useMutation: jest.fn(),
+        useMutation: jest.fn((callbacks) => ({
+          mutate: mockClaimMutate,
+          isPending: false,
+          isLoading: false,
+        })),
       },
     },
   },
-}))
+}));
 
 // Mock the toast hook
 jest.mock('@/components/ui/use-toast', () => ({
   useToast: () => ({
     toast: jest.fn(),
   }),
-}))
+}));
+
+// Mock window.location.reload
+delete (window as any).location;
+(window as any).location = { reload: jest.fn() };
 
 describe('ClaimShareCodeModal', () => {
   const defaultProps = {
     isOpen: true,
     onClose: jest.fn(),
     roleId: 'role1',
-    onSuccess: jest.fn(),
-  }
+    userId: 'user1',
+  };
 
   beforeEach(() => {
-    jest.clearAllMocks()
-  })
+    jest.clearAllMocks();
+  });
 
   it('should render the modal when open', () => {
-    render(<ClaimShareCodeModal {...defaultProps} />)
+    render(<ClaimShareCodeModal {...defaultProps} />);
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText(/enter share code/i)).toBeInTheDocument()
-  })
+    expect(screen.getByText(/enter share code/i)).toBeInTheDocument();
+  });
 
   it('should not render when closed', () => {
-    render(<ClaimShareCodeModal {...defaultProps} isOpen={false} />)
+    render(<ClaimShareCodeModal {...defaultProps} isOpen={false} />);
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
+    expect(screen.queryByText(/enter share code/i)).not.toBeInTheDocument();
+  });
 
-  it('should display input fields for 3-word code', () => {
-    render(<ClaimShareCodeModal {...defaultProps} />)
+  it('should display single input field for code', () => {
+    render(<ClaimShareCodeModal {...defaultProps} />);
 
-    const inputs = screen.getAllByRole('textbox')
-    expect(inputs).toHaveLength(3)
-  })
+    const input = screen.getByPlaceholderText(/e\.g\., happy-turtle-jump/i);
+    expect(input).toBeInTheDocument();
+  });
 
-  it('should validate code format (3 words)', async () => {
-    const user = userEvent.setup()
-    render(<ClaimShareCodeModal {...defaultProps} />)
+  it('should call validate mutation when validating code', async () => {
+    const user = userEvent.setup();
+    render(<ClaimShareCodeModal {...defaultProps} />);
 
-    const inputs = screen.getAllByRole('textbox')
+    const input = screen.getByPlaceholderText(/e\.g\., happy-turtle-jump/i);
+    const continueButton = screen.getByText(/continue/i);
 
-    // Enter valid code
-    await user.type(inputs[0], 'happy')
-    await user.type(inputs[1], 'sunny')
-    await user.type(inputs[2], 'day')
+    await user.type(input, 'happy-turtle-jump');
+    await user.click(continueButton);
 
-    // Check that all inputs have values
-    expect(inputs[0]).toHaveValue('happy')
-    expect(inputs[1]).toHaveValue('sunny')
-    expect(inputs[2]).toHaveValue('day')
-  })
+    expect(mockValidateMutate).toHaveBeenCalledWith('happy-turtle-jump');
+  });
 
-  it('should auto-focus next input when word is entered', async () => {
-    const user = userEvent.setup()
-    render(<ClaimShareCodeModal {...defaultProps} />)
+  it('should validate on Enter key press', async () => {
+    const user = userEvent.setup();
+    render(<ClaimShareCodeModal {...defaultProps} />);
 
-    const inputs = screen.getAllByRole('textbox')
+    const input = screen.getByPlaceholderText(/e\.g\., happy-turtle-jump/i);
 
-    // Type in first input
-    await user.type(inputs[0], 'happy')
-    await user.keyboard('{Tab}')
+    await user.type(input, 'happy-turtle-jump{Enter}');
 
-    // Second input should be focused
-    expect(inputs[1]).toHaveFocus()
-  })
+    expect(mockValidateMutate).toHaveBeenCalledWith('happy-turtle-jump');
+  });
 
-  it('should successfully claim a valid code', async () => {
-    const mockMutate = jest.fn()
-    const mockClaimInvite = {
-      useMutation: jest.fn((options) => ({
-        mutate: (data: any) => {
-          mockMutate(data)
-          options.onSuccess({ success: true })
-        },
-        isLoading: false,
-      })),
-    }
+  it('should pre-fill code when initialCode is provided', () => {
+    render(<ClaimShareCodeModal {...defaultProps} initialCode="pre-filled-code" />);
 
-    require('@/lib/trpc/client').trpc.personSharing.claimInvite = mockClaimInvite
+    const input = screen.getByPlaceholderText(/e\.g\., happy-turtle-jump/i);
+    expect(input).toHaveValue('pre-filled-code');
+  });
 
-    const user = userEvent.setup()
-    render(<ClaimShareCodeModal {...defaultProps} />)
-
-    const inputs = screen.getAllByRole('textbox')
-
-    // Enter code
-    await user.type(inputs[0], 'happy')
-    await user.type(inputs[1], 'sunny')
-    await user.type(inputs[2], 'day')
-
-    // Click claim button
-    const claimButton = screen.getByText(/claim access/i)
-    await user.click(claimButton)
-
-    expect(mockMutate).toHaveBeenCalledWith({
-      code: 'happy-sunny-day',
-      roleId: 'role1',
-    })
-
-    expect(defaultProps.onSuccess).toHaveBeenCalled()
-  })
-
-  it('should show error for invalid code', async () => {
-    const mockToast = jest.fn()
+  it('should show error when validating empty code', async () => {
+    const mockToast = jest.fn();
     jest.spyOn(require('@/components/ui/use-toast'), 'useToast').mockReturnValue({
       toast: mockToast,
-    })
+    });
 
-    const mockClaimInvite = {
-      useMutation: jest.fn((options) => ({
-        mutate: () => {
-          options.onError(new Error('Invalid or expired code'))
-        },
-        isLoading: false,
-      })),
-    }
+    const user = userEvent.setup();
+    render(<ClaimShareCodeModal {...defaultProps} />);
 
-    require('@/lib/trpc/client').trpc.personSharing.claimInvite = mockClaimInvite
-
-    const user = userEvent.setup()
-    render(<ClaimShareCodeModal {...defaultProps} />)
-
-    const inputs = screen.getAllByRole('textbox')
-
-    // Enter code
-    await user.type(inputs[0], 'invalid')
-    await user.type(inputs[1], 'share')
-    await user.type(inputs[2], 'code')
-
-    // Try to claim
-    const claimButton = screen.getByText(/claim access/i)
-    await user.click(claimButton)
+    const continueButton = screen.getByText(/continue/i);
+    await user.click(continueButton);
 
     expect(mockToast).toHaveBeenCalledWith({
       title: 'Error',
-      description: 'Invalid or expired code',
+      description: 'Please enter a share code',
       variant: 'destructive',
-    })
-  })
+    });
 
-  it('should show error for expired code', async () => {
-    const mockToast = jest.fn()
-    jest.spyOn(require('@/components/ui/use-toast'), 'useToast').mockReturnValue({
-      toast: mockToast,
-    })
-
-    const mockClaimInvite = {
-      useMutation: jest.fn((options) => ({
-        mutate: () => {
-          options.onError(new Error('This share code has expired'))
-        },
-        isLoading: false,
-      })),
-    }
-
-    require('@/lib/trpc/client').trpc.personSharing.claimInvite = mockClaimInvite
-
-    const user = userEvent.setup()
-    render(<ClaimShareCodeModal {...defaultProps} />)
-
-    const inputs = screen.getAllByRole('textbox')
-    await user.type(inputs[0], 'expired')
-    await user.type(inputs[1], 'share')
-    await user.type(inputs[2], 'code')
-
-    const claimButton = screen.getByText(/claim access/i)
-    await user.click(claimButton)
-
-    expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
-      description: 'This share code has expired',
-      variant: 'destructive',
-    })
-  })
-
-  it('should show error for already claimed code', async () => {
-    const mockToast = jest.fn()
-    jest.spyOn(require('@/components/ui/use-toast'), 'useToast').mockReturnValue({
-      toast: mockToast,
-    })
-
-    const mockClaimInvite = {
-      useMutation: jest.fn((options) => ({
-        mutate: () => {
-          options.onError(new Error('This code has already been claimed'))
-        },
-        isLoading: false,
-      })),
-    }
-
-    require('@/lib/trpc/client').trpc.personSharing.claimInvite = mockClaimInvite
-
-    const user = userEvent.setup()
-    render(<ClaimShareCodeModal {...defaultProps} />)
-
-    const inputs = screen.getAllByRole('textbox')
-    await user.type(inputs[0], 'already')
-    await user.type(inputs[1], 'claimed')
-    await user.type(inputs[2], 'code')
-
-    const claimButton = screen.getByText(/claim access/i)
-    await user.click(claimButton)
-
-    expect(mockToast).toHaveBeenCalledWith({
-      title: 'Error',
-      description: 'This code has already been claimed',
-      variant: 'destructive',
-    })
-  })
-
-  it('should disable claim button when code is incomplete', () => {
-    render(<ClaimShareCodeModal {...defaultProps} />)
-
-    const claimButton = screen.getByText(/claim access/i)
-    expect(claimButton).toBeDisabled()
-  })
-
-  it('should enable claim button when all fields are filled', async () => {
-    const user = userEvent.setup()
-    render(<ClaimShareCodeModal {...defaultProps} />)
-
-    const inputs = screen.getAllByRole('textbox')
-    const claimButton = screen.getByText(/claim access/i)
-
-    // Initially disabled
-    expect(claimButton).toBeDisabled()
-
-    // Fill all fields
-    await user.type(inputs[0], 'happy')
-    await user.type(inputs[1], 'sunny')
-    await user.type(inputs[2], 'day')
-
-    // Should now be enabled
-    await waitFor(() => {
-      expect(claimButton).not.toBeDisabled()
-    })
-  })
+    expect(mockValidateMutate).not.toHaveBeenCalled();
+  });
 
   it('should close modal on cancel', async () => {
-    const user = userEvent.setup()
-    render(<ClaimShareCodeModal {...defaultProps} />)
+    const user = userEvent.setup();
+    render(<ClaimShareCodeModal {...defaultProps} />);
 
-    const cancelButton = screen.getByText(/cancel/i)
-    await user.click(cancelButton)
+    const cancelButton = screen.getByText(/cancel/i);
+    await user.click(cancelButton);
 
-    expect(defaultProps.onClose).toHaveBeenCalled()
-  })
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
 
-  it('should clear inputs when modal is reopened', () => {
-    const { rerender } = render(<ClaimShareCodeModal {...defaultProps} isOpen={false} />)
+  it('should reset to initialCode when closed and reopened', () => {
+    const { rerender } = render(<ClaimShareCodeModal {...defaultProps} initialCode="test-code" isOpen={false} />);
 
     // Open modal
-    rerender(<ClaimShareCodeModal {...defaultProps} isOpen={true} />)
+    rerender(<ClaimShareCodeModal {...defaultProps} initialCode="test-code" isOpen={true} />);
 
-    const inputs = screen.getAllByRole('textbox')
-    inputs.forEach(input => {
-      expect(input).toHaveValue('')
-    })
-  })
-})
+    const input = screen.getByPlaceholderText(/e\.g\., happy-turtle-jump/i);
+    expect(input).toHaveValue('test-code');
+  });
+});
