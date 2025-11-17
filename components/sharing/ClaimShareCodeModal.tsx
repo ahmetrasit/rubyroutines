@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ interface ClaimShareCodeModalProps {
   onClose: () => void;
   roleId: string;
   userId: string;
+  initialCode?: string;
 }
 
 export function ClaimShareCodeModal({
@@ -20,11 +21,12 @@ export function ClaimShareCodeModal({
   onClose,
   roleId,
   userId,
+  initialCode,
 }: ClaimShareCodeModalProps) {
   const [step, setStep] = useState<'enter_code' | 'confirm' | 'success'>(
     'enter_code'
   );
-  const [shareCode, setShareCode] = useState('');
+  const [shareCode, setShareCode] = useState(initialCode || '');
   const [validatedInvite, setValidatedInvite] = useState<any>(null);
   const { toast } = useToast();
 
@@ -72,6 +74,14 @@ export function ClaimShareCodeModal({
     },
   });
 
+  // Auto-validate if initialCode is provided when modal opens
+  useEffect(() => {
+    if (isOpen && initialCode && initialCode.trim() && step === 'enter_code') {
+      setShareCode(initialCode);
+      validateMutation.mutate(initialCode.trim());
+    }
+  }, [isOpen, initialCode]);
+
   const handleValidate = () => {
     if (!shareCode.trim()) {
       toast({
@@ -95,7 +105,7 @@ export function ClaimShareCodeModal({
 
   const handleClose = () => {
     setStep('enter_code');
-    setShareCode('');
+    setShareCode(initialCode || '');
     setValidatedInvite(null);
     onClose();
   };

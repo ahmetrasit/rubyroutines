@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { PersonList } from '@/components/person/person-list';
 import { ModeSwitcher } from '@/components/mode-switcher';
@@ -13,15 +13,28 @@ import Link from 'next/link';
 
 export default function ParentDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, isLoading } = trpc.auth.getSession.useQuery();
   const [showImportModal, setShowImportModal] = useState(false);
   const [showClaimShareModal, setShowClaimShareModal] = useState(false);
+  const [inviteCodeFromUrl, setInviteCodeFromUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !session?.user) {
       router.push('/login');
     }
   }, [isLoading, session, router]);
+
+  // Auto-open claim share modal if inviteCode is in URL
+  useEffect(() => {
+    const inviteCode = searchParams.get('inviteCode');
+    if (inviteCode && session?.user) {
+      setInviteCodeFromUrl(inviteCode);
+      setShowClaimShareModal(true);
+      // Clean up URL by removing the query parameter
+      router.replace('/parent', { scroll: false });
+    }
+  }, [searchParams, session, router]);
 
   if (isLoading) {
     return (
@@ -185,9 +198,13 @@ export default function ParentDashboard() {
       {/* Claim Share Code Modal */}
       <ClaimShareCodeModal
         isOpen={showClaimShareModal}
-        onClose={() => setShowClaimShareModal(false)}
+        onClose={() => {
+          setShowClaimShareModal(false);
+          setInviteCodeFromUrl(null);
+        }}
         roleId={parentRole.id}
         userId={session.user.id}
+        initialCode={inviteCodeFromUrl || undefined}
       />
     </div>
   );
