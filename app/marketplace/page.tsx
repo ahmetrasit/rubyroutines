@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { SearchBar } from '@/components/marketplace/SearchBar';
@@ -109,10 +109,10 @@ function MarketplacePageContent({
     offset: page * limit,
   });
 
-  const handleSearch = (newFilters: SearchFilters) => {
+  const handleSearch = useCallback((newFilters: SearchFilters) => {
     setFilters(newFilters);
     setPage(0);
-  };
+  }, [setFilters, setPage]);
 
   const totalPages = data?.total ? Math.ceil(data.total / limit) : 0;
 
