@@ -2,11 +2,13 @@
 
 import { trpc } from '@/lib/trpc/client';
 import { PersonCard } from './person-card';
+import { SharedPersonCard } from './SharedPersonCard';
 import { Button } from '@/components/ui/button';
 import { Plus, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { PersonForm } from './person-form';
 import { RestorePersonDialog } from './restore-person-dialog';
+import { SharePersonModal } from '@/components/sharing/SharePersonModal';
 import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 import type { Person } from '@/lib/types/database';
 import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
@@ -21,6 +23,7 @@ interface PersonListProps {
 export function PersonList({ roleId, userName, effectiveLimits = null, onSelectPerson }: PersonListProps) {
   const [showForm, setShowForm] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [kioskCollapsed, setKioskCollapsed] = useState(true); // Collapsed by default
 
   const { data: persons, isLoading } = trpc.person.list.useQuery(
@@ -44,6 +47,12 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
     }
   );
 
+  // Get shared persons using the personSharing API
+  const { data: accessiblePersons } = trpc.personSharing.getAccessiblePersons.useQuery(
+    { roleId },
+    { enabled: !!roleId }
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -54,13 +63,24 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
 
   const hasInactive = (allPersons?.length ?? 0) > (persons?.length ?? 0);
 
-  // Separate adults (Me) from children
+  // Combine owned and shared persons
+  const allAccessiblePersons = [
+    ...(accessiblePersons?.ownedPersons || []),
+    ...(accessiblePersons?.sharedPersons || [])
+  ];
+
+  // Separate adults (Me) from children - for owned persons only
   const adults = persons?.filter((person) => person.name === 'Me') || [];
-  const children = persons?.filter((person) => person.name !== 'Me') || [];
+  const ownedChildren = persons?.filter((person) => person.name !== 'Me') || [];
+
+  // Get shared children separately
+  const sharedChildren = accessiblePersons?.sharedPersons?.filter(
+    (person) => person.name !== 'Me'
+  ) || [];
 
   // Check tier limits using effective limits from database
   const childLimit = getTierLimit(effectiveLimits, 'children_per_family');
-  const currentChildCount = children.length;
+  const currentChildCount = ownedChildren.length;
   const canAddChild = currentChildCount < childLimit;
 
   const coParentLimit = getTierLimit(effectiveLimits, 'co_parents');
@@ -117,10 +137,7 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
 
           {/* Add Co-Parent placeholder card */}
           <button
-            onClick={canAddCoParent ? () => {
-              // FEATURE: Co-parent invitation dialog component not yet created
-              alert('Co-parent invitation feature coming soon!');
-            } : undefined}
+            onClick={canAddCoParent ? () => setShowShareModal(true) : undefined}
             className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${
               canAddCoParent
                 ? 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50 cursor-pointer'
@@ -152,9 +169,18 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
       {/* Row 3: Children */}
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Child cards */}
-          {children.map((person) => (
+          {/* Owned child cards */}
+          {ownedChildren.map((person) => (
             <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
+          ))}
+
+          {/* Shared child cards */}
+          {sharedChildren.map((person) => (
+            <SharedPersonCard
+              key={person.id}
+              person={person}
+              onClick={() => onSelectPerson?.(person as Person)}
+            />
           ))}
 
           {/* Add Member placeholder card */}
@@ -192,6 +218,16 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
 
       {showRestore && (
         <RestorePersonDialog roleId={roleId} onClose={() => setShowRestore(false)} />
+      )}
+
+      {showShareModal && (
+        <SharePersonModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          roleId={roleId}
+          roleType="PARENT"
+          persons={ownedChildren}
+        />
       )}
     </div>
   );

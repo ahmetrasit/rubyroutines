@@ -8,12 +8,14 @@ import { ModeSwitcher } from '@/components/mode-switcher';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Store, BarChart3, CreditCard, Settings, Download, Users } from 'lucide-react';
 import { ImportFromCodeModal } from '@/components/marketplace/ImportFromCodeModal';
+import { ClaimShareCodeModal } from '@/components/sharing/ClaimShareCodeModal';
 import Link from 'next/link';
 
 export default function ParentDashboard() {
   const router = useRouter();
   const { data: session, isLoading } = trpc.auth.getSession.useQuery();
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showClaimShareModal, setShowClaimShareModal] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !session?.user) {
@@ -111,17 +113,18 @@ export default function ParentDashboard() {
                 </CardContent>
               </Card>
 
-              <Link href="/parent/connections" className="block">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Connections</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-muted-foreground">Manage co-parents</div>
-                  </CardContent>
-                </Card>
-              </Link>
+              <Card
+                className="hover:shadow-lg transition-shadow cursor-pointer h-full"
+                onClick={() => setShowClaimShareModal(true)}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Connections</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xs text-muted-foreground">Accept share code</div>
+                </CardContent>
+              </Card>
 
               <Link href="/analytics" className="block">
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
@@ -177,6 +180,14 @@ export default function ParentDashboard() {
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         roleId={parentRole.id}
+      />
+
+      {/* Claim Share Code Modal */}
+      <ClaimShareCodeModal
+        isOpen={showClaimShareModal}
+        onClose={() => setShowClaimShareModal(false)}
+        roleId={parentRole.id}
+        userId={session.user.id}
       />
     </div>
   );
