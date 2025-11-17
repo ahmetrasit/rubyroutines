@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { X, Check } from 'lucide-react';
@@ -109,9 +109,8 @@ export function ForkModal({ isOpen, onClose, marketplaceItem, roleId }: ForkModa
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 space-y-6">
+      <DialogContent className="max-w-2xl">
+        <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
@@ -251,9 +250,8 @@ export function ForkModal({ isOpen, onClose, marketplaceItem, roleId }: ForkModa
                 </div>
               </>
             )}
-          </div>
         </div>
-      </div>
+      </DialogContent>
     </Dialog>
   );
 }
