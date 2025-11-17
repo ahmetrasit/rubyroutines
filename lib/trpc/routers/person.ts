@@ -16,7 +16,8 @@ export const personRouter = router({
   list: authorizedProcedure
     .input(listPersonsSchema)
     .query(async ({ ctx, input }) => {
-      const persons = await ctx.prisma.person.findMany({
+      // Get owned persons (directly created by this role)
+      const ownedPersons = await ctx.prisma.person.findMany({
         where: {
           roleId: input.roleId,
           status: input.includeInactive ? undefined : EntityStatus.ACTIVE,
@@ -24,7 +25,79 @@ export const personRouter = router({
         orderBy: { name: 'asc' },
       });
 
-      return persons;
+      // Get shared persons from co-parent relationships
+      const coParentPersons = await ctx.prisma.person.findMany({
+        where: {
+          status: input.includeInactive ? undefined : EntityStatus.ACTIVE,
+          role: {
+            primaryCoParents: {
+              some: {
+                coParentRoleId: input.roleId,
+                status: EntityStatus.ACTIVE,
+              },
+            },
+          },
+        },
+        include: {
+          role: {
+            include: {
+              user: {
+                select: {
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { name: 'asc' },
+      });
+
+      // Get connected students from teacher connections (for parent roles)
+      const role = await ctx.prisma.role.findUnique({
+        where: { id: input.roleId },
+        select: { type: true },
+      });
+
+      let connectedStudents: any[] = [];
+      if (role?.type === 'PARENT') {
+        connectedStudents = await ctx.prisma.person.findMany({
+          where: {
+            status: input.includeInactive ? undefined : EntityStatus.ACTIVE,
+            studentConnections: {
+              some: {
+                parentRoleId: input.roleId,
+                status: EntityStatus.ACTIVE,
+              },
+            },
+          },
+          include: {
+            role: {
+              include: {
+                user: {
+                  select: {
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { name: 'asc' },
+        });
+      }
+
+      // Combine all persons and mark their access type
+      const allPersons = [
+        ...ownedPersons.map(p => ({ ...p, accessType: 'owned' as const })),
+        ...coParentPersons.map(p => ({ ...p, accessType: 'coparent' as const })),
+        ...connectedStudents.map(p => ({ ...p, accessType: 'connected' as const })),
+      ];
+
+      // Sort combined list by name
+      allPersons.sort((a, b) => a.name.localeCompare(b.name));
+
+      return allPersons;
     }),
 
   getById: authorizedProcedure

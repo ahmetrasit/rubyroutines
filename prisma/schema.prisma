@@ -44,6 +44,7 @@ model User {
   marketplaceImports      MarketplaceImport[]     // Items imported by this user
   routineShareCodes       RoutineShareCode[]      // Routine share codes created by this user
   auditLogs               AuditLog[]
+  sharedWithConnections   PersonSharingConnection[] @relation("SharedWithUserSharingConnections")
 
   @@index([isAdmin])
   @@map("users")
@@ -81,6 +82,9 @@ model Role {
   connectionCodes             ConnectionCode[]
   marketplaceItems            MarketplaceItem[]
   schoolMemberships           SchoolMember[]
+  ownerSharingInvites         PersonSharingInvite[]      @relation("OwnerRoleSharingInvites")
+  ownerSharingConnections     PersonSharingConnection[]  @relation("OwnerRoleSharingConnections")
+  sharedWithConnections       PersonSharingConnection[]  @relation("SharedWithRoleSharingConnections")
 
   @@unique([userId, type])
   @@index([userId])
@@ -128,6 +132,8 @@ model Person {
   parentConnections       StudentParentConnection[] @relation("ParentPerson")
   connectionCodes         ConnectionCode[]
   codes                   Code[]                    // Individual kiosk codes for this person
+  ownerSharingInvites     PersonSharingInvite[]     @relation("OwnerPersonSharingInvites")
+  ownerSharingConnections PersonSharingConnection[] @relation("OwnerPersonSharingConnections")
 
   @@index([roleId])
   @@index([status])
@@ -585,6 +591,18 @@ enum InvitationStatus {
   EXPIRED
 }
 
+enum ShareType {
+  PERSON              // Share a specific person (kid, student, etc.)
+  ROUTINE_ACCESS      // Share routine viewing/editing for a person
+  FULL_ROLE           // Share entire role access (co-parent/co-teacher)
+}
+
+enum PermissionLevel {
+  VIEW                // View task completions only
+  EDIT                // View + complete tasks
+  MANAGE              // View + Edit + manage routines/settings
+}
+
 model CoParent {
   id              String   @id @default(cuid())
   primaryRoleId   String
@@ -655,6 +673,82 @@ model StudentParentConnection {
   @@map("student_parent_connections")
 }
 
+model PersonSharingInvite {
+  id              String          @id @default(cuid())
+  inviteCode      String          @unique // 3-word code (e.g., "happy-turtle-jump")
+
+  // Who is sharing
+  ownerRoleId     String
+  ownerPersonId   String?         // Optional: specific person being shared
+
+  // What is being shared
+  shareType       ShareType
+  permissions     PermissionLevel @default(VIEW)
+
+  // Context for what's being shared
+  contextData     Json?           // Flexible data (e.g., specific routine IDs)
+
+  // Invite metadata
+  expiresAt       DateTime        // 90 days from creation
+  maxUses         Int?            // null = unlimited, 1 = single use
+  useCount        Int             @default(0)
+  status          CodeStatus      @default(ACTIVE) // ACTIVE, USED, EXPIRED, REVOKED
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  ownerRole         Role                      @relation("OwnerRoleSharingInvites", fields: [ownerRoleId], references: [id], onDelete: Cascade)
+  ownerPerson       Person?                   @relation("OwnerPersonSharingInvites", fields: [ownerPersonId], references: [id], onDelete: Cascade)
+  claimedConnections PersonSharingConnection[] @relation("ClaimedFromInvite")
+
+  @@index([inviteCode])
+  @@index([ownerRoleId])
+  @@index([ownerPersonId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("person_sharing_invites")
+}
+
+model PersonSharingConnection {
+  id                String          @id @default(cuid())
+
+  // Who is sharing
+  ownerRoleId       String
+  ownerPersonId     String?         // null for role-level sharing
+
+  // Who it's shared with
+  sharedWithRoleId  String
+  sharedWithUserId  String
+
+  // What is being shared
+  shareType         ShareType
+  permissions       PermissionLevel @default(VIEW)
+
+  // Metadata
+  contextData       Json?           // Flexible: classroom ID, routine IDs, etc.
+  inviteCodeId      String?         // Track which invite created this
+  status            String          @default("ACTIVE") // ACTIVE, REVOKED, EXPIRED
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  ownerRole         Role                  @relation("OwnerRoleSharingConnections", fields: [ownerRoleId], references: [id], onDelete: Cascade)
+  ownerPerson       Person?               @relation("OwnerPersonSharingConnections", fields: [ownerPersonId], references: [id], onDelete: Cascade)
+  sharedWithRole    Role                  @relation("SharedWithRoleSharingConnections", fields: [sharedWithRoleId], references: [id], onDelete: Cascade)
+  sharedWithUser    User                  @relation("SharedWithUserSharingConnections", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  claimedFromInvite PersonSharingInvite?  @relation("ClaimedFromInvite", fields: [inviteCodeId], references: [id], onDelete: SetNull)
+
+  @@unique([ownerRoleId, ownerPersonId, sharedWithRoleId, shareType]) // Prevent duplicate shares
+  @@index([ownerRoleId])
+  @@index([ownerPersonId])
+  @@index([sharedWithRoleId])
+  @@index([sharedWithUserId])
+  @@index([status])
+  @@map("person_sharing_connections")
+}
+
 // ============================================================================
 // SCHOOL MODE
 // ============================================================================
@@ -710,11 +804,14 @@ model MarketplaceItem {
   tags           String[] @default([])
   version        String   @default("1.0.0")
   content        String   // JSON snapshot of routine/goal
-  rating         Float    @default(0)
-  ratingCount    Int      @default(0)
-  forkCount      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  rating         Float     @default(0)
+  ratingCount    Int       @default(0)
+  forkCount      Int       @default(0)
+  hidden         Boolean   @default(false) // Admin moderation
+  hiddenAt       DateTime? // When item was hidden
+  hiddenBy       String?   // Admin user ID who hid it
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relations
   authorRole  Role                    @relation(fields: [authorRoleId], references: [id], onDelete: Cascade)
@@ -729,6 +826,7 @@ model MarketplaceItem {
   @@index([category])
   @@index([rating])
   @@index([targetAudience])
+  @@index([hidden])
   @@map("marketplace_items")
 }
 

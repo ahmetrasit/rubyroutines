@@ -225,6 +225,14 @@ export async function updateMarketplaceItem(params: UpdateMarketplaceItemParams)
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Marketplace item not found' });
   }
 
+  // Prevent updating hidden items
+  if (existingItem.hidden) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Marketplace item not found or is not available'
+    });
+  }
+
   // Increment version
   const newVersion = incrementVersion(existingItem.version);
 
@@ -268,6 +276,14 @@ export async function forkMarketplaceItem(params: ForkMarketplaceItemParams) {
 
   if (!item) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Marketplace item not found' });
+  }
+
+  // Prevent forking hidden items
+  if (item.hidden) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Marketplace item not found or is not available'
+    });
   }
 
   const contentData = JSON.parse(item.content);
@@ -539,6 +555,7 @@ export async function searchMarketplace(params: SearchMarketplaceParams) {
 
   const where: any = {
     visibility: 'PUBLIC',
+    hidden: false,  // Filter out hidden items from search results
   };
 
   // Filter by target audience based on user's role type
@@ -637,7 +654,7 @@ export async function rateMarketplaceItem(params: RateMarketplaceItemParams) {
     });
   }
 
-  // Upsert rating
+  // Check for existing rating to prevent duplicates
   const existingRating = await prisma.marketplaceRating.findUnique({
     where: {
       marketplaceItemId_userId: {
@@ -648,19 +665,21 @@ export async function rateMarketplaceItem(params: RateMarketplaceItemParams) {
   });
 
   if (existingRating) {
-    await prisma.marketplaceRating.update({
-      where: { id: existingRating.id },
-      data: { rating },
-    });
-  } else {
-    await prisma.marketplaceRating.create({
-      data: {
-        marketplaceItemId: itemId,
-        userId,
-        rating,
-      },
+    // Server-side duplicate prevention - throw error instead of allowing update
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'You have already rated this item',
     });
   }
+
+  // Create new rating
+  await prisma.marketplaceRating.create({
+    data: {
+      marketplaceItemId: itemId,
+      userId,
+      rating,
+    },
+  });
 
   // Recalculate average rating
   const ratings = await prisma.marketplaceRating.findMany({

@@ -6,10 +6,13 @@ import { trpc } from '@/lib/trpc/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Eye, EyeOff, BarChart3, MessageSquare, Flag } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, BarChart3, MessageSquare, Flag, Search, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/toast';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function AdminMarketplacePage() {
   return (
@@ -24,6 +27,12 @@ function MarketplaceModeration() {
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
+  // State for marketplace items filtering
+  const [searchQuery, setSearchQuery] = useState('');
+  const [visibilityFilter, setVisibilityFilter] = useState<'PUBLIC' | 'PRIVATE' | undefined>(undefined);
+  const [hiddenFilter, setHiddenFilter] = useState<'all' | 'hidden' | 'visible'>('all');
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
   // Fetch flagged comments
   const { data: flaggedComments, isLoading: flaggedLoading } =
     trpc.adminMarketplace.getFlaggedComments.useQuery();
@@ -31,6 +40,14 @@ function MarketplaceModeration() {
   // Fetch marketplace stats
   const { data: stats, isLoading: statsLoading } =
     trpc.adminMarketplace.getStatistics.useQuery();
+
+  // Fetch all marketplace items
+  const { data: itemsData, isLoading: itemsLoading } =
+    trpc.adminMarketplace.getAllItems.useQuery({
+      limit: 100,
+      offset: 0,
+      visibility: visibilityFilter,
+    });
 
   // Hide/unhide comment mutation
   const hideCommentMutation = trpc.adminMarketplace.hideComment.useMutation({
@@ -54,6 +71,112 @@ function MarketplaceModeration() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
+
+  // Hide/unhide item mutations
+  const hideItemMutation = trpc.adminMarketplace.hideItem.useMutation({
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Item hidden', variant: 'success' });
+      utils.adminMarketplace.getAllItems.invalidate();
+      utils.adminMarketplace.getStatistics.invalidate();
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const unhideItemMutation = trpc.adminMarketplace.unhideItem.useMutation({
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Item unhidden', variant: 'success' });
+      utils.adminMarketplace.getAllItems.invalidate();
+      utils.adminMarketplace.getStatistics.invalidate();
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const bulkHideItemsMutation = trpc.adminMarketplace.bulkHideItems.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: 'Success',
+        description: `${data.count} item(s) hidden`,
+        variant: 'success'
+      });
+      setSelectedItems(new Set());
+      utils.adminMarketplace.getAllItems.invalidate();
+      utils.adminMarketplace.getStatistics.invalidate();
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const bulkUnhideItemsMutation = trpc.adminMarketplace.bulkUnhideItems.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: 'Success',
+        description: `${data.count} item(s) unhidden`,
+        variant: 'success'
+      });
+      setSelectedItems(new Set());
+      utils.adminMarketplace.getAllItems.invalidate();
+      utils.adminMarketplace.getStatistics.invalidate();
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Filter items based on search and hidden status
+  const filteredItems = (itemsData?.items || []).filter((item: any) => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesName = item.name?.toLowerCase().includes(query);
+      const matchesCategory = item.category?.toLowerCase().includes(query);
+      const matchesAuthor = item.authorRole?.user?.name?.toLowerCase().includes(query);
+      if (!matchesName && !matchesCategory && !matchesAuthor) {
+        return false;
+      }
+    }
+
+    // Hidden filter
+    if (hiddenFilter === 'hidden' && !item.hidden) return false;
+    if (hiddenFilter === 'visible' && item.hidden) return false;
+
+    return true;
+  });
+
+  // Toggle item selection
+  const toggleItemSelection = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  // Toggle all items selection
+  const toggleAllItems = () => {
+    if (selectedItems.size === filteredItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filteredItems.map((item: any) => item.id)));
+    }
+  };
+
+  // Bulk actions
+  const handleBulkHide = () => {
+    if (selectedItems.size === 0) return;
+    bulkHideItemsMutation.mutate({ itemIds: Array.from(selectedItems) });
+  };
+
+  const handleBulkUnhide = () => {
+    if (selectedItems.size === 0) return;
+    bulkUnhideItemsMutation.mutate({ itemIds: Array.from(selectedItems) });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -113,7 +236,7 @@ function MarketplaceModeration() {
         </div>
 
         {/* Flagged Comments */}
-        <Card>
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle>Flagged Comments</CardTitle>
           </CardHeader>
@@ -212,6 +335,203 @@ function MarketplaceModeration() {
                       </div>
                     </CardContent>
                   </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Marketplace Items */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Marketplace Items</CardTitle>
+              <div className="flex gap-2">
+                {selectedItems.size > 0 && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleBulkUnhide}
+                      disabled={bulkUnhideItemsMutation.isPending}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Unhide Selected ({selectedItems.size})
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={handleBulkHide}
+                      disabled={bulkHideItemsMutation.isPending}
+                    >
+                      <EyeOff className="h-4 w-4 mr-2" />
+                      Hide Selected ({selectedItems.size})
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Filters */}
+            <div className="mb-6 space-y-4">
+              <div className="flex gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search items by name, category, or author..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={visibilityFilter === undefined ? 'default' : 'outline'}
+                  onClick={() => setVisibilityFilter(undefined)}
+                >
+                  All Visibility
+                </Button>
+                <Button
+                  size="sm"
+                  variant={visibilityFilter === 'PUBLIC' ? 'default' : 'outline'}
+                  onClick={() => setVisibilityFilter('PUBLIC')}
+                >
+                  Public
+                </Button>
+                <Button
+                  size="sm"
+                  variant={visibilityFilter === 'PRIVATE' ? 'default' : 'outline'}
+                  onClick={() => setVisibilityFilter('PRIVATE')}
+                >
+                  Private
+                </Button>
+                <div className="mx-4 border-l" />
+                <Button
+                  size="sm"
+                  variant={hiddenFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setHiddenFilter('all')}
+                >
+                  All Items
+                </Button>
+                <Button
+                  size="sm"
+                  variant={hiddenFilter === 'visible' ? 'default' : 'outline'}
+                  onClick={() => setHiddenFilter('visible')}
+                >
+                  Visible
+                </Button>
+                <Button
+                  size="sm"
+                  variant={hiddenFilter === 'hidden' ? 'default' : 'outline'}
+                  onClick={() => setHiddenFilter('hidden')}
+                >
+                  Hidden
+                </Button>
+              </div>
+            </div>
+
+            {/* Items Table */}
+            {itemsLoading ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading marketplace items...</p>
+              </div>
+            ) : !filteredItems || filteredItems.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No marketplace items found</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {/* Table Header */}
+                <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-gray-100 rounded font-medium text-sm">
+                  <div className="col-span-1 flex items-center">
+                    <Checkbox
+                      checked={selectedItems.size === filteredItems.length && filteredItems.length > 0}
+                      onCheckedChange={toggleAllItems}
+                    />
+                  </div>
+                  <div className="col-span-3">Item</div>
+                  <div className="col-span-2">Creator</div>
+                  <div className="col-span-2">Category</div>
+                  <div className="col-span-1">Visibility</div>
+                  <div className="col-span-1">Status</div>
+                  <div className="col-span-2">Actions</div>
+                </div>
+
+                {/* Table Rows */}
+                {filteredItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    className="grid grid-cols-12 gap-4 px-4 py-3 bg-white rounded border hover:bg-gray-50"
+                  >
+                    <div className="col-span-1 flex items-center">
+                      <Checkbox
+                        checked={selectedItems.has(item.id)}
+                        onCheckedChange={() => toggleItemSelection(item.id)}
+                      />
+                    </div>
+                    <div className="col-span-3 flex items-center gap-2">
+                      {item.iconUrl && (
+                        <img src={item.iconUrl} alt="" className="w-8 h-8 rounded" />
+                      )}
+                      <div>
+                        <div className="font-medium">{item.name}</div>
+                        {item.hidden && (
+                          <div className="text-xs text-muted-foreground">
+                            Hidden {item.hiddenAt && `on ${format(new Date(item.hiddenAt), 'PP')}`}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="col-span-2 flex items-center">
+                      <div className="text-sm">
+                        {item.authorRole?.user?.name || 'Unknown'}
+                      </div>
+                    </div>
+                    <div className="col-span-2 flex items-center">
+                      <Badge variant="outline">{item.category || 'Uncategorized'}</Badge>
+                    </div>
+                    <div className="col-span-1 flex items-center">
+                      <Badge variant={item.visibility === 'PUBLIC' ? 'default' : 'secondary'}>
+                        {item.visibility}
+                      </Badge>
+                    </div>
+                    <div className="col-span-1 flex items-center">
+                      {item.hidden ? (
+                        <Badge variant="destructive">Hidden</Badge>
+                      ) : (
+                        <Badge variant="success">Visible</Badge>
+                      )}
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <Link href={`/marketplace/${item.id}`}>
+                        <Button size="sm" variant="ghost">
+                          View
+                        </Button>
+                      </Link>
+                      {item.hidden ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => unhideItemMutation.mutate({ itemId: item.id })}
+                          disabled={unhideItemMutation.isPending}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => hideItemMutation.mutate({ itemId: item.id })}
+                          disabled={hideItemMutation.isPending}
+                        >
+                          <EyeOff className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

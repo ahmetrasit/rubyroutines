@@ -6,7 +6,7 @@ import { trpc } from '@/lib/trpc/client';
 import { PersonList } from '@/components/person/person-list';
 import { ModeSwitcher } from '@/components/mode-switcher';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Store, BarChart3, CreditCard, Settings, Download } from 'lucide-react';
+import { Store, BarChart3, CreditCard, Settings, Download, Users } from 'lucide-react';
 import { ImportFromCodeModal } from '@/components/marketplace/ImportFromCodeModal';
 import Link from 'next/link';
 
@@ -85,7 +85,7 @@ export default function ParentDashboard() {
             </div>
 
             {/* Quick Navigation */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
               <Link href="/marketplace" className="block">
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -110,6 +110,18 @@ export default function ParentDashboard() {
                   <div className="text-xs text-muted-foreground">Import shared item</div>
                 </CardContent>
               </Card>
+
+              <Link href="/parent/connections" className="block">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Connections</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xs text-muted-foreground">Manage co-parents</div>
+                  </CardContent>
+                </Card>
+              </Link>
 
               <Link href="/analytics" className="block">
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">

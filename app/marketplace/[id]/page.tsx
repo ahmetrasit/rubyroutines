@@ -210,7 +210,7 @@ function MarketplaceItemContent({ itemId, roleId, toast, router }: MarketplaceIt
                     averageRating={item.averageRating || 0}
                     ratingCount={item.ratingCount || 0}
                     userRating={userRating}
-                    interactive={true}
+                    interactive={!userRating}
                   />
                 </div>
                 <div className="text-center">

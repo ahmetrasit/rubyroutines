@@ -237,8 +237,11 @@ export const marketplaceRouter = router({
   getById: authorizedProcedure
     .input(z.object({ itemId: z.string().cuid() }))
     .query(async ({ ctx, input }) => {
-      const item = await ctx.prisma.marketplaceItem.findUnique({
-        where: { id: input.itemId },
+      const item = await ctx.prisma.marketplaceItem.findFirst({
+        where: {
+          id: input.itemId,
+          hidden: false  // Only show non-hidden items
+        },
         include: {
           authorRole: {
             include: {

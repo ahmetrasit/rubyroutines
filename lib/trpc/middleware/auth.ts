@@ -1,4 +1,6 @@
 import { TRPCError } from '@trpc/server';
+import { hasPermission, Action } from '@/lib/services/permission.service';
+import { PrismaClient } from '@prisma/client';
 
 /**
  * Verify that the authenticated user owns the specified role
@@ -186,6 +188,81 @@ export async function verifyAdminStatus(
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'Admin access required',
+    });
+  }
+
+  return true;
+}
+
+/**
+ * Verify task access with permission system integration
+ * Supports co-parent and student-parent connection permissions
+ */
+export async function verifyTaskAccess(
+  userId: string,
+  roleId: string,
+  taskId: string,
+  requiredAction: 'VIEW' | 'COMPLETE_TASK' | 'EDIT_TASK',
+  prisma: PrismaClient
+): Promise<boolean> {
+  // Get the task with its routine and person assignments
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: {
+      routine: {
+        include: {
+          role: {
+            select: { userId: true },
+          },
+          assignments: {
+            include: {
+              person: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!task) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Task not found',
+    });
+  }
+
+  // Check direct ownership
+  if (task.routine.role.userId === userId) {
+    return true;
+  }
+
+  // Map required action to permission service action
+  const action = requiredAction === 'VIEW'
+    ? Action.VIEW
+    : requiredAction === 'COMPLETE_TASK'
+    ? Action.COMPLETE_TASK
+    : Action.EDIT_TASK;
+
+  // Get the person this task is assigned to (if any)
+  const assignment = task.routine.assignments[0];
+  const personId = assignment?.personId;
+
+  // Check permission through sharing system
+  const hasSharedAccess = await hasPermission(
+    {
+      userId,
+      roleId,
+      personId: personId || undefined,
+      taskId,
+      routineId: task.routineId,
+    },
+    action
+  );
+
+  if (!hasSharedAccess) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You do not have permission to access this task',
     });
   }
 
