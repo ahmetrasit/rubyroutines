@@ -6,13 +6,20 @@ import { trpc } from '@/lib/trpc/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Eye, EyeOff, BarChart3, MessageSquare, Flag, Search, Trash2 } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, BarChart3, MessageSquare, Flag, Search, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function AdminMarketplacePage() {
   return (
@@ -33,6 +40,16 @@ function MarketplaceModeration() {
   const [hiddenFilter, setHiddenFilter] = useState<'all' | 'hidden' | 'visible'>('all');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Reset page when filters change (but keep page size)
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedItems(new Set());
+  }, [searchQuery, visibilityFilter, hiddenFilter]);
+
   // Fetch flagged comments
   const { data: flaggedComments, isLoading: flaggedLoading } =
     trpc.adminMarketplace.getFlaggedComments.useQuery();
@@ -41,11 +58,14 @@ function MarketplaceModeration() {
   const { data: stats, isLoading: statsLoading } =
     trpc.adminMarketplace.getStatistics.useQuery();
 
-  // Fetch all marketplace items
-  const { data: itemsData, isLoading: itemsLoading } =
+  // Calculate offset for pagination
+  const offset = (currentPage - 1) * pageSize;
+
+  // Fetch all marketplace items with pagination
+  const { data: itemsData, isLoading: itemsLoading, isFetching: itemsFetching } =
     trpc.adminMarketplace.getAllItems.useQuery({
-      limit: 100,
-      offset: 0,
+      limit: pageSize,
+      offset: offset,
       visibility: visibilityFilter,
     });
 
@@ -127,7 +147,8 @@ function MarketplaceModeration() {
     },
   });
 
-  // Filter items based on search and hidden status
+  // Note: With server-side pagination, we apply filters on client side
+  // This is a temporary solution - ideally filters should be passed to the API
   const filteredItems = (itemsData?.items || []).filter((item: any) => {
     // Search filter
     if (searchQuery) {
@@ -146,6 +167,38 @@ function MarketplaceModeration() {
 
     return true;
   });
+
+  // Calculate pagination values
+  const totalItems = itemsData?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize)); // Ensure at least 1 page
+  const startItem = totalItems === 0 ? 0 : offset + 1;
+  const endItem = Math.min(offset + pageSize, totalItems);
+
+  // Pagination handlers
+  const handlePageSizeChange = (newSize: string) => {
+    const size = parseInt(newSize, 10);
+    setPageSize(size);
+
+    // Calculate new current page to maintain approximate position
+    const newTotalPages = Math.max(1, Math.ceil(totalItems / size));
+    const currentItemIndex = (currentPage - 1) * pageSize;
+    const newPage = Math.min(Math.floor(currentItemIndex / size) + 1, newTotalPages);
+
+    setCurrentPage(newPage);
+    setSelectedItems(new Set()); // Clear selections when changing page size
+  };
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages && !itemsFetching) {
+      setCurrentPage(page);
+      setSelectedItems(new Set()); // Clear selections when changing pages
+      // Scroll table into view on page change
+      const tableElement = document.querySelector('[data-table-container]');
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
 
   // Toggle item selection
   const toggleItemSelection = (itemId: string) => {
@@ -342,7 +395,7 @@ function MarketplaceModeration() {
         </Card>
 
         {/* Marketplace Items */}
-        <Card>
+        <Card data-table-container>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Marketplace Items</CardTitle>
@@ -443,13 +496,23 @@ function MarketplaceModeration() {
                 <p className="text-muted-foreground">No marketplace items found</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <>
+                <div className="space-y-2 relative">
+                  {/* Loading overlay for page changes */}
+                  {itemsFetching && !itemsLoading && (
+                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10 rounded backdrop-blur-sm">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <div className="text-sm text-muted-foreground">Loading page {currentPage}...</div>
+                      </div>
+                    </div>
+                  )}
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-gray-100 rounded font-medium text-sm">
                   <div className="col-span-1 flex items-center">
                     <Checkbox
                       checked={selectedItems.size === filteredItems.length && filteredItems.length > 0}
-                      onCheckedChange={toggleAllItems}
+                      onChange={toggleAllItems}
                     />
                   </div>
                   <div className="col-span-3">Item</div>
@@ -469,7 +532,7 @@ function MarketplaceModeration() {
                     <div className="col-span-1 flex items-center">
                       <Checkbox
                         checked={selectedItems.has(item.id)}
-                        onCheckedChange={() => toggleItemSelection(item.id)}
+                        onChange={() => toggleItemSelection(item.id)}
                       />
                     </div>
                     <div className="col-span-3 flex items-center gap-2">
@@ -533,7 +596,87 @@ function MarketplaceModeration() {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                    {/* Page navigation buttons */}
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => goToPage(1)}
+                        disabled={currentPage === 1 || itemsFetching || totalItems === 0}
+                        aria-label="Go to first page"
+                        title="First page"
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                        <span className="sr-only">First page</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1 || itemsFetching || totalItems === 0}
+                        aria-label="Go to previous page"
+                        title="Previous page"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span className="sr-only">Previous page</span>
+                      </Button>
+                      <div className="flex items-center gap-1 text-sm" aria-live="polite">
+                        <span className="font-medium">Page {currentPage}</span>
+                        <span className="text-muted-foreground">of {totalPages || 1}</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages || itemsFetching || totalItems === 0}
+                        aria-label="Go to next page"
+                        title="Next page"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                        <span className="sr-only">Next page</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => goToPage(totalPages)}
+                        disabled={currentPage === totalPages || itemsFetching || totalItems === 0}
+                        aria-label="Go to last page"
+                        title="Last page"
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                        <span className="sr-only">Last page</span>
+                      </Button>
+                    </div>
+
+                    {/* Page size selector */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Show:</span>
+                      <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                        <SelectTrigger className="h-8 w-[70px]" disabled={itemsFetching}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="20">20</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span className="text-sm text-muted-foreground">items per page</span>
+                    </div>
+                  </div>
+
+                  {/* Total items count */}
+                  <div className="text-sm text-muted-foreground text-center sm:text-right">
+                    Showing {startItem} to {endItem} of {totalItems} items
+                  </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

@@ -4,6 +4,11 @@ import { createAuditLog, AdminAction } from './audit.service';
 import { logger } from '@/lib/utils/logger';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { softDelete } from '@/lib/soft-delete';
+import {
+  logModerationAction,
+  ModerationAction,
+  EntityType
+} from '@/lib/services/audit-log.service';
 
 export interface UserSearchFilters {
   email?: string;
@@ -203,6 +208,19 @@ export async function grantAdminAccess(
     userAgent,
   });
 
+  // Also log in moderation system
+  await logModerationAction({
+    adminUserId: grantedByAdminId,
+    entityType: EntityType.USER,
+    entityId: userId,
+    action: ModerationAction.GRANT_ADMIN,
+    metadata: {
+      email: user.email,
+    },
+    ipAddress,
+    userAgent,
+  });
+
   logger.info(`Admin access granted to user ${userId} by ${grantedByAdminId}`);
 }
 
@@ -251,6 +269,19 @@ export async function revokeAdminAccess(
     userAgent,
   });
 
+  // Also log in moderation system
+  await logModerationAction({
+    adminUserId: revokedByAdminId,
+    entityType: EntityType.USER,
+    entityId: userId,
+    action: ModerationAction.REVOKE_ADMIN,
+    metadata: {
+      email: user.email,
+    },
+    ipAddress,
+    userAgent,
+  });
+
   logger.info(`Admin access revoked from user ${userId} by ${revokedByAdminId}`);
 }
 
@@ -291,6 +322,22 @@ export async function changeUserTier(
     entityId: roleId,
     changes: {
       tier: { before: oldTier, after: newTier },
+      userEmail: role.user.email,
+      roleType: role.type,
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  // Also log in moderation system
+  await logModerationAction({
+    adminUserId: changedByAdminId,
+    entityType: EntityType.ROLE,
+    entityId: roleId,
+    action: ModerationAction.CHANGE_TIER,
+    metadata: {
+      oldTier,
+      newTier,
       userEmail: role.user.email,
       roleType: role.type,
     },
@@ -530,6 +577,36 @@ export async function deleteUserAccount(
 
   // Note: We do NOT delete from Supabase Auth to allow potential account recovery
   // If permanent deletion is needed, admin can do it manually from Supabase dashboard
+
+  // Log in both audit systems
+  await createAuditLog({
+    userId: deletedByAdminId,
+    action: AdminAction.USER_DELETED,
+    entityType: 'User',
+    entityId: userId,
+    changes: {
+      email: user.email,
+      roleCount: user.roles.length,
+      deletedAt: new Date().toISOString(),
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  // Also log in moderation system
+  await logModerationAction({
+    adminUserId: deletedByAdminId,
+    entityType: EntityType.USER,
+    entityId: userId,
+    action: ModerationAction.DELETE_USER,
+    metadata: {
+      email: user.email,
+      roleCount: user.roles.length,
+      roleIds,
+    },
+    ipAddress,
+    userAgent,
+  });
 
   logger.info(`User ${userId} soft-deleted by admin ${deletedByAdminId}`);
 }

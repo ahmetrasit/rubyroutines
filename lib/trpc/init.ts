@@ -3,14 +3,33 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import superjson from 'superjson';
 
-export async function createTRPCContext() {
+export async function createTRPCContext(opts?: {
+  req?: Request;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Extract request metadata if available
+  let ipAddress: string | undefined;
+  let userAgent: string | undefined;
+
+  if (opts?.req) {
+    // Try to get IP address from various headers (common proxy headers)
+    ipAddress = opts.req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+                opts.req.headers.get('x-real-ip') ||
+                opts.req.headers.get('x-client-ip') ||
+                undefined;
+
+    // Get user agent
+    userAgent = opts.req.headers.get('user-agent') || undefined;
+  }
 
   return {
     prisma,
     supabase,
     user,
+    ipAddress,
+    userAgent,
   };
 }
 

@@ -41,7 +41,7 @@ function DashboardContent() {
         </div>
 
         {/* Quick Navigation */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <Link href="/admin/users" className="block">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -98,6 +98,18 @@ function DashboardContent() {
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-muted-foreground">View activity</div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/moderation-logs" className="block">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-orange-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Moderation</CardTitle>
+                <Shield className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground">Moderation logs</div>
               </CardContent>
             </Card>
           </Link>

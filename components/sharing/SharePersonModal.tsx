@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { X, Copy, Check } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { X, Copy, Check, Mail } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -27,16 +28,21 @@ export function SharePersonModal({
   const [selectedPersons, setSelectedPersons] = useState<string[]>([]);
   const [shareType, setShareType] = useState<'PERSON' | 'FULL_ROLE'>('PERSON');
   const [permissions, setPermissions] = useState<'VIEW' | 'EDIT' | 'MANAGE'>('VIEW');
+  const [recipientEmail, setRecipientEmail] = useState<string>('');
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
   const generateCodeMutation = trpc.personSharing.generateInvite.useMutation({
     onSuccess: (data) => {
       setGeneratedCode(data.code);
+      setEmailSent(data.emailSent || false);
       toast({
         title: 'Success',
-        description: 'Share code generated successfully',
+        description: data.emailSent
+          ? 'Share code generated and invitation email sent'
+          : 'Share code generated successfully',
         variant: 'default',
       });
     },
@@ -66,6 +72,7 @@ export function SharePersonModal({
       permissions,
       expiresInDays: 90,
       maxUses: shareType === 'FULL_ROLE' ? 1 : undefined,
+      recipientEmail: recipientEmail || undefined,
     });
   };
 
@@ -86,7 +93,9 @@ export function SharePersonModal({
     setSelectedPersons([]);
     setShareType('PERSON');
     setPermissions('VIEW');
+    setRecipientEmail('');
     setGeneratedCode(null);
+    setEmailSent(false);
     setCopied(false);
     onClose();
   };
@@ -186,6 +195,24 @@ export function SharePersonModal({
                 </Select>
               </div>
 
+              {/* Email Invitation (Optional) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Send Email Invitation (Optional)
+                </label>
+                <Input
+                  type="email"
+                  placeholder="recipient@example.com"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  className="w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  If provided, an invitation email will be sent with the share code
+                </p>
+              </div>
+
               {/* Info Box */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h3 className="font-semibold text-blue-900 mb-2">
@@ -222,9 +249,15 @@ export function SharePersonModal({
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                 <Check className="w-8 h-8 text-green-600" />
               </div>
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-600 mb-2">
                 Share this code with the other {roleType.toLowerCase()}
               </p>
+              {emailSent && (
+                <p className="text-sm text-green-600 mb-4 flex items-center justify-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Invitation email sent successfully
+                </p>
+              )}
 
               <div className="flex items-center gap-2 max-w-md mx-auto">
                 <code className="flex-1 p-3 bg-white border-2 border-green-300 rounded-lg text-xl font-mono text-green-700">

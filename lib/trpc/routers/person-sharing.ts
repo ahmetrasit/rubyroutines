@@ -11,6 +11,9 @@ import {
   hasAccessToPerson,
   getAccessiblePersons,
 } from '@/lib/services/person-sharing-access';
+import { sendPersonSharingInvite } from '@/lib/email/email.service';
+import { prisma } from '@/lib/prisma';
+import { TRPCError } from '@trpc/server';
 
 export const personSharingRouter = router({
   /**
@@ -26,11 +29,48 @@ export const personSharingRouter = router({
         contextData: z.any().optional(),
         expiresInDays: z.number().min(1).max(365).default(90),
         maxUses: z.number().min(1).optional(),
+        recipientEmail: z.string().email().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not found' });
+      }
+
       const code = await generatePersonSharingInvite(input);
-      return { code };
+
+      // Send email if recipient email is provided
+      if (input.recipientEmail) {
+        // Get inviter name
+        const inviterName = ctx.user.name || ctx.user.email;
+
+        // Get person name if applicable
+        let personName: string | undefined;
+        if (input.ownerPersonId) {
+          const person = await prisma.person.findUnique({
+            where: { id: input.ownerPersonId },
+            select: { name: true },
+          });
+          personName = person?.name;
+        }
+
+        // Calculate expiry date
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + input.expiresInDays);
+
+        // Send invitation email
+        await sendPersonSharingInvite({
+          to: input.recipientEmail,
+          inviterName,
+          personName,
+          shareType: input.shareType,
+          permissions: input.permissions,
+          inviteCode: code,
+          expiresAt,
+        });
+      }
+
+      return { code, emailSent: !!input.recipientEmail };
     }),
 
   /**

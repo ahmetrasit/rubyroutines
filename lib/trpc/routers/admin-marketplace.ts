@@ -2,6 +2,12 @@ import { router, adminProcedure } from '../init';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { TRPCError } from '@trpc/server';
+import {
+  logModerationAction,
+  logBulkModerationAction,
+  ModerationAction,
+  EntityType
+} from '@/lib/services/audit-log.service';
 
 export const adminMarketplaceRouter = router({
   /**
@@ -99,9 +105,10 @@ export const adminMarketplaceRouter = router({
     .input(
       z.object({
         commentId: z.string().cuid(),
+        reason: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const comment = await prisma.marketplaceComment.findUnique({
         where: { id: input.commentId },
       });
@@ -117,6 +124,21 @@ export const adminMarketplaceRouter = router({
         },
       });
 
+      // Log the moderation action
+      await logModerationAction({
+        adminUserId: ctx.user.id,
+        entityType: EntityType.COMMENT,
+        entityId: input.commentId,
+        action: ModerationAction.HIDE_COMMENT,
+        reason: input.reason,
+        metadata: {
+          previousStatus: comment.status,
+          marketplaceItemId: comment.marketplaceItemId,
+        },
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
+
       return updatedComment;
     }),
 
@@ -127,9 +149,10 @@ export const adminMarketplaceRouter = router({
     .input(
       z.object({
         commentId: z.string().cuid(),
+        reason: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const comment = await prisma.marketplaceComment.findUnique({
         where: { id: input.commentId },
       });
@@ -145,6 +168,21 @@ export const adminMarketplaceRouter = router({
         },
       });
 
+      // Log the moderation action
+      await logModerationAction({
+        adminUserId: ctx.user.id,
+        entityType: EntityType.COMMENT,
+        entityId: input.commentId,
+        action: ModerationAction.UNHIDE_COMMENT,
+        reason: input.reason,
+        metadata: {
+          previousStatus: comment.status,
+          marketplaceItemId: comment.marketplaceItemId,
+        },
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
+
       return updatedComment;
     }),
 
@@ -155,9 +193,10 @@ export const adminMarketplaceRouter = router({
     .input(
       z.object({
         itemId: z.string().cuid(),
+        reason: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const item = await prisma.marketplaceItem.findUnique({
         where: { id: input.itemId },
       });
@@ -165,6 +204,24 @@ export const adminMarketplaceRouter = router({
       if (!item) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Item not found' });
       }
+
+      // Log the moderation action before deletion (so we have the item data)
+      await logModerationAction({
+        adminUserId: ctx.user.id,
+        entityType: EntityType.MARKETPLACE_ITEM,
+        entityId: input.itemId,
+        action: ModerationAction.DELETE_ITEM,
+        reason: input.reason,
+        metadata: {
+          itemName: item.name,
+          authorRoleId: item.authorRoleId,
+          type: item.type,
+          visibility: item.visibility,
+          category: item.category,
+        },
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
 
       await prisma.marketplaceItem.delete({
         where: { id: input.itemId },
@@ -231,6 +288,7 @@ export const adminMarketplaceRouter = router({
     .input(
       z.object({
         itemId: z.string().cuid(),
+        reason: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -249,6 +307,24 @@ export const adminMarketplaceRouter = router({
           hiddenAt: new Date(),
           hiddenBy: ctx.user.id,
         },
+      });
+
+      // Log the moderation action
+      await logModerationAction({
+        adminUserId: ctx.user.id,
+        entityType: EntityType.MARKETPLACE_ITEM,
+        entityId: input.itemId,
+        action: ModerationAction.HIDE_ITEM,
+        reason: input.reason,
+        metadata: {
+          itemName: item.name,
+          authorRoleId: item.authorRoleId,
+          type: item.type,
+          visibility: item.visibility,
+          wasHidden: item.hidden,
+        },
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
       });
 
       return updatedItem;
@@ -261,9 +337,10 @@ export const adminMarketplaceRouter = router({
     .input(
       z.object({
         itemId: z.string().cuid(),
+        reason: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const item = await prisma.marketplaceItem.findUnique({
         where: { id: input.itemId },
       });
@@ -281,6 +358,24 @@ export const adminMarketplaceRouter = router({
         },
       });
 
+      // Log the moderation action
+      await logModerationAction({
+        adminUserId: ctx.user.id,
+        entityType: EntityType.MARKETPLACE_ITEM,
+        entityId: input.itemId,
+        action: ModerationAction.UNHIDE_ITEM,
+        reason: input.reason,
+        metadata: {
+          itemName: item.name,
+          authorRoleId: item.authorRoleId,
+          type: item.type,
+          visibility: item.visibility,
+          wasHidden: item.hidden,
+        },
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
+
       return updatedItem;
     }),
 
@@ -291,6 +386,7 @@ export const adminMarketplaceRouter = router({
     .input(
       z.object({
         itemIds: z.array(z.string().cuid()).min(1),
+        reason: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -307,6 +403,20 @@ export const adminMarketplaceRouter = router({
         },
       });
 
+      // Log the bulk moderation action
+      await logBulkModerationAction({
+        adminUserId: ctx.user.id,
+        entityType: EntityType.MARKETPLACE_ITEM,
+        entityIds: input.itemIds,
+        action: ModerationAction.BULK_HIDE_ITEMS,
+        reason: input.reason,
+        metadata: {
+          affectedCount: result.count,
+        },
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+      });
+
       return { count: result.count };
     }),
 
@@ -317,9 +427,10 @@ export const adminMarketplaceRouter = router({
     .input(
       z.object({
         itemIds: z.array(z.string().cuid()).min(1),
+        reason: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const result = await prisma.marketplaceItem.updateMany({
         where: {
           id: {
@@ -331,6 +442,20 @@ export const adminMarketplaceRouter = router({
           hiddenAt: null,
           hiddenBy: null,
         },
+      });
+
+      // Log the bulk moderation action
+      await logBulkModerationAction({
+        adminUserId: ctx.user.id,
+        entityType: EntityType.MARKETPLACE_ITEM,
+        entityIds: input.itemIds,
+        action: ModerationAction.BULK_UNHIDE_ITEMS,
+        reason: input.reason,
+        metadata: {
+          affectedCount: result.count,
+        },
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
       });
 
       return { count: result.count };

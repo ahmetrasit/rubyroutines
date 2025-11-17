@@ -68,14 +68,11 @@ export const adminUsersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // IP logging disabled - requires Next.js headers
-      // User agent logging disabled - requires Next.js headers
-
       await grantAdminAccess(
         input.userId,
         ctx.user.id,
-        undefined,
-        undefined
+        ctx.ipAddress,
+        ctx.userAgent
       );
 
       return { success: true };
@@ -89,14 +86,11 @@ export const adminUsersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // IP logging disabled - requires Next.js headers
-      // User agent logging disabled - requires Next.js headers
-
       await revokeAdminAccess(
         input.userId,
         ctx.user.id,
-        undefined,
-        undefined
+        ctx.ipAddress,
+        ctx.userAgent
       );
 
       return { success: true };
@@ -111,15 +105,12 @@ export const adminUsersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // IP logging disabled - requires Next.js headers
-      // User agent logging disabled - requires Next.js headers
-
       await changeUserTier(
         input.roleId,
         input.tier,
         ctx.user.id,
-        undefined,
-        undefined
+        ctx.ipAddress,
+        ctx.userAgent
       );
 
       return { success: true };
@@ -141,15 +132,12 @@ export const adminUsersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // IP logging disabled - requires Next.js headers
-      // User agent logging disabled - requires Next.js headers
-
       await setTierOverride(
         input.roleId,
         input.limits,
         ctx.user.id,
-        undefined,
-        undefined
+        ctx.ipAddress,
+        ctx.userAgent
       );
 
       return { success: true };
@@ -163,14 +151,11 @@ export const adminUsersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // IP logging disabled - requires Next.js headers
-      // User agent logging disabled - requires Next.js headers
-
       await removeTierOverride(
         input.roleId,
         ctx.user.id,
-        undefined,
-        undefined
+        ctx.ipAddress,
+        ctx.userAgent
       );
 
       return { success: true };
@@ -184,14 +169,11 @@ export const adminUsersRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // IP logging disabled - requires Next.js headers
-      // User agent logging disabled - requires Next.js headers
-
       await deleteUserAccount(
         input.userId,
         ctx.user.id,
-        undefined,
-        undefined
+        ctx.ipAddress,
+        ctx.userAgent
       );
 
       return { success: true };

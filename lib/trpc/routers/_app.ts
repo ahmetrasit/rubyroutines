@@ -20,6 +20,8 @@ import { adminSettingsRouter } from './admin-settings';
 import { adminTiersRouter } from './admin-tiers';
 import { adminAuditRouter } from './admin-audit';
 import { adminMarketplaceRouter } from './admin-marketplace';
+import { adminModerationRouter } from './admin-moderation';
+import { adminModerationLogsRouter } from './admin-moderation-logs';
 import { gdprRouter } from './gdpr';
 import { streakRouter } from './streak';
 import { twoFactorRouter } from './two-factor';
@@ -47,6 +49,8 @@ export const appRouter = router({
   adminTiers: adminTiersRouter,
   adminAudit: adminAuditRouter,
   adminMarketplace: adminMarketplaceRouter,
+  adminModeration: adminModerationRouter,
+  adminModerationLogs: adminModerationLogsRouter,
   gdpr: gdprRouter,
   streak: streakRouter,
 });

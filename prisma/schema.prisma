@@ -44,6 +44,7 @@ model User {
   marketplaceImports      MarketplaceImport[]     // Items imported by this user
   routineShareCodes       RoutineShareCode[]      // Routine share codes created by this user
   auditLogs               AuditLog[]
+  moderationLogs          ModerationLog[]         @relation("ModerationLogs")
   sharedWithConnections   PersonSharingConnection[] @relation("SharedWithUserSharingConnections")
 
   @@index([isAdmin])
@@ -1012,4 +1013,32 @@ model AuditLog {
   @@index([entityType])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+model ModerationLog {
+  id            String   @id @default(cuid())
+  adminUserId   String   // Who performed the action
+
+  // What was affected
+  entityType    String   // 'MARKETPLACE_ITEM', 'COMMENT', 'USER', 'ROLE', etc.
+  entityId      String   // ID of the affected entity
+
+  // Action details
+  action        String   // 'HIDE_ITEM', 'UNHIDE_ITEM', 'DELETE_ITEM', 'HIDE_COMMENT', 'UNHIDE_COMMENT', 'BULK_HIDE_ITEMS', 'BULK_UNHIDE_ITEMS', etc.
+  reason        String?  // Optional reason for the action
+  metadata      Json?    // Additional context (e.g., item IDs for bulk actions, original values)
+
+  // Audit trail
+  timestamp     DateTime @default(now())
+  ipAddress     String?  // IP address of admin
+  userAgent     String?  // Browser/client info
+
+  // Relations
+  adminUser     User     @relation("ModerationLogs", fields: [adminUserId], references: [id])
+
+  @@index([adminUserId])
+  @@index([entityType, entityId])
+  @@index([timestamp])
+  @@index([action])
+  @@map("moderation_logs")
 }
