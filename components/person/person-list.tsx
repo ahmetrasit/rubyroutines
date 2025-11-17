@@ -50,7 +50,14 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
   // Get shared persons using the personSharing API
   const { data: accessiblePersons } = trpc.personSharing.getAccessiblePersons.useQuery(
     { roleId },
-    { enabled: !!roleId }
+    {
+      enabled: !!roleId,
+      retry: false,
+      onError: (error) => {
+        // Silently handle person sharing errors if the feature is not set up yet
+        console.warn('Person sharing feature not available:', error.message);
+      }
+    }
   );
 
   if (isLoading) {
