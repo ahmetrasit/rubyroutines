@@ -6,9 +6,11 @@ import { trpc } from '@/lib/trpc/client';
 import { PersonList } from '@/components/person/person-list';
 import { ModeSwitcher } from '@/components/mode-switcher';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Store, BarChart3, CreditCard, Settings, Download, Users } from 'lucide-react';
+import { Store, BarChart3, CreditCard, Settings, Download, Users, Copy, Clock } from 'lucide-react';
 import { ImportFromCodeModal } from '@/components/marketplace/ImportFromCodeModal';
 import { ClaimShareCodeModal } from '@/components/sharing/ClaimShareCodeModal';
+import { CopyRoutineModal } from '@/components/routine/copy-routine-modal';
+import { BulkVisibilityControl } from '@/components/routine/bulk-visibility-control';
 import Link from 'next/link';
 
 export default function ParentDashboard() {
@@ -17,6 +19,8 @@ export default function ParentDashboard() {
   const { data: session, isLoading } = trpc.auth.getSession.useQuery();
   const [showImportModal, setShowImportModal] = useState(false);
   const [showClaimShareModal, setShowClaimShareModal] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [showBulkVisibility, setShowBulkVisibility] = useState(false);
   const [inviteCodeFromUrl, setInviteCodeFromUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,12 +88,13 @@ export default function ParentDashboard() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <ModeSwitcher currentMode="parent" />
+
+      {/* Top section with colored background */}
       <div className="bg-white dark:bg-gray-900">
         <div
-          className="max-w-7xl mx-auto"
+          className="max-w-7xl mx-auto border-t-2 border-x-2 rounded-t-md"
           style={{
-            borderLeft: `4px solid ${roleColor}`,
-            borderRight: `4px solid ${roleColor}`,
+            borderColor: roleColor,
             backgroundColor: `rgba(${rgbColor}, 0.05)`
           }}
         >
@@ -100,7 +105,7 @@ export default function ParentDashboard() {
             </div>
 
             {/* Quick Navigation */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
               <Link href="/marketplace" className="block">
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -136,6 +141,32 @@ export default function ParentDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-xs text-muted-foreground">Accept share code</div>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="hover:shadow-lg transition-shadow cursor-pointer h-full"
+                onClick={() => setShowCopyModal(true)}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Copy Routines</CardTitle>
+                  <Copy className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xs text-muted-foreground">Copy to other kids</div>
+                </CardContent>
+              </Card>
+
+              <Card
+                className="hover:shadow-lg transition-shadow cursor-pointer h-full"
+                onClick={() => setShowBulkVisibility(true)}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Show Hidden</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xs text-muted-foreground">Temp visibility</div>
                 </CardContent>
               </Card>
 
@@ -175,16 +206,24 @@ export default function ParentDashboard() {
                 </Card>
               </Link>
             </div>
-
-            <div className="mb-8">
-              <PersonList
-                roleId={parentRole.id}
-                userName={session.user.name || 'User'}
-                effectiveLimits={parentRole.effectiveLimits}
-                onSelectPerson={handleSelectPerson}
-              />
-            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Person cards section with white background */}
+      <div className="bg-white dark:bg-gray-900">
+        <div
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-x-2 border-b-2 rounded-b-md"
+          style={{ borderColor: roleColor }}
+        >
+          <PersonList
+            roleId={parentRole.id}
+            userName={session.user.name || 'User'}
+            effectiveLimits={parentRole.effectiveLimits}
+            onSelectPerson={handleSelectPerson}
+            userId={session.user.id}
+            roleType="PARENT"
+          />
         </div>
       </div>
 
@@ -205,6 +244,20 @@ export default function ParentDashboard() {
         roleId={parentRole.id}
         userId={session.user.id}
         initialCode={inviteCodeFromUrl || undefined}
+      />
+
+      {/* Copy Routine Modal */}
+      <CopyRoutineModal
+        isOpen={showCopyModal}
+        onClose={() => setShowCopyModal(false)}
+        roleId={parentRole.id}
+      />
+
+      {/* Bulk Visibility Control */}
+      <BulkVisibilityControl
+        isOpen={showBulkVisibility}
+        onClose={() => setShowBulkVisibility(false)}
+        roleId={parentRole.id}
       />
     </div>
   );

@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Activity, Calendar, User, Download, Shield, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/toast';
 
 export default function AdminModerationLogsPage() {
   return (

@@ -22,7 +22,7 @@ export const personSharingRouter = router({
   generateInvite: authorizedProcedure
     .input(
       z.object({
-        ownerRoleId: z.string().cuid(),
+        ownerRoleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         ownerPersonId: z.string().cuid().optional(),
         shareType: z.enum(['PERSON', 'ROUTINE_ACCESS', 'FULL_ROLE']),
         permissions: z.enum(['VIEW', 'EDIT', 'MANAGE']),
@@ -89,7 +89,7 @@ export const personSharingRouter = router({
     .input(
       z.object({
         inviteCode: z.string(),
-        claimingRoleId: z.string().cuid(),
+        claimingRoleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         claimingUserId: z.string(),
         contextData: z.any().optional(),
       })
@@ -124,7 +124,7 @@ export const personSharingRouter = router({
   getConnections: authorizedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         type: z.enum(['owned', 'shared_with_me']),
       })
     )
@@ -138,7 +138,7 @@ export const personSharingRouter = router({
   getAccessiblePersons: authorizedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
       })
     )
     .query(async ({ ctx, input }) => {
@@ -155,7 +155,7 @@ export const personSharingRouter = router({
   checkAccess: authorizedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         personId: z.string().cuid(),
         requiredPermission: z.enum(['VIEW', 'EDIT', 'MANAGE']).default('VIEW'),
       })
@@ -173,5 +173,34 @@ export const personSharingRouter = router({
       );
 
       return { hasAccess };
+    }),
+
+  /**
+   * Get person shares for a specific person (who has access to this person)
+   */
+  getPersonShares: authorizedProcedure
+    .input(
+      z.object({
+        personId: z.string().cuid(),
+      })
+    )
+    .query(async ({ input }) => {
+      const connections = await prisma.personSharingConnection.findMany({
+        where: {
+          ownerPersonId: input.personId,
+          status: 'ACTIVE',
+        },
+        include: {
+          sharedWithRole: {
+            include: {
+              user: {
+                select: { name: true, email: true, image: true },
+              },
+            },
+          },
+        },
+      });
+
+      return connections;
     }),
 });

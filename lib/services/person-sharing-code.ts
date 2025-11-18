@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { getRandomSafeWords } from './safe-words';
 import { TRPCError } from '@trpc/server';
+import { checkRateLimit, recordFailedAttempt, RATE_LIMIT_CONFIGS } from './rate-limit.service';
 
 interface GenerateInviteParams {
   ownerRoleId: string;
@@ -14,8 +15,10 @@ interface GenerateInviteParams {
 
 /**
  * Generate unique person sharing invite code
- * Format: word1-word2-word3 (lowercase, 3 words)
+ * Format: word1-word2-word3-word4 (lowercase, 4 words)
  * Checks uniqueness across ALL code systems
+ *
+ * Rate limiting: 20 codes per user per hour
  */
 export async function generatePersonSharingInvite(params: GenerateInviteParams): Promise<string> {
   const {
@@ -28,12 +31,26 @@ export async function generatePersonSharingInvite(params: GenerateInviteParams):
     maxUses,
   } = params;
 
+  // Check rate limit
+  const rateLimit = await checkRateLimit(
+    ownerRoleId,
+    RATE_LIMIT_CONFIGS.PERSON_SHARING_CODE_GENERATION
+  );
+
+  if (!rateLimit.allowed) {
+    const resetTime = new Date(rateLimit.resetAt).toLocaleTimeString();
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: `Rate limit exceeded. You can generate more codes after ${resetTime}. Limit: 20 codes per hour.`,
+    });
+  }
+
   let attempts = 0;
   const maxAttempts = 50;
 
   while (attempts < maxAttempts) {
-    // Generate 3-word code
-    const words = getRandomSafeWords(3);
+    // Generate 4-word code
+    const words = getRandomSafeWords(4);
     const code = words.join('-').toLowerCase();
 
     // Check uniqueness across all code systems
@@ -185,12 +202,36 @@ interface ClaimInviteParams {
   contextData?: any;
 }
 
+/**
+ * Claim a person sharing invite using a code
+ *
+ * Rate limiting: 10 failed attempts per user per hour
+ */
 export async function claimPersonSharingInvite(params: ClaimInviteParams) {
   const { inviteCode, claimingRoleId, claimingUserId, contextData } = params;
+
+  // Check rate limit
+  const rateLimit = await checkRateLimit(
+    claimingRoleId,
+    RATE_LIMIT_CONFIGS.PERSON_SHARING_CODE_CLAIM
+  );
+
+  if (!rateLimit.allowed) {
+    const resetTime = new Date(rateLimit.resetAt).toLocaleTimeString();
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: `Too many failed attempts. Please try again after ${resetTime}.`,
+    });
+  }
 
   // Validate invite
   const validation = await validatePersonSharingInvite(inviteCode);
   if (!validation.valid || !validation.invite) {
+    // Record failed attempt
+    await recordFailedAttempt(
+      claimingRoleId,
+      RATE_LIMIT_CONFIGS.PERSON_SHARING_CODE_CLAIM
+    );
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: validation.error || 'Invalid invite code',
@@ -217,41 +258,47 @@ export async function claimPersonSharingInvite(params: ClaimInviteParams) {
     });
   }
 
-  // Create connection
-  const connection = await prisma.personSharingConnection.create({
-    data: {
-      ownerRoleId: invite.ownerRole.id,
-      ownerPersonId: invite.ownerPerson?.id || null,
-      sharedWithRoleId: claimingRoleId,
-      sharedWithUserId: claimingUserId,
-      shareType: invite.shareType,
-      permissions: invite.permissions,
-      contextData: {
-        ...invite.contextData,
-        ...contextData,
-      },
-      inviteCodeId: invite.id,
-      status: 'ACTIVE',
-    },
-  });
-
-  // Increment use count
-  const updatedInvite = await prisma.personSharingInvite.findUnique({
-    where: { id: invite.id },
-  });
-
-  if (updatedInvite) {
-    await prisma.personSharingInvite.update({
-      where: { id: invite.id },
+  // Use transaction to ensure atomicity: create connection and update invite together
+  const connection = await prisma.$transaction(async (tx) => {
+    // Create connection
+    const newConnection = await tx.personSharingConnection.create({
       data: {
-        useCount: { increment: 1 },
-        status:
-          updatedInvite.maxUses && updatedInvite.useCount + 1 >= updatedInvite.maxUses
-            ? 'USED'
-            : 'ACTIVE',
+        ownerRoleId: invite.ownerRole.id,
+        ownerPersonId: invite.ownerPerson?.id || null,
+        sharedWithRoleId: claimingRoleId,
+        sharedWithUserId: claimingUserId,
+        shareType: invite.shareType,
+        permissions: invite.permissions,
+        contextData: {
+          ...invite.contextData,
+          ...contextData,
+        },
+        inviteCodeId: invite.id,
+        status: 'ACTIVE',
       },
     });
-  }
+
+    // Get current invite to check maxUses
+    const currentInvite = await tx.personSharingInvite.findUnique({
+      where: { id: invite.id },
+    });
+
+    if (currentInvite) {
+      // Increment use count and update status if max uses reached
+      await tx.personSharingInvite.update({
+        where: { id: invite.id },
+        data: {
+          useCount: { increment: 1 },
+          status:
+            currentInvite.maxUses && currentInvite.useCount + 1 >= currentInvite.maxUses
+              ? 'USED'
+              : 'ACTIVE',
+        },
+      });
+    }
+
+    return newConnection;
+  });
 
   return connection;
 }

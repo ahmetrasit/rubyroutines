@@ -6,6 +6,9 @@ import {
   trackMarketplaceImport,
   hasUserImportedItem
 } from './marketplace-share-code';
+import { getEffectiveTierLimits } from './admin/system-settings.service';
+import { mapDatabaseLimitsToComponentFormat, checkTierLimit } from './tier-limits';
+import { EntityStatus } from '@/lib/types/prisma-enums';
 
 interface PublishToMarketplaceParams {
   type: 'ROUTINE' | 'GOAL';
@@ -292,8 +295,95 @@ export async function forkMarketplaceItem(params: ForkMarketplaceItemParams) {
   let assignments = [];
 
   if (item.type === 'ROUTINE') {
+    // Get role and tier limits for routine limit validation
+    const role = await prisma.role.findUnique({
+      where: { id: roleId },
+    });
+
+    if (!role) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
+    }
+
+    const dbLimits = await getEffectiveTierLimits(roleId);
+    const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
     const routineName = contentData.name;
     const isDailyRoutine = routineName.toLowerCase() === 'daily routine';
+
+    // Check tier limit for the target (person or group members)
+    if (targetType === 'PERSON') {
+      // Check if merging into existing Daily Routine (won't create new routine)
+      if (isDailyRoutine) {
+        const existingDailyRoutine = await prisma.routine.findFirst({
+          where: {
+            roleId,
+            name: 'Daily Routine',
+            status: EntityStatus.ACTIVE,
+            assignments: {
+              some: { personId: targetId },
+            },
+          },
+        });
+
+        // Skip limit check if merging
+        if (!existingDailyRoutine) {
+          const personRoutineCount = await prisma.routine.count({
+            where: {
+              status: EntityStatus.ACTIVE,
+              assignments: {
+                some: { personId: targetId },
+              },
+            },
+          });
+          checkTierLimit(effectiveLimits, 'routines_per_person', personRoutineCount);
+        }
+      } else {
+        // Not Daily Routine, always check limit
+        const personRoutineCount = await prisma.routine.count({
+          where: {
+            status: EntityStatus.ACTIVE,
+            assignments: {
+              some: { personId: targetId },
+            },
+          },
+        });
+        checkTierLimit(effectiveLimits, 'routines_per_person', personRoutineCount);
+      }
+    } else if (targetType === 'GROUP') {
+      // For groups, check each member's routine count
+      const groupMembers = await prisma.groupMember.findMany({
+        where: { groupId: targetId },
+        select: { personId: true },
+      });
+
+      for (const member of groupMembers) {
+        // Check if merging into existing Daily Routine
+        if (isDailyRoutine) {
+          const existingDailyRoutine = await prisma.routine.findFirst({
+            where: {
+              roleId,
+              name: 'Daily Routine',
+              status: EntityStatus.ACTIVE,
+              assignments: {
+                some: { personId: member.personId },
+              },
+            },
+          });
+
+          // Skip this member if merging
+          if (existingDailyRoutine) continue;
+        }
+
+        const personRoutineCount = await prisma.routine.count({
+          where: {
+            status: EntityStatus.ACTIVE,
+            assignments: {
+              some: { personId: member.personId },
+            },
+          },
+        });
+        checkTierLimit(effectiveLimits, 'routines_per_person', personRoutineCount);
+      }
+    }
 
     if (isDailyRoutine) {
       // Check if Daily Routine already exists for this role
@@ -459,43 +549,145 @@ export async function importFromShareCode(params: ImportFromShareCodeParams) {
       });
     }
 
-    // Create a copy of the routine for the target role
-    const newRoutine = await prisma.routine.create({
-      data: {
-        roleId,
-        name: routine.name,
-        description: routine.description,
-        type: routine.type,
-        resetPeriod: routine.resetPeriod,
-        resetDay: routine.resetDay,
-        visibility: routine.visibility,
-        visibleDays: routine.visibleDays,
-        startDate: routine.startDate,
-        endDate: routine.endDate,
-        color: routine.color,
-        tasks: {
-          create: routine.tasks.map((task: any) => ({
-            name: task.name,
-            description: task.description,
-            type: task.type || 'SIMPLE',
-            order: task.order || 0,
-            targetValue: task.targetValue,
-            unit: task.unit,
-          })),
-        },
-      },
-      include: {
-        tasks: true,
-      },
-    });
+    // Check if this is a Daily Routine (should be merged instead of duplicated)
+    const isDailyRoutine = routine.name.includes('Daily Routine');
+    let newRoutine;
+    let assignment;
 
-    // Create RoutineAssignment to link routine to person/group
-    const assignment = await prisma.routineAssignment.create({
-      data: {
-        routineId: newRoutine.id,
-        ...(targetType === 'PERSON' ? { personId: targetId } : { groupId: targetId }),
-      },
-    });
+    if (isDailyRoutine) {
+      // Check if Daily Routine already exists for this role
+      const existingDailyRoutine = await prisma.routine.findFirst({
+        where: {
+          roleId,
+          name: { contains: 'Daily Routine' },
+          status: 'ACTIVE',
+        },
+        include: {
+          tasks: {
+            where: { status: 'ACTIVE' },
+            orderBy: { order: 'desc' },
+            take: 1,
+          },
+        },
+      });
+
+      if (existingDailyRoutine) {
+        // Merge: Add tasks to existing Daily Routine
+        const lastTaskOrder = existingDailyRoutine.tasks[0]?.order || 0;
+
+        await Promise.all(
+          routine.tasks.map((task: any, index: number) =>
+            prisma.task.create({
+              data: {
+                routineId: existingDailyRoutine.id,
+                name: task.name,
+                description: task.description,
+                type: task.type || 'SIMPLE',
+                order: lastTaskOrder + index + 1,
+                targetValue: task.targetValue,
+                unit: task.unit,
+              },
+            })
+          )
+        );
+
+        newRoutine = existingDailyRoutine;
+
+        // Check if assignment already exists
+        const existingAssignment = await prisma.routineAssignment.findFirst({
+          where: {
+            routineId: existingDailyRoutine.id,
+            ...(targetType === 'PERSON' ? { personId: targetId } : { groupId: targetId }),
+          },
+        });
+
+        if (!existingAssignment) {
+          assignment = await prisma.routineAssignment.create({
+            data: {
+              routineId: existingDailyRoutine.id,
+              ...(targetType === 'PERSON' ? { personId: targetId } : { groupId: targetId }),
+            },
+          });
+        } else {
+          assignment = existingAssignment;
+        }
+      } else {
+        // Create new Daily Routine
+        newRoutine = await prisma.routine.create({
+          data: {
+            roleId,
+            name: routine.name,
+            description: routine.description,
+            type: routine.type,
+            resetPeriod: routine.resetPeriod,
+            resetDay: routine.resetDay,
+            visibility: routine.visibility,
+            visibleDays: routine.visibleDays,
+            startDate: routine.startDate,
+            endDate: routine.endDate,
+            color: routine.color,
+            tasks: {
+              create: routine.tasks.map((task: any) => ({
+                name: task.name,
+                description: task.description,
+                type: task.type || 'SIMPLE',
+                order: task.order || 0,
+                targetValue: task.targetValue,
+                unit: task.unit,
+              })),
+            },
+          },
+          include: {
+            tasks: true,
+          },
+        });
+
+        assignment = await prisma.routineAssignment.create({
+          data: {
+            routineId: newRoutine.id,
+            ...(targetType === 'PERSON' ? { personId: targetId } : { groupId: targetId }),
+          },
+        });
+      }
+    } else {
+      // Create regular routine (not Daily Routine)
+      newRoutine = await prisma.routine.create({
+        data: {
+          roleId,
+          name: routine.name,
+          description: routine.description,
+          type: routine.type,
+          resetPeriod: routine.resetPeriod,
+          resetDay: routine.resetDay,
+          visibility: routine.visibility,
+          visibleDays: routine.visibleDays,
+          startDate: routine.startDate,
+          endDate: routine.endDate,
+          color: routine.color,
+          tasks: {
+            create: routine.tasks.map((task: any) => ({
+              name: task.name,
+              description: task.description,
+              type: task.type || 'SIMPLE',
+              order: task.order || 0,
+              targetValue: task.targetValue,
+              unit: task.unit,
+            })),
+          },
+        },
+        include: {
+          tasks: true,
+        },
+      });
+
+      // Create RoutineAssignment to link routine to person/group
+      assignment = await prisma.routineAssignment.create({
+        data: {
+          routineId: newRoutine.id,
+          ...(targetType === 'PERSON' ? { personId: targetId } : { groupId: targetId }),
+        },
+      });
+    }
 
     // Increment share code use count
     await incrementRoutineShareCodeUseCount(routineValidation.shareCode.id);

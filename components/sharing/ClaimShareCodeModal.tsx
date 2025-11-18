@@ -140,8 +140,8 @@ export function ClaimShareCodeModal({
                 <Input
                   type="text"
                   value={shareCode}
-                  onChange={(e) => setShareCode(e.target.value)}
-                  placeholder="e.g., happy-turtle-jump"
+                  onChange={(e) => setShareCode(e.target.value.toLowerCase())}
+                  placeholder="e.g., happy-turtle-jump-blue"
                   className="font-mono"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -150,7 +150,7 @@ export function ClaimShareCodeModal({
                   }}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Enter the 3-word code you received
+                  Enter the 4-word code you received
                 </p>
               </div>
             </div>

@@ -58,7 +58,7 @@ export function KioskCodeManager({ roleId, userName, classroomId, classroomName 
     }
   }, [roleId]);
 
-  // Auto-generate default code if none exists
+  // Auto-generate default code if none exists for this family/classroom
   useEffect(() => {
     if (
       !isLoading &&
@@ -66,21 +66,28 @@ export function KioskCodeManager({ roleId, userName, classroomId, classroomName 
       roleId &&
       roleId.length > 0 &&
       codes &&
-      codes.length === 0 &&
       !hasAttemptedGeneration.current &&
       !generateMutation.isPending
     ) {
-      hasAttemptedGeneration.current = true;
-      generateMutation.mutate({
-        roleId,
-        groupId: classroomId, // Pass classroomId for classroom-specific codes
-        userName,
-        classroomName,
-        wordCount: '3',
-        expiresInHours: 168
-      });
+      // Check if family/classroom code exists (not individual person code)
+      const hasFamilyCode = codes.some(c =>
+        c.personId === null &&
+        (classroomId ? c.groupId === classroomId : c.groupId === null)
+      );
+
+      if (!hasFamilyCode) {
+        hasAttemptedGeneration.current = true;
+        generateMutation.mutate({
+          roleId,
+          groupId: classroomId, // Pass classroomId for classroom-specific codes
+          userName,
+          classroomName,
+          wordCount: '3',
+          expiresInHours: 168
+        });
+      }
     }
-  }, [isLoading, error, roleId, codes?.length, generateMutation.isPending, userName, classroomName]);
+  }, [isLoading, error, roleId, codes, generateMutation.isPending, userName, classroomName, classroomId]);
 
   const handleGenerateNew = () => {
     if (confirm('Are you sure you want to generate a new code? The current code will be revoked.')) {
@@ -106,9 +113,12 @@ export function KioskCodeManager({ roleId, userName, classroomId, classroomName 
     },
   });
 
-  // getActiveCodesForRole already filters for ACTIVE codes server-side
-  // The returned KioskCode objects have isActive: boolean, not status field
-  const currentCode = codes?.[0]; // Take the first code (most recent)
+  // Filter codes to get only family/classroom codes (not individual person codes)
+  // Family codes have personId === null, classroom codes have groupId === classroomId
+  const currentCode = codes?.find(c =>
+    c.personId === null &&
+    (classroomId ? c.groupId === classroomId : c.groupId === null)
+  );
 
   if (!roleId || roleId.length === 0) {
     return <div className="text-center py-4 text-gray-500">Loading role...</div>;

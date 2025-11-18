@@ -13,7 +13,7 @@ export const coTeacherRouter = router({
   share: verifiedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         groupId: z.string().cuid(),
         email: z.string().email(),
         permissions: z.enum(['VIEW', 'EDIT_TASKS', 'FULL_EDIT'])

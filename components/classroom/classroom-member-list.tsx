@@ -2,6 +2,8 @@
 
 import { trpc } from '@/lib/trpc/client';
 import { PersonCard } from '@/components/person/person-card';
+import { CoTeacherCard } from '@/components/coteacher/CoTeacherCard';
+import { CoTeacherDetailModal } from '@/components/coteacher/CoTeacherDetailModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, ChevronDown, ChevronUp, Search } from 'lucide-react';
@@ -17,13 +19,22 @@ interface ClassroomMemberListProps {
   userName: string;
   effectiveLimits?: ComponentTierLimits | null;
   onSelectPerson?: (person: Person) => void;
+  userId?: string;
 }
 
-export function ClassroomMemberList({ classroomId, roleId, userName, effectiveLimits = null, onSelectPerson }: ClassroomMemberListProps) {
+export function ClassroomMemberList({
+  classroomId,
+  roleId,
+  userName,
+  effectiveLimits = null,
+  onSelectPerson,
+  userId
+}: ClassroomMemberListProps) {
   const [showForm, setShowForm] = useState(false);
   const [invisibleRoutineCollapsed, setInvisibleRoutineCollapsed] = useState(true);
   const [kioskCollapsed, setKioskCollapsed] = useState(true);
   const [studentSearch, setStudentSearch] = useState('');
+  const [selectedCoTeacher, setSelectedCoTeacher] = useState<any>(null);
 
   // Get classroom members
   const { data: classroom, isLoading } = trpc.group.getById.useQuery(
@@ -66,8 +77,8 @@ export function ClassroomMemberList({ classroomId, roleId, userName, effectiveLi
     .sort((a, b) => (memberMap.get(a.id) || 0) - (memberMap.get(b.id) || 0)) || [];
 
   // Separate teachers (Me) from students
-  const teachers = members.filter((person) => person.name === 'Me');
-  const allStudents = members.filter((person) => person.name !== 'Me');
+  const teachers = members.filter((person) => person.isAccountOwner);
+  const allStudents = members.filter((person) => !person.isAccountOwner);
 
   // Check tier limits using effective limits from database
   const studentLimit = getTierLimit(effectiveLimits, 'students_per_classroom');
@@ -164,7 +175,25 @@ export function ClassroomMemberList({ classroomId, roleId, userName, effectiveLi
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Teacher cards */}
           {teachers.map((person) => (
-            <PersonCard key={person.id} person={person} onSelect={onSelectPerson} classroomId={classroomId} />
+            <PersonCard
+              key={person.id}
+              person={person}
+              onSelect={onSelectPerson}
+              classroomId={classroomId}
+              roleId={roleId}
+              roleType="TEACHER"
+              userId={userId}
+            />
+          ))}
+
+          {/* Co-Teacher cards */}
+          {coTeachers && coTeachers.map((coTeacher: any) => (
+            <CoTeacherCard
+              key={coTeacher.id}
+              coTeacher={coTeacher}
+              groupId={classroomId}
+              onSelect={() => setSelectedCoTeacher(coTeacher)}
+            />
           ))}
 
           {/* Add Co-Teacher placeholder card */}
@@ -226,7 +255,15 @@ export function ClassroomMemberList({ classroomId, roleId, userName, effectiveLi
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Student cards */}
           {students.map((person) => (
-            <PersonCard key={person.id} person={person} onSelect={onSelectPerson} classroomId={classroomId} />
+            <PersonCard
+              key={person.id}
+              person={person}
+              onSelect={onSelectPerson}
+              classroomId={classroomId}
+              roleId={roleId}
+              roleType="TEACHER"
+              userId={userId}
+            />
           ))}
 
           {/* Add Student placeholder card - only show if not Teacher-Only classroom */}
@@ -267,6 +304,15 @@ export function ClassroomMemberList({ classroomId, roleId, userName, effectiveLi
           roleId={roleId}
           classroomId={classroomId}
           onClose={() => setShowForm(false)}
+        />
+      )}
+
+      {selectedCoTeacher && (
+        <CoTeacherDetailModal
+          isOpen={!!selectedCoTeacher}
+          onClose={() => setSelectedCoTeacher(null)}
+          coTeacher={selectedCoTeacher}
+          groupId={classroomId}
         />
       )}
     </div>

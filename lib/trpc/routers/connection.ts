@@ -13,7 +13,7 @@ export const connectionRouter = router({
   generateCode: verifiedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         studentPersonId: z.string().cuid()
       })
     )
@@ -29,8 +29,8 @@ export const connectionRouter = router({
   connect: authorizedProcedure
     .input(
       z.object({
-        code: z.string().length(6),
-        parentRoleId: z.string().cuid(),
+        code: z.string().regex(/^[a-z]+-[a-z]+-[a-z]+-[a-z]+$/, 'Code must be in format: word-word-word-word'),
+        parentRoleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         parentPersonId: z.string().cuid()
       })
     )
@@ -47,7 +47,7 @@ export const connectionRouter = router({
   listConnections: authorizedProcedure
     .input(
       z.object({
-        parentRoleId: z.string().cuid()
+        parentRoleId: z.string().uuid() // Role IDs are UUIDs, not CUIDs
       })
     )
     .query(async ({ ctx, input }) => {

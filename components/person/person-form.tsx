@@ -67,7 +67,7 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     const memberIds = classroom.members?.map((m: any) => m.personId) || [];
     return allPersons.filter((p: any) =>
       p.status === EntityStatus.ACTIVE &&
-      p.name !== 'Me' &&
+      !p.isAccountOwner &&
       !memberIds.includes(p.id)
     );
   }, [allPersons, classroom]);

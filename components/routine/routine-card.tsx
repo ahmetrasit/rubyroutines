@@ -134,7 +134,7 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
             )}
           </div>
 
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+          <div className="flex gap-1 ml-2">
             {!visible && (
               <Button
                 size="sm"
@@ -144,6 +144,7 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
                   setShowOverride(true);
                 }}
                 title="Show temporarily"
+                className="text-gray-600 hover:text-blue-600 hover:bg-blue-50"
               >
                 <Clock className="h-4 w-4" />
               </Button>
@@ -156,6 +157,7 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
                 setShowShare(true);
               }}
               title="Share routine"
+              className="text-gray-600 hover:text-blue-600 hover:bg-blue-50"
             >
               <Share2 className="h-4 w-4" />
             </Button>
@@ -166,6 +168,8 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
                 e.stopPropagation();
                 setShowEdit(true);
               }}
+              title="Edit routine"
+              className="text-gray-600 hover:text-blue-600 hover:bg-blue-50"
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -177,6 +181,8 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
                   e.stopPropagation();
                   handleDelete();
                 }}
+                title="Archive routine"
+                className="text-gray-600 hover:text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

@@ -1,10 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, CheckCircle } from 'lucide-react';
+import { Pencil, Trash2, CheckCircle, Link2 } from 'lucide-react';
 import { useState, memo } from 'react';
 import { PersonForm } from './person-form';
 import { PersonCheckinModal } from './person-checkin-modal';
+import { PersonConnectionModal } from '@/components/sharing/PersonConnectionModal';
 import { trpc } from '@/lib/trpc/client';
 import { useAvatar } from '@/lib/hooks';
 import { useDeleteMutation } from '@/lib/hooks';
@@ -15,11 +16,22 @@ interface PersonCardProps {
   person: Person;
   onSelect?: (person: Person) => void;
   classroomId?: string; // Optional: for teacher mode to handle classroom-specific removal
+  roleId?: string; // Required for connection functionality
+  roleType?: 'PARENT' | 'TEACHER'; // Required for connection functionality
+  userId?: string; // Required for connection functionality
 }
 
-export const PersonCard = memo(function PersonCard({ person, onSelect, classroomId }: PersonCardProps) {
+export const PersonCard = memo(function PersonCard({
+  person,
+  onSelect,
+  classroomId,
+  roleId,
+  roleType,
+  userId
+}: PersonCardProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
+  const [showConnection, setShowConnection] = useState(false);
   const utils = trpc.useUtils();
 
   // Parse avatar data using custom hook
@@ -27,6 +39,17 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
     avatarString: person.avatar,
     fallbackName: person.name,
   });
+
+  // Darken color by reducing brightness
+  const darkenColor = (hex: string, amount: number = 40) => {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.max(0, (num >> 16) - amount);
+    const g = Math.max(0, ((num >> 8) & 0x00FF) - amount);
+    const b = Math.max(0, (num & 0x0000FF) - amount);
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+  };
+
+  const darkerColor = darkenColor(color, 40);
 
   const deleteMutation = trpc.person.delete.useMutation();
   const { mutate: deletePerson, isLoading: isDeleting } = useDeleteMutation(
@@ -51,6 +74,12 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
 
   // Get person details with assignments for stats and group memberships for smart deletion
   const { data: personDetails } = trpc.person.getById.useQuery({ id: person.id });
+
+  // Get person shares to count co-parent connections
+  const { data: personShares } = trpc.personSharing.getPersonShares.useQuery(
+    { personId: person.id },
+    { enabled: !!person.id }
+  );
 
   const handleDelete = () => {
     // In teacher mode (classroom context), handle removal intelligently
@@ -91,14 +120,32 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
   const goalsTotal = goalCount;
   const goalProgress = goalsTotal > 0 ? (goalsAccomplished / goalsTotal) * 100 : 0;
 
-  // FEATURE: Classroom connection indicator to be implemented
-  const isInClassroom = false;
+  // Calculate connection counts
+  const classroomCount = personDetails?.groupMembers?.length || 0;
+  const coParentCount = personShares?.length || 0;
+
+  // Build connection status text
+  const connectionParts = [];
+  if (coParentCount > 0) {
+    connectionParts.push(`${coParentCount} co-parent${coParentCount !== 1 ? 's' : ''}`);
+  }
+  if (classroomCount > 0) {
+    connectionParts.push(`${classroomCount} classroom${classroomCount !== 1 ? 's' : ''}`);
+  }
+
+  // Always show connection status
+  let connectionStatus: string;
+  if (connectionParts.length > 0) {
+    connectionStatus = `Connected to ${connectionParts.join(', ')}`;
+  } else {
+    connectionStatus = 'No connections';
+  }
 
   return (
     <>
       <div
-        className="group relative rounded-xl bg-white p-4 shadow-md hover:shadow-lg transition-all cursor-pointer border-4"
-        style={{ borderColor: color }}
+        className="group relative rounded-xl bg-white p-4 shadow-md hover:shadow-lg transition-all cursor-pointer border border-gray-200 border-t-4"
+        style={{ borderTopColor: color }}
         onClick={() => onSelect?.(person)}
       >
         {/* Avatar and Name */}
@@ -113,15 +160,26 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-lg text-gray-900 truncate flex items-center gap-2">
-              <RenderIconEmoji value={emoji} className="h-6 w-6" />
+            <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 truncate">
               {person.name}
             </h3>
-            {isInClassroom && (
-              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                📚 In Classroom
-              </span>
-            )}
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate font-medium flex-1">
+                {connectionStatus}
+              </p>
+              {roleId && roleType && userId && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowConnection(true);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-gray-100"
+                  title="Manage connections"
+                >
+                  <Link2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -166,11 +224,12 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 relative z-10">
           <Button
             size="sm"
             onClick={handleCheckIn}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+            className="flex-1 text-white hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: darkerColor }}
           >
             <CheckCircle className="h-4 w-4 mr-1" />
             Check-in
@@ -186,16 +245,16 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
           >
             <Pencil className="h-4 w-4" />
           </Button>
-          {person.name !== 'Me' && (
+          {!person.isAccountOwner && (
             <Button
               size="sm"
-              variant="ghost"
+              variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
                 handleDelete();
               }}
               disabled={isDeleting || isRemoving}
-              className="px-3 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
+              className="px-3 text-red-600 hover:text-red-700 hover:bg-red-50 border-gray-300 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -216,6 +275,17 @@ export const PersonCard = memo(function PersonCard({ person, onSelect, classroom
           personName={person.name}
           isOpen={showCheckin}
           onClose={() => setShowCheckin(false)}
+        />
+      )}
+
+      {showConnection && roleId && roleType && userId && (
+        <PersonConnectionModal
+          isOpen={showConnection}
+          onClose={() => setShowConnection(false)}
+          person={person}
+          roleId={roleId}
+          roleType={roleType}
+          userId={userId}
         />
       )}
     </>

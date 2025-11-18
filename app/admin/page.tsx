@@ -32,16 +32,37 @@ function DashboardContent() {
     endDate: new Date(),
   });
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">System overview and management</p>
-        </div>
+  const adminColor = '#dc2626'; // red-600
 
-        {/* Quick Navigation */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+  // Convert hex to RGB for opacity
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result && result[1] && result[2] && result[3]
+      ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+      : '220, 38, 38'; // Default red RGB
+  };
+
+  const rgbColor = hexToRgb(adminColor);
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-gray-900">
+      {/* Top section with colored background */}
+      <div className="bg-white dark:bg-gray-900">
+        <div
+          className="max-w-7xl mx-auto border-t-2 border-x-2 rounded-t-md"
+          style={{
+            borderColor: adminColor,
+            backgroundColor: `rgba(${rgbColor}, 0.05)`
+          }}
+        >
+          <div className="px-4 sm:px-6 lg:px-8 py-8">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Admin Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-2">System overview and management</p>
+            </div>
+
+            {/* Quick Navigation */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Link href="/admin/users" className="block">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -114,9 +135,18 @@ function DashboardContent() {
             </Card>
           </Link>
         </div>
+      </div>
+        </div>
+      </div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Stats and content section with white background */}
+      <div className="bg-white dark:bg-gray-900">
+        <div
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-x-2 border-b-2 rounded-b-md"
+          style={{ borderColor: adminColor }}
+        >
+          {/* Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {statsLoading ? (
             <>
               <Skeleton className="h-32" />
@@ -293,6 +323,8 @@ function DashboardContent() {
             </CardContent>
           </Card>
         )}
+      </div>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 import { addDays } from 'date-fns';
+import { getRandomSafeWords } from './safe-words';
+import { checkRateLimit, RATE_LIMIT_CONFIGS } from './rate-limit.service';
 
 export enum InvitationType {
   CO_PARENT = 'CO_PARENT',
@@ -26,11 +28,38 @@ export interface SendInvitationOptions {
 }
 
 /**
+ * Generate unique 4-word invitation code
+ */
+async function generateInvitationCode(): Promise<string> {
+  let attempts = 0;
+  const maxAttempts = 50;
+
+  while (attempts < maxAttempts) {
+    const words = getRandomSafeWords(4);
+    const code = words.join('-').toLowerCase();
+
+    // Check if code already exists in invitations
+    const existing = await prisma.invitation.findFirst({
+      where: { inviteCode: code }
+    });
+
+    if (!existing) {
+      return code;
+    }
+    attempts++;
+  }
+
+  throw new Error('Failed to generate unique invitation code after 50 attempts');
+}
+
+/**
  * Send invitation via email
+ *
+ * Rate limiting: 10 invitations per user per day (24 hours)
  */
 export async function sendInvitation(
   options: SendInvitationOptions
-): Promise<{ invitationId: string; token: string }> {
+): Promise<{ invitationId: string; token: string; inviteCode: string }> {
   const {
     inviterUserId,
     inviterRoleId,
@@ -41,8 +70,25 @@ export async function sendInvitation(
     groupIds
   } = options;
 
+  // Check rate limit
+  const rateLimit = await checkRateLimit(
+    inviterUserId,
+    RATE_LIMIT_CONFIGS.INVITATION_SEND
+  );
+
+  if (!rateLimit.allowed) {
+    const resetTime = new Date(rateLimit.resetAt).toLocaleString();
+    throw new Error(
+      `Rate limit exceeded. You can send more invitations after ${resetTime}. Limit: 10 invitations per day.`
+    );
+  }
+
   // Generate secure token
   const token = crypto.randomBytes(32).toString('hex');
+
+  // Generate 4-word invite code
+  const inviteCode = await generateInvitationCode();
+
   const expiresAt = addDays(new Date(), 7); // 7 days expiry
 
   // Check if invitation already exists and is pending
@@ -59,15 +105,21 @@ export async function sendInvitation(
     throw new Error('Invitation already sent to this email');
   }
 
+  // Force READ_ONLY permissions for co-parent and co-teacher
+  const finalPermissions = (type === InvitationType.CO_PARENT || type === InvitationType.CO_TEACHER)
+    ? 'READ_ONLY'
+    : (permissions || 'READ_ONLY');
+
   // Create invitation
   const invitation = await prisma.invitation.create({
     data: {
       token,
+      inviteCode,
       inviterUserId,
       inviterRoleId,
       inviteeEmail,
       type,
-      permissions: permissions || 'READ_ONLY',
+      permissions: finalPermissions,
       personIds: personIds || [],
       groupIds: groupIds || [],
       expiresAt,
@@ -78,10 +130,12 @@ export async function sendInvitation(
   // FEATURE: Email service integration - configure RESEND_API_KEY in environment
   // const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   // const acceptUrl = `${appUrl}/invitations/accept?token=${token}`;
+  // Email should include: inviteCode for easy reference
 
   return {
     invitationId: invitation.id,
-    token
+    token,
+    inviteCode
   };
 }
 
@@ -126,40 +180,44 @@ export async function acceptInvitation(
     throw new Error('Email mismatch');
   }
 
-  // Handle different invitation types
-  switch (invitation.type) {
-    case InvitationType.CO_PARENT:
-      await acceptCoParentInvitation(invitation, acceptingUserId);
-      break;
-    case InvitationType.CO_TEACHER:
-      await acceptCoTeacherInvitation(invitation, acceptingUserId);
-      break;
-    case InvitationType.SCHOOL_TEACHER:
-    case InvitationType.SCHOOL_SUPPORT:
-      // FEATURE: School mode invite support planned for future release
-      throw new Error('School mode not yet implemented');
-  }
-
-  // Mark invitation as accepted
-  await prisma.invitation.update({
-    where: { id: invitation.id },
-    data: {
-      status: 'ACCEPTED',
-      acceptedAt: new Date(),
-      acceptedByUserId: acceptingUserId
+  // Use transaction to ensure atomicity: create relationship and mark invitation as accepted together
+  await prisma.$transaction(async (tx) => {
+    // Handle different invitation types
+    switch (invitation.type) {
+      case InvitationType.CO_PARENT:
+        await acceptCoParentInvitationTx(tx, invitation, acceptingUserId);
+        break;
+      case InvitationType.CO_TEACHER:
+        await acceptCoTeacherInvitationTx(tx, invitation, acceptingUserId);
+        break;
+      case InvitationType.SCHOOL_TEACHER:
+      case InvitationType.SCHOOL_SUPPORT:
+        // FEATURE: School mode invite support planned for future release
+        throw new Error('School mode not yet implemented');
     }
+
+    // Mark invitation as accepted
+    await tx.invitation.update({
+      where: { id: invitation.id },
+      data: {
+        status: 'ACCEPTED',
+        acceptedAt: new Date(),
+        acceptedByUserId: acceptingUserId
+      }
+    });
   });
 }
 
 /**
- * Accept co-parent invitation
+ * Accept co-parent invitation (transaction version)
  */
-async function acceptCoParentInvitation(
+async function acceptCoParentInvitationTx(
+  tx: any,
   invitation: any,
   acceptingUserId: string
 ): Promise<void> {
   // Get or create accepting user's parent role
-  let acceptingRole = await prisma.role.findFirst({
+  let acceptingRole = await tx.role.findFirst({
     where: {
       userId: acceptingUserId,
       type: 'PARENT'
@@ -167,7 +225,7 @@ async function acceptCoParentInvitation(
   });
 
   if (!acceptingRole) {
-    acceptingRole = await prisma.role.create({
+    acceptingRole = await tx.role.create({
       data: {
         userId: acceptingUserId,
         type: 'PARENT',
@@ -177,7 +235,7 @@ async function acceptCoParentInvitation(
   }
 
   // Create co-parent relationship
-  await prisma.coParent.create({
+  await tx.coParent.create({
     data: {
       primaryRoleId: invitation.inviterRoleId,
       coParentRoleId: acceptingRole.id,
@@ -189,14 +247,15 @@ async function acceptCoParentInvitation(
 }
 
 /**
- * Accept co-teacher invitation
+ * Accept co-teacher invitation (transaction version)
  */
-async function acceptCoTeacherInvitation(
+async function acceptCoTeacherInvitationTx(
+  tx: any,
   invitation: any,
   acceptingUserId: string
 ): Promise<void> {
   // Get or create accepting user's teacher role
-  let acceptingRole = await prisma.role.findFirst({
+  let acceptingRole = await tx.role.findFirst({
     where: {
       userId: acceptingUserId,
       type: 'TEACHER'
@@ -204,7 +263,7 @@ async function acceptCoTeacherInvitation(
   });
 
   if (!acceptingRole) {
-    acceptingRole = await prisma.role.create({
+    acceptingRole = await tx.role.create({
       data: {
         userId: acceptingUserId,
         type: 'TEACHER',
@@ -215,7 +274,7 @@ async function acceptCoTeacherInvitation(
 
   // Create co-teacher relationship for each shared group
   for (const groupId of invitation.groupIds) {
-    await prisma.coTeacher.create({
+    await tx.coTeacher.create({
       data: {
         groupId,
         primaryTeacherRoleId: invitation.inviterRoleId,

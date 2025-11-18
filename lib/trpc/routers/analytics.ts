@@ -15,7 +15,7 @@ export const analyticsRouter = router({
   completionTrend: authorizedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         personId: z.string().cuid().nullable().optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
@@ -42,7 +42,7 @@ export const analyticsRouter = router({
   goalProgress: authorizedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         personId: z.string().cuid().nullable().optional(),
       })
     )
@@ -58,7 +58,7 @@ export const analyticsRouter = router({
   taskHeatmap: authorizedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         personId: z.string().cuid().nullable().optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
@@ -85,7 +85,7 @@ export const analyticsRouter = router({
   exportCSV: authorizedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         personId: z.string().cuid().nullable().optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),

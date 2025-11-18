@@ -17,27 +17,40 @@ import { Label } from '@/components/ui/label';
 import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { usePickerState } from '@/hooks/use-picker-state';
+import { getTierLimit, ComponentTierLimits } from '@/lib/services/tier-limits';
 
 interface TaskFormProps {
   task?: Task;
   routineId?: string;
   personId?: string;
   onClose: () => void;
+  effectiveLimits?: ComponentTierLimits | null;
 }
 
-export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) {
+export function TaskForm({ task, routineId, personId, onClose, effectiveLimits = null }: TaskFormProps) {
   const [name, setName] = useState(task?.name || '');
   const [description, setDescription] = useState(task?.description || '');
   const [type, setType] = useState<TaskType>(task?.type || TaskType.SIMPLE);
   const [unit, setUnit] = useState(task?.unit || '');
   const [isSmart, setIsSmart] = useState(task?.isSmart || false);
-  const [emoji, setEmoji] = useState(task?.emoji || '✅');
+  const [emoji, setEmoji] = useState(task?.emoji || '😊');
   const [color, setColor] = useState<string>(task?.color || '#3B82F6');
 
   const { pickerRef, togglePicker, closePicker, isPickerOpen } = usePickerState();
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Fetch tasks to check smart task count (only when creating a new task)
+  const { data: tasks } = trpc.task.list.useQuery(
+    { routineId: routineId || '' },
+    { enabled: !!routineId && !task }
+  );
+
+  // Calculate smart task limits
+  const smartTaskLimit = getTierLimit(effectiveLimits, 'smart_tasks_per_routine');
+  const currentSmartTaskCount = tasks?.filter((t: any) => t.isSmart).length || 0;
+  const canAddSmartTask = currentSmartTaskCount < smartTaskLimit;
 
   const createMutation = trpc.task.create.useMutation({
     onSuccess: () => {
@@ -117,41 +130,46 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Emoji Picker - Always editable */}
-          <div className="relative">
-            <Label htmlFor="emoji">Icon</Label>
-            <button
-              type="button"
-              onClick={() => togglePicker('emoji')}
-              className="mt-2 w-full h-12 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
-            >
-              <RenderIconEmoji value={emoji || '✅'} className="h-8 w-8" />
-            </button>
-            {isPickerOpen('emoji') && (
-              <div ref={pickerRef} className="absolute z-50 top-full mt-2 left-0">
-                <IconEmojiPicker
-                  selectedValue={emoji || '✅'}
-                  onSelect={setEmoji}
-                  onClose={closePicker}
-                />
-              </div>
-            )}
-          </div>
-
           {/* Show name and type as read-only when editing, but allow description editing */}
           {task ? (
             <>
-              <div className="p-4 bg-gray-50 rounded-lg border">
-                <div className="mb-3">
-                  <Label className="text-xs text-gray-500">Task Name (cannot be changed)</Label>
-                  <p className="text-base font-semibold text-gray-900 mt-1">{name}</p>
+              {/* Icon and Name in same row - Editing mode */}
+              <div>
+                <Label>Task Name (cannot be changed)</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  {/* Emoji Picker */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => togglePicker('emoji')}
+                      className="h-10 w-10 rounded-md border border-gray-300 flex items-center justify-center text-xl hover:bg-gray-50 transition-colors"
+                    >
+                      <RenderIconEmoji value={emoji || '😊'} className="h-6 w-6" />
+                    </button>
+                    {isPickerOpen('emoji') && (
+                      <div ref={pickerRef} className="absolute z-50 top-full mt-2 left-0">
+                        <IconEmojiPicker
+                          selectedValue={emoji || '😊'}
+                          onSelect={setEmoji}
+                          onClose={closePicker}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {/* Task Name - Read Only */}
+                  <div className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
+                    <p className="text-sm font-semibold text-gray-900">{name}</p>
+                  </div>
                 </div>
+              </div>
+
+              <div className="p-4 bg-gray-50 rounded-lg border">
                 <div>
                   <Label className="text-xs text-gray-500">Task Type (cannot be changed)</Label>
                   <p className="text-sm font-medium text-gray-900 mt-1">
-                    {type === TaskType.SIMPLE && 'Simple (Once per period)'}
-                    {type === TaskType.MULTIPLE_CHECKIN && 'Multiple Check-in (Track count)'}
-                    {type === TaskType.PROGRESS && `Progress (Track ${unit})`}
+                    {type === TaskType.SIMPLE && 'Simple'}
+                    {type === TaskType.MULTIPLE_CHECKIN && 'Multiple Check-in'}
+                    {type === TaskType.PROGRESS && 'Progress'}
                   </p>
                 </div>
               </div>
@@ -163,28 +181,50 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  maxLength={25}
+                  maxLength={20}
                   placeholder="Add a brief description..."
                   className="mt-1"
                 />
-                <p className="text-xs text-gray-500 mt-1">{description.length}/25 characters</p>
+                <p className="text-xs text-gray-500 mt-1">{description.length}/20 characters</p>
               </div>
             </>
           ) : (
             <>
-              {/* Name - Only when creating */}
+              {/* Icon and Name in same row - Only when creating */}
               <div>
-                <Label htmlFor="name">Task Name *</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  maxLength={25}
-                  placeholder="Brush teeth"
-                  className="mt-1"
-                />
-                <p className="text-xs text-gray-500 mt-1">{name.length}/25 characters</p>
+                <Label>Task Name *</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  {/* Emoji Picker */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => togglePicker('emoji')}
+                      className="h-10 w-10 rounded-md border border-gray-300 flex items-center justify-center text-xl hover:bg-gray-50 transition-colors"
+                    >
+                      <RenderIconEmoji value={emoji || '😊'} className="h-6 w-6" />
+                    </button>
+                    {isPickerOpen('emoji') && (
+                      <div ref={pickerRef} className="absolute z-50 top-full mt-2 left-0">
+                        <IconEmojiPicker
+                          selectedValue={emoji || '😊'}
+                          onSelect={setEmoji}
+                          onClose={closePicker}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {/* Task Name */}
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    maxLength={16}
+                    placeholder="Brush teeth"
+                    className="flex-1"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{name.length}/16 characters</p>
               </div>
 
               {/* Description - Only when creating */}
@@ -194,11 +234,11 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  maxLength={25}
-                  placeholder="2 minutes, twice daily"
+                  maxLength={20}
+                  placeholder="2 min, twice daily"
                   className="mt-1"
                 />
-                <p className="text-xs text-gray-500 mt-1">{description.length}/25 characters</p>
+                <p className="text-xs text-gray-500 mt-1">{description.length}/20 characters</p>
               </div>
             </>
           )}
@@ -289,12 +329,18 @@ export function TaskForm({ task, routineId, personId, onClose }: TaskFormProps) 
                     id="isSmart"
                     checked={isSmart}
                     onChange={(e) => setIsSmart(e.target.checked)}
-                    className="w-4 h-4 text-blue-500 rounded"
+                    disabled={!canAddSmartTask && !isSmart}
+                    className="w-4 h-4 text-blue-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                   />
-                  <Label htmlFor="isSmart" className="cursor-pointer">
+                  <Label htmlFor="isSmart" className={canAddSmartTask || isSmart ? "cursor-pointer" : "cursor-not-allowed opacity-50"}>
                     Make this a Smart Task
                   </Label>
                 </div>
+                {!canAddSmartTask && !isSmart && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    Smart task limit reached ({currentSmartTaskCount}/{smartTaskLimit})
+                  </p>
+                )}
               </div>
             </>
           )}

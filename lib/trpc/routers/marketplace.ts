@@ -22,7 +22,7 @@ export const marketplaceRouter = router({
       z.object({
         type: z.enum(['ROUTINE', 'GOAL']),
         sourceId: z.string().cuid(),
-        authorRoleId: z.string().cuid(),
+        authorRoleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         name: z.string().min(1).max(100),
         description: z.string().max(1000).default(''),
         visibility: z.enum(['PUBLIC', 'PRIVATE']).default('PUBLIC'),
@@ -62,7 +62,7 @@ export const marketplaceRouter = router({
     .input(
       z.object({
         itemId: z.string().cuid(),
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         targetId: z.string().cuid(),
         targetType: z.enum(['PERSON', 'GROUP']),
       })
@@ -184,7 +184,7 @@ export const marketplaceRouter = router({
     .input(
       z.object({
         shareCode: z.string().min(1),
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         targetId: z.string().cuid(),
         targetType: z.enum(['PERSON', 'GROUP']),
       })

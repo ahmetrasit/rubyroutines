@@ -35,6 +35,8 @@ interface Person {
   id: string;
   name: string;
   avatar?: string | null;
+  status?: string;
+  isAccountOwner?: boolean;
 }
 
 const INACTIVITY_TIMEOUT = 60000; // 60 seconds (default, can be configured in admin settings)
@@ -110,10 +112,10 @@ export default function KioskModePage() {
     const allMembers = groups.flatMap((g: any) => g.members || []);
     activePersons = allMembers
       .map((m: any) => m.person)
-      .filter((p: Person) => p && p.status === 'ACTIVE' && p.name !== 'Me');
+      .filter((p: Person) => p && p.status === 'ACTIVE' && !p.isAccountOwner);
   } else {
     // Role code: use persons from role (fallback)
-    activePersons = rolePersons.filter((p: Person) => p.status === 'ACTIVE' && p.name !== 'Me');
+    activePersons = rolePersons.filter((p: Person) => p.status === 'ACTIVE' && !p.isAccountOwner);
   }
 
   const selectedPerson = activePersons.find((p: Person) => p.id === selectedPersonId);

@@ -43,9 +43,9 @@ export const GroupCard = memo(function GroupCard({ group, onSelect, hideSubtitle
     }
   };
 
-  // Count only students/kids (exclude teachers/parents named 'Me')
+  // Count only students/kids (exclude teachers/parents who are account owners)
   const memberCount = group.members
-    ? group.members.filter((m: any) => m.person?.name !== 'Me').length
+    ? group.members.filter((m: any) => !m.person?.isAccountOwner).length
     : (group._count?.members || 0);
 
   // Check if this is the protected Teacher-Only classroom

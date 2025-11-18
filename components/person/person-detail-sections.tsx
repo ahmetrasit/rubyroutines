@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, Pencil } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Pencil, Share2, Trash2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { isRoutineVisible } from '@/lib/services/visibility-rules';
 import { RoutineForm } from '@/components/routine/routine-form';
 import { GoalForm } from '@/components/goal/goal-form';
 import { Button } from '@/components/ui/button';
 import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
+import { RoutineShareModal } from '@/components/routine/routine-share-modal';
+import { useToast } from '@/components/ui/toast';
 
 interface PersonDetailSectionsProps {
   roleId: string;
@@ -23,6 +25,9 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
   const [showRoutineForm, setShowRoutineForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingRoutine, setEditingRoutine] = useState<any>(null);
+  const [sharingRoutine, setSharingRoutine] = useState<any>(null);
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
 
   const { data: routines, isLoading: routinesLoading } = trpc.routine.list.useQuery({
     roleId,
@@ -33,6 +38,25 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
     { roleId },
     { enabled: !!roleId }
   );
+
+  const deleteMutation = trpc.routine.delete.useMutation({
+    onSuccess: (data, variables) => {
+      const routine = routines?.find((r) => r.id === variables.id);
+      toast({
+        title: 'Success',
+        description: `${routine?.name || 'Routine'} has been archived`,
+        variant: 'success',
+      });
+      utils.routine.list.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   // Filter goals for this person
   const filteredGoals = goals?.filter((goal) => goal.personIds.includes(personId)) || [];
@@ -59,6 +83,12 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
     (sum: number, tasks: any) => sum + tasks.length,
     0
   );
+
+  const handleDelete = (routine: any) => {
+    if (confirm(`Are you sure you want to archive "${routine.name}"?`)) {
+      deleteMutation.mutate({ id: routine.id });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -87,87 +117,158 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
               <div className="text-center py-8 text-gray-500">Loading...</div>
             ) : routines && routines.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {routines.map((routine: any) => {
+                {[...routines]
+                  .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                  .map((routine: any) => {
                   const visible = isRoutineVisible(routine);
-                  const totalTasks = routine.tasks?.length || 0;
-                  const smartTasks = routine.tasks?.filter((t: any) => t.isSmart).length || 0;
 
-                  // Extract emoji from name if present
-                  const emojiMatch = routine.name.match(/^(\p{Emoji}+)\s*/u);
-                  const emoji = emojiMatch ? emojiMatch[1] : '';
-                  const displayName = emoji
-                    ? routine.name.substring(emoji.length).trim()
-                    : routine.name;
+                  // Extract emoji from name
+                  const emojiMatch = routine.name.match(/^(\p{Emoji}+)\s*(.*)$/u);
+                  const emoji = emojiMatch ? emojiMatch[1] : '📋';
+                  const displayName = emojiMatch ? emojiMatch[2] : routine.name;
 
-                  // Add sunshine for daily routines
-                  const isDailyRoutine = routine.resetPeriod === 'DAILY';
-                  const periodLabel = routine.resetPeriod === 'DAILY' ? 'Daily' :
-                                     routine.resetPeriod === 'WEEKLY' ? 'Weekly' :
-                                     routine.resetPeriod === 'MONTHLY' ? 'Monthly' :
-                                     routine.resetPeriod === 'DAYS_OF_WEEK' ? 'Specific Days' :
-                                     routine.resetPeriod === 'CONDITIONAL' ? 'Conditional' : 'Custom';
+                  // Count tasks by type
+                  const simpleTasks = routine.tasks?.filter((t: any) => t.type === 'SIMPLE').length || 0;
+                  const multipleTasks = routine.tasks?.filter((t: any) => t.type === 'MULTIPLE_CHECKIN').length || 0;
+                  const progressTasks = routine.tasks?.filter((t: any) => t.type === 'PROGRESS').length || 0;
+                  const totalTasks = simpleTasks + multipleTasks + progressTasks;
+
+                  // Check if showing weekly with specific days
+                  const isWeeklyWithDays = (routine.resetPeriod === 'DAYS_OF_WEEK' || routine.resetPeriod === 'WEEKLY') && routine.visibleDays?.length > 0;
+
+                  // Format time info
+                  const formatTimeInfo = () => {
+                    if (routine.startTime && routine.endTime) {
+                      return `${routine.startTime.slice(0, 5)}-${routine.endTime.slice(0, 5)}`;
+                    }
+                    return '';
+                  };
+
+                  // Format visibility info for simple display
+                  const formatVisibility = () => {
+                    const timeInfo = formatTimeInfo();
+
+                    // Weekly without specific days
+                    if (routine.resetPeriod === 'WEEKLY') {
+                      return timeInfo ? `Weekly ${timeInfo}` : 'Weekly';
+                    }
+
+                    // Daily with time
+                    if (routine.resetPeriod === 'DAILY') {
+                      return timeInfo || 'Daily';
+                    }
+
+                    // Default
+                    return routine.resetPeriod || 'Custom';
+                  };
 
                   return (
                     <div
                       key={routine.id}
-                      className={`group bg-white rounded-lg border-4 p-3 cursor-pointer transition-all hover:shadow-md relative ${
-                        visible ? 'hover:shadow-lg' : 'opacity-40'
+                      onClick={() => onSelectRoutine?.(routine)}
+                      className={`bg-white rounded-lg border-4 p-3 transition-all hover:shadow-md cursor-pointer ${
+                        visible ? '' : 'opacity-50'
                       }`}
                       style={{
                         borderColor: routine.color || '#E5E7EB',
                       }}
                     >
-                      <div
-                        onClick={() => onSelectRoutine?.(routine)}
-                        className="flex flex-col gap-2"
-                      >
-                        {/* Header with emoji */}
-                        <div className="flex items-center justify-center gap-1">
-                          {isDailyRoutine && <span className="text-2xl">☀️</span>}
-                          {emoji && !isDailyRoutine && <div className="text-2xl">{emoji}</div>}
-                        </div>
-
-                        {/* Title */}
-                        <h3 className="font-semibold text-gray-900 text-sm text-center line-clamp-2">
+                      {/* Row 1: Emoji and Name */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">{emoji}</span>
+                        <h3 className="font-semibold text-gray-900 text-sm flex-1 line-clamp-1">
                           {displayName}
                         </h3>
-
-                        {/* Task counts */}
-                        <div className="flex items-center justify-center gap-2 text-xs">
-                          <span className="text-gray-600">{totalTasks} tasks</span>
-                          {smartTasks > 0 && (
-                            <span className="flex items-center gap-1 text-amber-700">
-                              (<span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-100 text-[10px] font-bold">S</span>
-                              {smartTasks})
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Period and structure */}
-                        <div className="flex flex-col gap-1 text-xs text-center">
-                          <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">
-                            {periodLabel}
-                          </span>
-                          {routine.visibilityStructure && (
-                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px]">
-                              {routine.visibilityStructure}
-                            </span>
-                          )}
-                        </div>
                       </div>
 
-                      {/* Edit Button */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingRoutine(routine);
-                        }}
-                        className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
+                      {/* Row 2: Task counts by type */}
+                      <div className="flex items-center gap-2 mb-2 text-xs text-gray-600">
+                        {totalTasks > 0 ? (
+                          <span>
+                            {totalTasks} {totalTasks === 1 ? 'task' : 'tasks'} (
+                            {[
+                              simpleTasks > 0 && `${simpleTasks}S`,
+                              multipleTasks > 0 && `${multipleTasks}M`,
+                              progressTasks > 0 && `${progressTasks}P`
+                            ].filter(Boolean).join(', ')}
+                            )
+                          </span>
+                        ) : (
+                          <span>0 tasks</span>
+                        )}
+                      </div>
+
+                      {/* Row 3: Visibility period */}
+                      <div className="mb-2 text-xs">
+                        {isWeeklyWithDays ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-0.5">
+                              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, idx) => {
+                                const isSelected = routine.visibleDays.includes(idx);
+                                return (
+                                  <span
+                                    key={day}
+                                    className={`px-1 py-0.5 text-[10px] font-medium rounded ${
+                                      isSelected
+                                        ? 'bg-blue-100 text-blue-700'
+                                        : 'bg-gray-100 text-gray-400'
+                                    }`}
+                                  >
+                                    {day}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                            {formatTimeInfo() && (
+                              <span className="text-gray-600 text-[10px]">{formatTimeInfo()}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-600">{formatVisibility()}</span>
+                        )}
+                      </div>
+
+                      {/* Row 4: Action buttons */}
+                      <div className="flex items-center gap-1 relative z-10">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSharingRoutine(routine);
+                          }}
+                          title="Share"
+                          className="h-7 px-2 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                        >
+                          <Share2 className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingRoutine(routine);
+                          }}
+                          title="Edit"
+                          className="h-7 px-2 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        {!routine.name?.includes('Daily Routine') && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(routine);
+                            }}
+                            title="Delete"
+                            className="h-7 px-2 text-xs text-gray-600 hover:text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -383,6 +484,8 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
       {editingRoutine && (
         <RoutineForm
           routine={editingRoutine}
+          roleId={roleId}
+          personIds={[personId]}
           onClose={() => setEditingRoutine(null)}
         />
       )}
@@ -392,6 +495,18 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
           roleId={roleId}
           personId={personId}
           onClose={() => setShowGoalForm(false)}
+        />
+      )}
+
+      {/* Share Modal */}
+      {sharingRoutine && (
+        <RoutineShareModal
+          isOpen={!!sharingRoutine}
+          onClose={() => setSharingRoutine(null)}
+          routine={{
+            id: sharingRoutine.id,
+            name: sharingRoutine.name,
+          }}
         />
       )}
     </div>

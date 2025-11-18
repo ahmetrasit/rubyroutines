@@ -4,6 +4,7 @@ import { ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
 type Routine = any;
 import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/toast';
 import {
   Dialog,
@@ -67,12 +68,7 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
-
-  // Fetch tier limits to check smart routine quota
-  const { data: tierLimits } = trpc.role.getTierLimits.useQuery(
-    { roleId: roleId! },
-    { enabled: !!roleId }
-  );
+  const queryClient = useQueryClient();
 
   // Reset visibility if it's invalid for Daily period
   useEffect(() => {
@@ -116,13 +112,28 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const timeOptions = generateTimeOptions();
 
   const createMutation = trpc.routine.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: 'Success',
         description: 'Routine created successfully',
         variant: 'success',
       });
-      utils.routine.list.invalidate();
+
+      // Invalidate all routine queries
+      await utils.routine.invalidate();
+
+      // If we have roleId and personIds, specifically refetch those queries
+      if (roleId && personIds && personIds.length > 0) {
+        for (const personId of personIds) {
+          await utils.routine.list.refetch({ roleId, personId });
+        }
+      }
+
+      // Also refetch any routine list queries without personId (general lists)
+      if (roleId) {
+        await utils.routine.list.refetch({ roleId });
+      }
+
       onClose();
     },
     onError: (error) => {
@@ -135,13 +146,28 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   });
 
   const updateMutation = trpc.routine.update.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: 'Success',
         description: 'Routine updated successfully',
         variant: 'success',
       });
-      utils.routine.list.invalidate();
+
+      // Invalidate all routine queries
+      await utils.routine.invalidate();
+
+      // If we have roleId and personIds, specifically refetch those queries
+      if (roleId && personIds && personIds.length > 0) {
+        for (const personId of personIds) {
+          await utils.routine.list.refetch({ roleId, personId });
+        }
+      }
+
+      // Also refetch any routine list queries without personId (general lists)
+      if (roleId) {
+        await utils.routine.list.refetch({ roleId });
+      }
+
       onClose();
     },
     onError: (error) => {
@@ -559,42 +585,16 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
                 checked={isSmart}
                 onChange={(e) => {
                   const checked = e.target.checked;
-                  // Check tier limit before allowing smart routine
-                  if (checked && tierLimits) {
-                    const currentSmartCount = tierLimits.usage?.smartRoutines || 0;
-                    const maxSmartRoutines = tierLimits.limits?.smart_routines || 0;
-
-                    if (currentSmartCount >= maxSmartRoutines) {
-                      toast({
-                        title: 'Limit Reached',
-                        description: 'Upgrade to add more smart routines',
-                        variant: 'destructive',
-                      });
-                      return;
-                    }
-                  }
                   setIsSmart(checked);
                   if (checked) {
                     setShowConditionsModal(true);
                   }
                 }}
-                disabled={
-                  tierLimits &&
-                  !isSmart &&
-                  (tierLimits.usage?.smartRoutines || 0) >= (tierLimits.limits?.smart_routines || 0)
-                }
                 className="w-4 h-4 text-blue-500 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <Label htmlFor="isSmart" className="cursor-pointer">
                 Make this a Smart Routine
               </Label>
-              {tierLimits &&
-                !isSmart &&
-                (tierLimits.usage?.smartRoutines || 0) >= (tierLimits.limits?.smart_routines || 0) && (
-                  <span className="text-xs text-gray-500 italic">
-                    (Upgrade to add more smart routines)
-                  </span>
-                )}
             </div>
 
             {isSmart && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { Link2 } from 'lucide-react';
+import { Link2, Plus } from 'lucide-react';
 
 interface CodeEntryProps {
   parentRoleId: string;
@@ -17,6 +17,8 @@ interface CodeEntryProps {
 export function CodeEntry({ parentRoleId }: CodeEntryProps) {
   const [code, setCode] = useState('');
   const [selectedPersonId, setSelectedPersonId] = useState('');
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [newChildName, setNewChildName] = useState('');
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -24,6 +26,26 @@ export function CodeEntry({ parentRoleId }: CodeEntryProps) {
   // Get list of parent's children
   const { data: persons, isLoading: personsLoading } = trpc.person.list.useQuery({
     roleId: parentRoleId
+  });
+
+  // Auto-select "create new" if there are no existing persons
+  useEffect(() => {
+    if (!personsLoading && persons && persons.length === 0) {
+      setIsCreatingNew(true);
+    }
+  }, [persons, personsLoading]);
+
+  const createPersonMutation = trpc.person.create.useMutation({
+    onSuccess: () => {
+      utils.person.list.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error creating child',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
   });
 
   const connectMutation = trpc.connection.connect.useMutation({
@@ -36,6 +58,8 @@ export function CodeEntry({ parentRoleId }: CodeEntryProps) {
       utils.connection.listConnections.invalidate();
       setCode('');
       setSelectedPersonId('');
+      setIsCreatingNew(false);
+      setNewChildName('');
     },
     onError: (error) => {
       toast({
@@ -46,36 +70,82 @@ export function CodeEntry({ parentRoleId }: CodeEntryProps) {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedPersonId) {
+    // Validate 4-word code format (word-word-word-word)
+    const codePattern = /^[a-z]+-[a-z]+-[a-z]+-[a-z]+$/;
+    if (!code.trim() || !codePattern.test(code.trim())) {
       toast({
         title: 'Error',
-        description: 'Please select which child this student represents',
+        description: 'Connection code must be in format: word-word-word-word',
         variant: 'destructive',
       });
       return;
     }
 
-    if (code.length !== 6) {
-      toast({
-        title: 'Error',
-        description: 'Connection code must be 6 digits',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // If creating a new child, validate name
+    if (isCreatingNew) {
+      if (!newChildName.trim()) {
+        toast({
+          title: 'Error',
+          description: 'Please enter a name for the new child',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    connectMutation.mutate({
-      code,
-      parentRoleId,
-      parentPersonId: selectedPersonId,
-    });
+      // Create the new person first
+      try {
+        const newPerson = await createPersonMutation.mutateAsync({
+          roleId: parentRoleId,
+          name: newChildName.trim(),
+          avatar: JSON.stringify({ emoji: '👤', color: '#FFB3BA' }),
+        });
+
+        // Verify person was created with an ID
+        if (!newPerson || !newPerson.id) {
+          toast({
+            title: 'Error',
+            description: 'Failed to create child. Please try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Then connect using the new person's ID
+        connectMutation.mutate({
+          code: code.trim(),
+          parentRoleId,
+          parentPersonId: newPerson.id,
+        });
+      } catch (error) {
+        // Error already handled in mutation onError callback
+        console.error('Failed to create person:', error);
+        return;
+      }
+    } else {
+      // Using existing child
+      if (!selectedPersonId) {
+        toast({
+          title: 'Error',
+          description: 'Please select which child this student represents',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      connectMutation.mutate({
+        code: code.trim(),
+        parentRoleId,
+        parentPersonId: selectedPersonId,
+      });
+    }
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    // Allow lowercase letters and hyphens only
+    const value = e.target.value.toLowerCase().replace(/[^a-z-]/g, '');
     setCode(value);
   };
 
@@ -100,63 +170,111 @@ export function CodeEntry({ parentRoleId }: CodeEntryProps) {
           {/* Info Box */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
-              <strong>Connect your child to their teacher:</strong> Enter the 6-digit code from your
+              <strong>Connect your child to their teacher:</strong> Enter the 4-word code from your
               child&apos;s teacher to receive their classroom tasks at home.
             </p>
           </div>
 
           {/* Code Input */}
           <div>
-            <Label htmlFor="code">6-Digit Connection Code *</Label>
+            <Label htmlFor="code">Connection Code (4 words) *</Label>
             <Input
               id="code"
               type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
               value={code}
               onChange={handleCodeChange}
-              placeholder="000000"
-              maxLength={6}
-              className="mt-1 text-center text-2xl font-mono tracking-widest"
+              placeholder="happy-turtle-jump-blue"
+              className="mt-1 text-center text-lg font-mono"
               required
             />
             <p className="text-sm text-gray-500 mt-1">
-              Ask your child&apos;s teacher for this code
+              Format: word-word-word-word (ask your child&apos;s teacher)
             </p>
           </div>
 
           {/* Child Selector */}
           <div>
-            <Label htmlFor="child">Which child is this for? *</Label>
+            <Label>Which child is this for? *</Label>
             {personsLoading ? (
               <div className="text-center py-4 text-gray-500">Loading children...</div>
-            ) : persons && persons.length > 0 ? (
-              <div className="mt-2 space-y-2">
-                <Select
-                  id="child"
-                  value={selectedPersonId}
-                  onChange={(e) => setSelectedPersonId(e.target.value)}
-                  required
-                >
-                  <option value="">Select a child...</option>
-                  {persons.map((person: any) => {
-                    const avatar = parseAvatar(person.avatar);
-                    return (
-                      <option key={person.id} value={person.id}>
-                        {avatar.emoji} {person.name}
-                      </option>
-                    );
-                  })}
-                </Select>
-                <p className="text-sm text-gray-500">
-                  This links your child at home to the teacher&apos;s student record
-                </p>
-              </div>
             ) : (
-              <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg mt-2">
-                <p className="text-gray-500 text-sm">
-                  Add a child first before connecting to a teacher
-                </p>
+              <div className="mt-3 space-y-4">
+                {/* Radio buttons to choose between existing or new */}
+                <div className="space-y-3">
+                  {persons && persons.length > 0 && (
+                    <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="childOption"
+                        checked={!isCreatingNew}
+                        onChange={() => {
+                          setIsCreatingNew(false);
+                          setNewChildName('');
+                        }}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">Match to existing child</div>
+                        <p className="text-sm text-gray-500">Select a child you've already added</p>
+                      </div>
+                    </label>
+                  )}
+
+                  <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="childOption"
+                      checked={isCreatingNew}
+                      onChange={() => {
+                        setIsCreatingNew(true);
+                        setSelectedPersonId('');
+                      }}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900 flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Create new child
+                      </div>
+                      <p className="text-sm text-gray-500">Add a new child and connect them</p>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Show appropriate input based on selection */}
+                {!isCreatingNew && persons && persons.length > 0 ? (
+                  <div className="pl-7">
+                    <Select
+                      id="child"
+                      value={selectedPersonId}
+                      onChange={(e) => setSelectedPersonId(e.target.value)}
+                      required
+                    >
+                      <option value="">Select a child...</option>
+                      {persons.map((person: any) => {
+                        const avatar = parseAvatar(person.avatar);
+                        return (
+                          <option key={person.id} value={person.id}>
+                            {avatar.emoji} {person.name}
+                          </option>
+                        );
+                      })}
+                    </Select>
+                  </div>
+                ) : isCreatingNew ? (
+                  <div className="pl-7">
+                    <Input
+                      type="text"
+                      value={newChildName}
+                      onChange={(e) => setNewChildName(e.target.value)}
+                      placeholder="Enter child's name"
+                      required
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      A new child will be created and connected
+                    </p>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -165,14 +283,22 @@ export function CodeEntry({ parentRoleId }: CodeEntryProps) {
           <Button
             type="submit"
             className="w-full"
-            disabled={connectMutation.isPending || !code || !selectedPersonId}
+            disabled={
+              createPersonMutation.isPending ||
+              connectMutation.isPending ||
+              !code ||
+              (!isCreatingNew && !selectedPersonId) ||
+              (isCreatingNew && !newChildName.trim())
+            }
           >
-            {connectMutation.isPending ? (
+            {createPersonMutation.isPending ? (
+              <>Creating child...</>
+            ) : connectMutation.isPending ? (
               <>Connecting...</>
             ) : (
               <>
                 <Link2 className="h-4 w-4 mr-2" />
-                Connect to Teacher
+                {isCreatingNew ? 'Create & Connect' : 'Connect to Teacher'}
               </>
             )}
           </Button>

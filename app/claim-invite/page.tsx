@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Mail, ArrowRight } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/toast';
 import Link from 'next/link';
 
 export default function ClaimInvitePage() {

@@ -238,13 +238,21 @@ export const personRouter = router({
       // Get person to access roleId and groups
       const existingPerson = await ctx.prisma.person.findUnique({
         where: { id: input.id },
-        select: { roleId: true, groupMembers: { select: { groupId: true } } }
+        select: { roleId: true, groupMembers: { select: { groupId: true } }, isAccountOwner: true }
       });
 
       if (!existingPerson) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Person not found',
+        });
+      }
+
+      // Prevent deleting the account owner
+      if (existingPerson.isAccountOwner) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Cannot delete the account owner. This person is required for your account.',
         });
       }
 

@@ -36,12 +36,13 @@ BEGIN
 
             -- Create "Me" person for parent role if it doesn't exist
             IF NOT EXISTS(SELECT 1 FROM persons WHERE "roleId" = parent_role_id AND name = 'Me') THEN
-                INSERT INTO persons (id, "roleId", name, avatar, status, "createdAt", "updatedAt")
+                INSERT INTO persons (id, "roleId", name, avatar, "isAccountOwner", status, "createdAt", "updatedAt")
                 VALUES (
                     'person_me_' || substring(md5(random()::text) from 1 for 20),
                     parent_role_id,
                     'Me',
                     '{"color":"#BAE1FF","emoji":"👤"}',
+                    true,
                     'ACTIVE',
                     NOW(),
                     NOW()
@@ -54,12 +55,13 @@ BEGIN
 
             -- Ensure "Me" person exists
             IF NOT EXISTS(SELECT 1 FROM persons WHERE "roleId" = parent_role_id AND name = 'Me') THEN
-                INSERT INTO persons (id, "roleId", name, avatar, status, "createdAt", "updatedAt")
+                INSERT INTO persons (id, "roleId", name, avatar, "isAccountOwner", status, "createdAt", "updatedAt")
                 VALUES (
                     'person_me_' || substring(md5(random()::text) from 1 for 20),
                     parent_role_id,
                     'Me',
                     '{"color":"#BAE1FF","emoji":"👤"}',
+                    true,
                     'ACTIVE',
                     NOW(),
                     NOW()

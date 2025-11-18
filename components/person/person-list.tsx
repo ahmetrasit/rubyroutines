@@ -3,13 +3,14 @@
 import { trpc } from '@/lib/trpc/client';
 import { PersonCard } from './person-card';
 import { SharedPersonCard } from './SharedPersonCard';
+import { CoParentCard } from '@/components/coparent/CoParentCard';
 import { Button } from '@/components/ui/button';
-import { Plus, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { PersonForm } from './person-form';
-import { RestorePersonDialog } from './restore-person-dialog';
 import { SharePersonModal } from '@/components/sharing/SharePersonModal';
 import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
+import { CoParentDetailModal } from '@/components/coparent/CoParentDetailModal';
 import type { Person } from '@/lib/types/database';
 import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
 
@@ -18,20 +19,25 @@ interface PersonListProps {
   userName: string;
   effectiveLimits?: ComponentTierLimits | null;
   onSelectPerson?: (person: Person) => void;
+  userId?: string;
+  roleType?: 'PARENT' | 'TEACHER';
 }
 
-export function PersonList({ roleId, userName, effectiveLimits = null, onSelectPerson }: PersonListProps) {
+export function PersonList({
+  roleId,
+  userName,
+  effectiveLimits = null,
+  onSelectPerson,
+  userId,
+  roleType
+}: PersonListProps) {
   const [showForm, setShowForm] = useState(false);
-  const [showRestore, setShowRestore] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [kioskCollapsed, setKioskCollapsed] = useState(true); // Collapsed by default
+  const [selectedCoParent, setSelectedCoParent] = useState<any>(null);
 
   const { data: persons, isLoading } = trpc.person.list.useQuery(
     { roleId },
-    { enabled: !!roleId }
-  );
-  const { data: allPersons } = trpc.person.list.useQuery(
-    { roleId, includeInactive: true },
     { enabled: !!roleId }
   );
 
@@ -68,8 +74,6 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
     );
   }
 
-  const hasInactive = (allPersons?.length ?? 0) > (persons?.length ?? 0);
-
   // Combine owned and shared persons
   const allAccessiblePersons = [
     ...(accessiblePersons?.ownedPersons || []),
@@ -77,12 +81,12 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
   ];
 
   // Separate adults (Me) from children - for owned persons only
-  const adults = persons?.filter((person) => person.name === 'Me') || [];
-  const ownedChildren = persons?.filter((person) => person.name !== 'Me') || [];
+  const adults = persons?.filter((person) => person.isAccountOwner) || [];
+  const ownedChildren = persons?.filter((person) => !person.isAccountOwner) || [];
 
   // Get shared children separately
   const sharedChildren = accessiblePersons?.sharedPersons?.filter(
-    (person) => person.name !== 'Me'
+    (person) => !person.isAccountOwner
   ) || [];
 
   // Check tier limits using effective limits from database
@@ -127,19 +131,27 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
 
       {/* Row 2: Adults (Parent and Co-Parent) */}
       <div className="space-y-4">
-        {hasInactive && (
-          <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={() => setShowRestore(true)}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Restore
-            </Button>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Me person card */}
           {adults.map((person) => (
-            <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
+            <PersonCard
+              key={person.id}
+              person={person}
+              onSelect={onSelectPerson}
+              roleId={roleId}
+              roleType={roleType}
+              userId={userId}
+            />
+          ))}
+
+          {/* Co-Parent cards */}
+          {coParents && coParents.map((coParent: any) => (
+            <CoParentCard
+              key={coParent.id}
+              coParent={coParent}
+              roleId={roleId}
+              onSelect={() => setSelectedCoParent(coParent)}
+            />
           ))}
 
           {/* Add Co-Parent placeholder card */}
@@ -175,10 +187,17 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
 
       {/* Row 3: Children */}
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Owned child cards */}
           {ownedChildren.map((person) => (
-            <PersonCard key={person.id} person={person} onSelect={onSelectPerson} />
+            <PersonCard
+              key={person.id}
+              person={person}
+              onSelect={onSelectPerson}
+              roleId={roleId}
+              roleType={roleType}
+              userId={userId}
+            />
           ))}
 
           {/* Shared child cards */}
@@ -223,10 +242,6 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
 
       {showForm && <PersonForm roleId={roleId} onClose={() => setShowForm(false)} />}
 
-      {showRestore && (
-        <RestorePersonDialog roleId={roleId} onClose={() => setShowRestore(false)} />
-      )}
-
       {showShareModal && (
         <SharePersonModal
           isOpen={showShareModal}
@@ -234,6 +249,15 @@ export function PersonList({ roleId, userName, effectiveLimits = null, onSelectP
           roleId={roleId}
           roleType="PARENT"
           persons={ownedChildren}
+        />
+      )}
+
+      {selectedCoParent && (
+        <CoParentDetailModal
+          isOpen={!!selectedCoParent}
+          onClose={() => setSelectedCoParent(null)}
+          coParent={selectedCoParent}
+          roleId={roleId}
         />
       )}
     </div>

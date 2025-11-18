@@ -161,148 +161,26 @@ interface IconEmojiPickerProps {
 }
 
 export function IconEmojiPicker({ selectedValue, onSelect, onClose }: IconEmojiPickerProps) {
-  const [activeTab, setActiveTab] = useState<'emoji' | 'icon'>('emoji');
-  const [iconSearch, setIconSearch] = useState('');
-
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     onSelect(emojiData.emoji);
     onClose();
   };
 
-  const handleIconClick = (iconName: string) => {
-    onSelect(`icon:${iconName}`);
-    onClose();
-  };
-
-  // Filter all lucide icons based on search
-  const searchResults = useMemo(() => {
-    if (!iconSearch.trim()) return null;
-
-    const searchTerm = iconSearch.toLowerCase();
-    const allIcons = Object.keys(LucideIcons).filter(
-      (key) =>
-        key !== 'default' &&
-        key !== 'createLucideIcon' &&
-        typeof (LucideIcons as any)[key] === 'function'
-    );
-
-    const matches = allIcons
-      .filter((iconName) => iconName.toLowerCase().includes(searchTerm))
-      .slice(0, 60); // Limit to 60 results for performance
-
-    return matches.map((name) => ({
-      name,
-      icon: (LucideIcons as any)[name],
-    }));
-  }, [iconSearch]);
-
   return (
     <div className="bg-white rounded-lg shadow-lg border w-[360px]">
-      {/* Tabs */}
-      <div className="flex border-b">
-        <button
-          type="button"
-          className={`flex-1 px-4 py-2 text-sm font-medium ${
-            activeTab === 'emoji'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-          onClick={() => setActiveTab('emoji')}
-        >
-          😊 Emojis
-        </button>
-        <button
-          type="button"
-          className={`flex-1 px-4 py-2 text-sm font-medium ${
-            activeTab === 'icon'
-              ? 'border-b-2 border-blue-500 text-blue-600'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-          onClick={() => setActiveTab('icon')}
-        >
-          ⭐ Icons
-        </button>
+      {/* Header */}
+      <div className="px-4 py-3 border-b">
+        <h3 className="text-sm font-medium text-gray-900">Select an Emoji</h3>
       </div>
 
       {/* Content */}
       <div className="p-2">
-        {activeTab === 'emoji' ? (
-          <EmojiPicker
-            onEmojiClick={handleEmojiClick}
-            searchPlaceHolder="Search emoji..."
-            width="100%"
-            height={350}
-          />
-        ) : (
-          <div className="h-[350px] flex flex-col">
-            {/* Search input */}
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search icons..."
-                value={iconSearch}
-                onChange={(e) => setIconSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            {/* Icon grid */}
-            <div className="flex-1 overflow-y-auto">
-              {searchResults ? (
-                // Show search results
-                <div className="mb-4">
-                  <Label className="text-xs text-gray-500 mb-2 block">
-                    Search Results ({searchResults.length})
-                  </Label>
-                  {searchResults.length > 0 ? (
-                    <div className="grid grid-cols-6 gap-2">
-                      {searchResults.map(({ name, icon: Icon }) => (
-                        <button
-                          key={name}
-                          type="button"
-                          onClick={() => handleIconClick(name)}
-                          className={`p-2 rounded-md hover:bg-gray-100 transition-colors ${
-                            selectedValue === `icon:${name}` ? 'bg-blue-100 ring-2 ring-blue-500' : ''
-                          }`}
-                          title={name}
-                        >
-                          <Icon className="h-5 w-5 mx-auto" />
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500 text-center py-4">No icons found</p>
-                  )}
-                </div>
-              ) : (
-                // Show curated icons when search is empty
-                <>
-                  {Object.entries(ICON_CATEGORIES).map(([category, icons]) => (
-                    <div key={category} className="mb-4">
-                      <Label className="text-xs text-gray-500 mb-2 block">{category}</Label>
-                      <div className="grid grid-cols-6 gap-2">
-                        {icons.map(({ name, icon: Icon }) => (
-                          <button
-                            key={name}
-                            type="button"
-                            onClick={() => handleIconClick(name)}
-                            className={`p-2 rounded-md hover:bg-gray-100 transition-colors ${
-                              selectedValue === `icon:${name}` ? 'bg-blue-100 ring-2 ring-blue-500' : ''
-                            }`}
-                            title={name}
-                          >
-                            <Icon className="h-5 w-5 mx-auto" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-        )}
+        <EmojiPicker
+          onEmojiClick={handleEmojiClick}
+          searchPlaceHolder="Search emoji..."
+          width="100%"
+          height={350}
+        />
       </div>
     </div>
   );
@@ -317,15 +195,12 @@ interface RenderIconEmojiProps {
 export function RenderIconEmoji({ value, className = 'text-2xl' }: RenderIconEmojiProps) {
   if (!value) return null;
 
-  // Check if it's an icon
+  // Check if it's an old icon format (backward compatibility - convert to emoji)
   if (value.startsWith('icon:')) {
-    const iconName = value.replace('icon:', '');
-    const Icon = (LucideIcons as any)[iconName];
-    if (Icon) {
-      return <Icon className={className} />;
-    }
+    // Return a default emoji for old icon entries
+    return <span className={className}>📋</span>;
   }
 
-  // Otherwise, it's an emoji
+  // Render emoji
   return <span className={className}>{value}</span>;
 }

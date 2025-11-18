@@ -87,7 +87,7 @@ export const streakRouter = router({
   getRoleStreaks: authorizedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
       })
     )
     .query(async ({ ctx, input }) => {

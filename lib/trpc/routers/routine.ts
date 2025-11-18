@@ -92,11 +92,6 @@ export const routineRouter = router({
     // Check tier limit
     const role = await ctx.prisma.role.findUnique({
       where: { id: input.roleId },
-      include: {
-        routines: {
-          where: { status: EntityStatus.ACTIVE },
-        },
-      },
     });
 
     if (!role) {
@@ -107,8 +102,20 @@ export const routineRouter = router({
     const dbLimits = await getEffectiveTierLimits(role.id);
     const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
 
-    // Check tier limit for routines (only counting ACTIVE routines)
-    checkTierLimit(effectiveLimits, 'routines_per_person', role.routines.length);
+    // Check tier limit for routines per person (only counting ACTIVE routines)
+    // For each person, count how many routines they currently have
+    for (const personId of personIds) {
+      const personRoutineCount = await ctx.prisma.routine.count({
+        where: {
+          status: EntityStatus.ACTIVE,
+          assignments: {
+            some: { personId },
+          },
+        },
+      });
+
+      checkTierLimit(effectiveLimits, 'routines_per_person', personRoutineCount);
+    }
 
     // Create routine with assignments
     const routine = await ctx.prisma.routine.create({
@@ -216,9 +223,101 @@ export const routineRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Routine not found' });
     }
 
-    // Create copies for each target person
-    const copies = await Promise.all(
+    // Get role and tier limits
+    const role = await ctx.prisma.role.findUnique({
+      where: { id: source.roleId },
+    });
+
+    if (!role) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
+    }
+
+    const dbLimits = await getEffectiveTierLimits(role.id);
+    const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
+
+    // Check if this is a Daily Routine (should be merged instead of duplicated)
+    const isDailyRoutine = source.name.includes('Daily Routine');
+
+    // Check tier limits for each target person before copying
+    for (const personId of input.targetPersonIds) {
+      // If Daily Routine and person already has one, merging won't create a new routine
+      if (isDailyRoutine) {
+        const existingDailyRoutine = await ctx.prisma.routine.findFirst({
+          where: {
+            roleId: source.roleId,
+            name: { contains: 'Daily Routine' },
+            status: EntityStatus.ACTIVE,
+            assignments: {
+              some: { personId },
+            },
+          },
+        });
+
+        // Skip limit check if merging into existing Daily Routine
+        if (existingDailyRoutine) continue;
+      }
+
+      // Check routine limit for this person
+      const personRoutineCount = await ctx.prisma.routine.count({
+        where: {
+          status: EntityStatus.ACTIVE,
+          assignments: {
+            some: { personId },
+          },
+        },
+      });
+
+      checkTierLimit(effectiveLimits, 'routines_per_person', personRoutineCount);
+    }
+
+    // Create copies or merge for each target person
+    const results = await Promise.all(
       input.targetPersonIds.map(async (personId) => {
+        // If Daily Routine, try to find existing Daily Routine for this person
+        if (isDailyRoutine) {
+          const existingDailyRoutine = await ctx.prisma.routine.findFirst({
+            where: {
+              roleId: source.roleId,
+              name: { contains: 'Daily Routine' },
+              status: EntityStatus.ACTIVE,
+              assignments: {
+                some: { personId },
+              },
+            },
+            include: {
+              tasks: {
+                where: { status: EntityStatus.ACTIVE },
+                orderBy: { order: 'desc' },
+                take: 1,
+              },
+            },
+          });
+
+          if (existingDailyRoutine) {
+            // Merge: Add tasks to existing Daily Routine
+            const lastTaskOrder = existingDailyRoutine.tasks[0]?.order || 0;
+
+            await Promise.all(
+              source.tasks.map((task: any, index: number) =>
+                ctx.prisma.task.create({
+                  data: {
+                    routineId: existingDailyRoutine.id,
+                    name: task.name,
+                    description: task.description,
+                    type: task.type,
+                    order: lastTaskOrder + index + 1,
+                    targetValue: task.targetValue,
+                    unit: task.unit,
+                  },
+                })
+              )
+            );
+
+            return { merged: true, routine: existingDailyRoutine, taskCount: source.tasks.length };
+          }
+        }
+
+        // Create new routine (either not Daily Routine, or no existing Daily Routine found)
         const routine = await ctx.prisma.routine.create({
           data: {
             roleId: source.roleId,
@@ -247,11 +346,11 @@ export const routineRouter = router({
           },
         });
 
-        return routine;
+        return { merged: false, routine, taskCount: source.tasks.length };
       })
     );
 
-    return copies;
+    return results;
   }),
 
   createVisibilityOverride: authorizedProcedure

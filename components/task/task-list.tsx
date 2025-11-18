@@ -23,6 +23,10 @@ export function TaskList({ routineId, personId = '', effectiveLimits = null }: T
     routineId,
   });
 
+  const { data: routine } = trpc.routine.getById.useQuery({
+    id: routineId,
+  });
+
   const reorderMutation = trpc.task.reorder.useMutation({
     onSuccess: () => {
       utils.task.list.invalidate();
@@ -79,32 +83,43 @@ export function TaskList({ routineId, personId = '', effectiveLimits = null }: T
           />
         ))}
 
-        {/* Add Task Card - Always visible */}
+        {/* Add Task Card - Always visible with 4 row height */}
         <div
           onClick={canAddTask ? () => setShowForm(true) : undefined}
-          className={`bg-white rounded-lg border-2 border-dashed p-2 flex items-center justify-center min-h-[40px] ${
+          className={`bg-white rounded-lg border-2 border-dashed p-3 flex items-center justify-center h-[160px] opacity-60 ${
             canAddTask
-              ? 'border-gray-300 cursor-pointer transition-all hover:border-primary-400 hover:bg-gray-50'
-              : 'border-gray-200 cursor-not-allowed bg-gray-50'
+              ? 'cursor-pointer transition-all hover:shadow-md hover:opacity-80'
+              : 'cursor-not-allowed bg-gray-50'
           }`}
+          style={{ borderColor: routine?.color || '#E5E7EB' }}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-2 text-center">
             {canAddTask ? (
               <>
-                <Plus className="h-5 w-5 text-gray-400" />
-                <span className="text-sm font-medium text-gray-400">Add Task</span>
+                <Plus className="h-12 w-12 text-gray-400" />
+                <span className="text-lg font-medium text-gray-500">Add Task</span>
               </>
             ) : (
-              <span className="text-sm text-gray-500">
-                {currentTaskCount}/{taskLimit} tasks
-              </span>
+              <>
+                <span className="text-lg font-semibold text-gray-500">
+                  {currentTaskCount}/{taskLimit} tasks
+                </span>
+                <span className="text-xs text-amber-600 font-medium">
+                  Tier limit reached
+                </span>
+              </>
             )}
           </div>
         </div>
       </div>
 
       {showForm && (
-        <TaskForm routineId={routineId} personId={personId} onClose={() => setShowForm(false)} />
+        <TaskForm
+          routineId={routineId}
+          personId={personId}
+          effectiveLimits={effectiveLimits}
+          onClose={() => setShowForm(false)}
+        />
       )}
     </div>
   );

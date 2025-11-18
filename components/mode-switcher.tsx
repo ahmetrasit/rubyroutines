@@ -45,24 +45,42 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
     return null;
   }
 
+  // Helper function to convert hex to RGB for opacity
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result && result[1] && result[2] && result[3]
+      ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+      : '147, 51, 234'; // Default purple RGB
+  };
+
+  const parentRgb = hexToRgb(parentColor);
+  const teacherRgb = hexToRgb(teacherColor);
+  const adminRgb = hexToRgb(adminColor);
+
   return (
-    <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+    <div className="bg-gray-100 dark:bg-gray-800 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
-          <nav className="flex space-x-8" aria-label="Mode switcher">
+          <nav className="flex gap-2 pt-2" aria-label="Mode switcher">
             <button
               onClick={() => handleModeSwitch('parent')}
               className={`
-                py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                px-6 py-3 font-semibold text-sm transition-all rounded-t-md
                 ${
                   currentMode === 'parent'
-                    ? 'border-current text-gray-900 dark:text-white'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    ? 'border-t-2 border-x-2 -mb-[2px] z-10 relative'
+                    : 'bg-white/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600'
                 }
               `}
               style={
                 currentMode === 'parent'
-                  ? { borderColor: parentColor, color: parentColor }
+                  ? {
+                      backgroundColor: `rgba(${parentRgb}, 0.15)`,
+                      borderTopColor: parentColor,
+                      borderLeftColor: parentColor,
+                      borderRightColor: parentColor,
+                      color: parentColor
+                    }
                   : undefined
               }
               aria-label="Switch to parent mode"
@@ -73,16 +91,22 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
             <button
               onClick={() => handleModeSwitch('teacher')}
               className={`
-                py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                px-6 py-3 font-semibold text-sm transition-all rounded-t-md
                 ${
                   currentMode === 'teacher'
-                    ? 'border-current text-gray-900 dark:text-white'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    ? 'border-t-2 border-x-2 -mb-[2px] z-10 relative'
+                    : 'bg-white/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600'
                 }
               `}
               style={
                 currentMode === 'teacher'
-                  ? { borderColor: teacherColor, color: teacherColor }
+                  ? {
+                      backgroundColor: `rgba(${teacherRgb}, 0.15)`,
+                      borderTopColor: teacherColor,
+                      borderLeftColor: teacherColor,
+                      borderRightColor: teacherColor,
+                      color: teacherColor
+                    }
                   : undefined
               }
               aria-label="Switch to teacher mode"
@@ -94,16 +118,22 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
               <button
                 onClick={() => handleModeSwitch('admin')}
                 className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                  px-6 py-3 font-semibold text-sm transition-all rounded-t-md
                   ${
                     currentMode === 'admin'
-                      ? 'border-current text-gray-900 dark:text-white'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                      ? 'border-t-2 border-x-2 -mb-[2px] z-10 relative'
+                      : 'bg-white/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600'
                   }
                 `}
                 style={
                   currentMode === 'admin'
-                    ? { borderColor: adminColor, color: adminColor }
+                    ? {
+                        backgroundColor: `rgba(${adminRgb}, 0.15)`,
+                        borderTopColor: adminColor,
+                        borderLeftColor: adminColor,
+                        borderRightColor: adminColor,
+                        color: adminColor
+                      }
                     : undefined
                 }
                 aria-label="Switch to admin mode"

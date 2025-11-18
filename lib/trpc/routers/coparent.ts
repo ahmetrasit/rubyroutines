@@ -13,7 +13,7 @@ export const coParentRouter = router({
   invite: verifiedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         email: z.string().email(),
         permissions: z.enum(['READ_ONLY', 'TASK_COMPLETION', 'FULL_EDIT']),
         personIds: z.array(z.string().cuid())
@@ -36,7 +36,7 @@ export const coParentRouter = router({
   list: authorizedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid()
+        roleId: z.string().uuid() // Role IDs are UUIDs, not CUIDs
       })
     )
     .query(async ({ ctx, input }) => {

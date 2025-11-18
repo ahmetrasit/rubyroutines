@@ -118,6 +118,7 @@ model Person {
   birthDate           DateTime?
   avatar              String?
   notes               String?
+  isAccountOwner      Boolean      @default(false) // True for the "Me" person (account owner)
   status              EntityStatus @default(ACTIVE)
   archivedAt          DateTime?
   createdAt           DateTime     @default(now())
@@ -554,6 +555,7 @@ model ConnectionCode {
 model Invitation {
   id             String         @id @default(cuid())
   token          String         @unique @default(cuid())
+  inviteCode     String?        @unique // 4-word code for easy sharing
   inviterUserId  String
   inviterRoleId  String
   inviteeEmail   String
@@ -573,6 +575,7 @@ model Invitation {
   acceptedByUser User? @relation("AcceptedUser", fields: [acceptedByUserId], references: [id])
 
   @@index([token])
+  @@index([inviteCode])
   @@index([inviteeEmail])
   @@index([status])
   @@map("invitations")
@@ -1041,4 +1044,25 @@ model ModerationLog {
   @@index([timestamp])
   @@index([action])
   @@map("moderation_logs")
+}
+
+// ============================================================================
+// RATE LIMITING
+// ============================================================================
+
+model RateLimit {
+  id         String   @id @default(cuid())
+  identifier String   // User ID, Role ID, or IP address
+  action     String   // Action being rate limited (e.g., 'code_generation', 'code_claim', 'invitation_send')
+  count      Int      @default(1)
+  windowStart DateTime @default(now())
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, action])
+  @@index([identifier])
+  @@index([action])
+  @@index([expiresAt])
+  @@map("rate_limits")
 }

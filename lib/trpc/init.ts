@@ -91,7 +91,7 @@ import {
 
 /**
  * Middleware that automatically checks role ownership
- * Usage: .input(z.object({ roleId: z.string().cuid(), ... }))
+ * Usage: .input(z.object({ roleId: z.string().uuid(), ... }))
  */
 export const authorizedProcedure = protectedProcedure.use(async (opts) => {
   const { ctx, input } = opts;

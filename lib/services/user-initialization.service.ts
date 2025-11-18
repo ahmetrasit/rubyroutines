@@ -24,6 +24,7 @@ async function createDefaultPerson(roleId: string, prisma: any) {
         color: '#BAE1FF', // Light blue
         emoji: '👤',
       }),
+      isAccountOwner: true, // Mark as account owner
       status: 'ACTIVE',
     },
   });

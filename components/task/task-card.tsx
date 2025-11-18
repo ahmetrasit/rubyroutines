@@ -36,69 +36,66 @@ export const TaskCard = memo(function TaskCard({
     setShowDeleteWarning(true);
   };
 
+  // Get task type label
+  const getTaskTypeLabel = () => {
+    if (task.type === TaskType.SIMPLE) return 'Simple';
+    if (task.type === TaskType.MULTIPLE_CHECKIN) return 'Multiple';
+    if (task.type === TaskType.PROGRESS) return 'Progress';
+    return 'Simple';
+  };
+
   return (
     <>
       <Card
-        className="group hover:shadow-md transition-all h-full flex flex-col border-2"
+        className="hover:shadow-md transition-all h-full flex flex-col border-4 p-3"
         style={{ borderColor: task.color || '#E5E7EB' }}
       >
-        <CardHeader className="p-1">
-          <div className="flex items-start gap-1">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1">
-                {task.emoji && (
-                  <div className="flex-shrink-0">
-                    <RenderIconEmoji value={task.emoji} className="h-4 w-4" />
-                  </div>
-                )}
-                <h4 className="font-semibold text-sm text-gray-900 truncate">
-                  {task.name}
-                </h4>
-                {task.isComplete && task.type === TaskType.SIMPLE && (
-                  <span className="text-[9px] px-1 py-0.5 bg-green-100 text-green-700 rounded-full flex-shrink-0">
-                    ✓
-                  </span>
-                )}
-                {task.type === TaskType.MULTIPLE_CHECKIN && (
-                  <span className="text-[9px] px-1 py-0.5 bg-blue-100 text-blue-700 rounded-full flex-shrink-0">
-                    M
-                  </span>
-                )}
-                {task.type === TaskType.PROGRESS && (
-                  <span className="text-[9px] px-1 py-0.5 bg-purple-100 text-purple-700 rounded-full flex-shrink-0">
-                    P
-                  </span>
-                )}
-                {task.isSmart && (
-                  <span className="text-[9px] px-1 py-0.5 bg-amber-100 text-amber-700 rounded-full flex-shrink-0">
-                    S
-                  </span>
-                )}
-              </div>
-              {task.description && (
-                <p className="text-xs text-gray-500 mt-0.5 truncate">{task.description}</p>
-              )}
-            </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowEdit(true)}
-                className="h-7 w-7 p-0"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleDelete}
-                className="h-7 w-7 p-0"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+        {/* Row 1: Emoji + Task Name */}
+        <div className="flex items-center gap-2 mb-2">
+          {task.emoji && (
+            <RenderIconEmoji value={task.emoji} className="h-5 w-5" />
+          )}
+          <h4 className="font-semibold text-sm text-gray-900 flex-1 line-clamp-1">
+            {task.name}
+          </h4>
+        </div>
+
+        {/* Row 2: Description */}
+        {task.description && (
+          <p className="text-xs text-gray-600 mb-2 line-clamp-2">{task.description}</p>
+        )}
+
+        {/* Row 3: Task Type Badge + Edit & Delete Buttons */}
+        <div className="flex items-center gap-2 mt-auto">
+          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+            {getTaskTypeLabel()}
+          </span>
+          {task.isSmart && (
+            <span className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full font-medium">
+              Smart
+            </span>
+          )}
+          <div className="flex gap-1 ml-auto">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowEdit(true)}
+              className="h-7 w-7 p-0 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+              title="Edit"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleDelete}
+              className="h-7 w-7 p-0 text-gray-600 hover:text-red-600 hover:bg-red-50"
+              title="Delete"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
-        </CardHeader>
+        </div>
       </Card>
 
       {showEdit && <TaskForm task={task} onClose={() => setShowEdit(false)} />}

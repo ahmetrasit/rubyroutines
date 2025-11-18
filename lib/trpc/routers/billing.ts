@@ -16,7 +16,7 @@ export const billingRouter = router({
   createCheckout: verifiedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         tier: z.nativeEnum(Tier),
         successUrl: z.string().url(),
         cancelUrl: z.string().url(),
@@ -34,7 +34,7 @@ export const billingRouter = router({
   createPortal: verifiedProcedure
     .input(
       z.object({
-        roleId: z.string().cuid(),
+        roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
         returnUrl: z.string().url(),
       })
     )
@@ -47,7 +47,7 @@ export const billingRouter = router({
    * Get current tier for a role
    */
   getCurrentTier: authorizedProcedure
-    .input(z.object({ roleId: z.string().cuid() }))
+    .input(z.object({ roleId: z.string().uuid() })) // Role IDs are UUIDs, not CUIDs
     .query(async ({ input }) => {
       const result = await getCurrentTier(input.roleId);
       return result;
@@ -83,7 +83,7 @@ export const billingRouter = router({
    * Get subscription status for a role
    */
   getSubscriptionStatus: authorizedProcedure
-    .input(z.object({ roleId: z.string().cuid() }))
+    .input(z.object({ roleId: z.string().uuid() })) // Role IDs are UUIDs, not CUIDs
     .query(async ({ ctx, input }) => {
       const role = await ctx.prisma.role.findUnique({
         where: { id: input.roleId },

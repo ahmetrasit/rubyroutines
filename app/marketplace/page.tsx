@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { SearchBar } from '@/components/marketplace/SearchBar';
 import { ItemCard } from '@/components/marketplace/ItemCard';
-import { PublishModal } from '@/components/marketplace/PublishModal';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 interface SearchFilters {
@@ -27,7 +26,6 @@ export default function MarketplacePage() {
     sortBy: 'rating',
   });
   const [page, setPage] = useState(0);
-  const [showPublishModal, setShowPublishModal] = useState(false);
   const limit = 20;
 
   useEffect(() => {
@@ -76,8 +74,6 @@ export default function MarketplacePage() {
       page={page}
       setPage={setPage}
       limit={limit}
-      showPublishModal={showPublishModal}
-      setShowPublishModal={setShowPublishModal}
     />
   );
 }
@@ -91,8 +87,6 @@ interface MarketplacePageContentProps {
   page: number;
   setPage: (page: number) => void;
   limit: number;
-  showPublishModal: boolean;
-  setShowPublishModal: (show: boolean) => void;
 }
 
 function MarketplacePageContent({
@@ -104,8 +98,6 @@ function MarketplacePageContent({
   page,
   setPage,
   limit,
-  showPublishModal,
-  setShowPublishModal,
 }: MarketplacePageContentProps) {
   const { data, isLoading } = trpc.marketplace.search.useQuery({
     keyword: filters.keyword,
@@ -138,17 +130,11 @@ function MarketplacePageContent({
         </Link>
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Marketplace</h1>
-            <p className="text-gray-600 mt-2">
-              Discover and share routines and goals with the community
-            </p>
-          </div>
-          <Button onClick={() => setShowPublishModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Publish
-          </Button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Marketplace</h1>
+          <p className="text-gray-600 mt-2">
+            Discover and share routines and goals with the community
+          </p>
         </div>
 
         {/* Search Bar */}
@@ -208,17 +194,10 @@ function MarketplacePageContent({
           <p className="text-sm text-blue-700">
             The marketplace is a community-driven space where you can discover routines and goals
             created by other users. Fork items to customize them for your needs, rate and comment
-            on items you've tried, and publish your own creations to help others.
+            on items you've tried.
           </p>
         </div>
       </div>
-
-      {/* Publish Modal */}
-      <PublishModal
-        isOpen={showPublishModal}
-        onClose={() => setShowPublishModal(false)}
-        roleId={roleId}
-      />
     </div>
   );
 }
