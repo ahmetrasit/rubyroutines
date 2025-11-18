@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { EntityStatus } from '@/lib/types/prisma-enums';
 import { checkTierLimit, mapDatabaseLimitsToComponentFormat } from '@/lib/services/tier-limits';
 import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
+import { createDefaultTeacherOnlyRoutine } from '@/lib/services/teacher-only-routine.service';
 import {
   createPersonSchema,
   updatePersonSchema,
@@ -10,6 +11,7 @@ import {
   restorePersonSchema,
   listPersonsSchema,
   getPersonSchema,
+  getBatchPersonsSchema,
 } from '@/lib/validation/person';
 
 export const personRouter = router({
@@ -106,6 +108,15 @@ export const personRouter = router({
       // Verify person ownership
       await verifyPersonOwnership(ctx.user.id, input.id, ctx.prisma);
 
+      // Get requesting user's role to determine if they should see teacher-only routines
+      // REQUIREMENT #4: Only teachers/co-teachers can see teacher-only routines
+      const requestingRole = await ctx.prisma.role.findFirst({
+        where: { userId: ctx.user.id },
+        select: { type: true },
+      });
+
+      const isTeacher = requestingRole?.type === 'TEACHER';
+
       const person = await ctx.prisma.person.findUnique({
         where: { id: input.id },
         include: {
@@ -115,7 +126,13 @@ export const personRouter = router({
             },
           },
           assignments: {
-            where: { routine: { status: EntityStatus.ACTIVE } },
+            where: {
+              routine: {
+                status: EntityStatus.ACTIVE,
+                // Hide teacher-only routines from non-teachers
+                ...(isTeacher ? {} : { isTeacherOnly: false }),
+              },
+            },
             include: {
               routine: {
                 include: {
@@ -144,6 +161,86 @@ export const personRouter = router({
       }
 
       return person;
+    }),
+
+  getBatch: authorizedProcedure
+    .input(getBatchPersonsSchema)
+    .query(async ({ ctx, input }) => {
+      // Verify ownership for all persons
+      const persons = await ctx.prisma.person.findMany({
+        where: { id: { in: input.ids } },
+        select: { id: true, roleId: true },
+      });
+
+      // Check that user has access to all requested persons
+      for (const person of persons) {
+        await verifyPersonOwnership(ctx.user.id, person.id, ctx.prisma);
+      }
+
+      // Get requesting user's role to determine if they should see teacher-only routines
+      const requestingRole = await ctx.prisma.role.findFirst({
+        where: { userId: ctx.user.id },
+        select: { type: true },
+      });
+
+      const isTeacher = requestingRole?.type === 'TEACHER';
+
+      // Fetch all persons with their assignments and teacher tasks in a single query
+      const batchPersons = await ctx.prisma.person.findMany({
+        where: { id: { in: input.ids } },
+        include: {
+          groupMembers: {
+            include: {
+              group: true,
+            },
+          },
+          assignments: {
+            where: {
+              routine: {
+                status: EntityStatus.ACTIVE,
+                // Only fetch teacher-only routines for teachers
+                ...(isTeacher ? {} : { isTeacherOnly: false }),
+              },
+            },
+            include: {
+              routine: {
+                include: {
+                  tasks: {
+                    where: { status: EntityStatus.ACTIVE },
+                    include: {
+                      completions: {
+                        where: {
+                          personId: { in: input.ids }, // Get completions for any of the batch persons
+                        },
+                        orderBy: { completedAt: 'desc' },
+                        take: 10, // Last 10 completions per task
+                      },
+                    },
+                    orderBy: { order: 'asc' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Map completions back to the correct person
+      const personsWithCorrectCompletions = batchPersons.map(person => ({
+        ...person,
+        assignments: person.assignments.map(assignment => ({
+          ...assignment,
+          routine: {
+            ...assignment.routine,
+            tasks: assignment.routine.tasks.map(task => ({
+              ...task,
+              completions: task.completions.filter(c => c.personId === person.id),
+            })),
+          },
+        })),
+      }));
+
+      return personsWithCorrectCompletions;
     }),
 
   create: authorizedProcedure
@@ -209,6 +306,11 @@ export const personRouter = router({
           },
         },
       });
+
+      // Auto-create teacher-only routine if this is a TEACHER role and not account owner
+      if (role.type === 'TEACHER' && !person.isAccountOwner) {
+        await createDefaultTeacherOnlyRoutine(input.roleId, person.id, role.type);
+      }
 
       return person;
     }),
@@ -327,6 +429,24 @@ export const personRouter = router({
         }),
         ...groupUpdates
       ]);
+
+      // Get role type to check if teacher
+      const role = await ctx.prisma.role.findUnique({
+        where: { id: existingPerson.roleId },
+        select: { type: true }
+      });
+
+      // Re-create teacher-only routine if this is a TEACHER role and person is not account owner
+      if (role?.type === 'TEACHER') {
+        const restoredPerson = await ctx.prisma.person.findUnique({
+          where: { id: input.id },
+          select: { isAccountOwner: true }
+        });
+
+        if (!restoredPerson?.isAccountOwner) {
+          await createDefaultTeacherOnlyRoutine(existingPerson.roleId, input.id, role.type);
+        }
+      }
 
       return person;
     }),

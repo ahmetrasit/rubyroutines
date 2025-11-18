@@ -19,8 +19,18 @@ import { generateRoutineShareCode } from '@/lib/services/routine-share-code';
 
 export const routineRouter = router({
   list: authorizedProcedure.input(listRoutinesSchema).query(async ({ ctx, input }) => {
+    // REQUIREMENT #4: Get requesting user's role to determine if they should see teacher-only routines
+    const requestingRole = await ctx.prisma.role.findFirst({
+      where: { userId: ctx.user.id },
+      select: { type: true },
+    });
+
+    const isTeacher = requestingRole?.type === 'TEACHER';
+
     const where: any = {
       status: input.includeInactive ? undefined : EntityStatus.ACTIVE,
+      // Hide teacher-only routines from non-teachers
+      ...(isTeacher ? {} : { isTeacherOnly: false }),
     };
 
     if (input.roleId) {

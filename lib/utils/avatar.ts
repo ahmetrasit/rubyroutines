@@ -5,17 +5,10 @@
  */
 
 import { AvatarData } from '@/lib/types/database';
+import { AVATAR_COLORS } from '@/lib/constants/theme';
 
 // Default color palette
-export const PASTEL_COLORS = [
-  '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF',
-  '#E0BBE4', '#FFDFD3', '#FEC8D8', '#D4F1F4', '#C9E4DE',
-  '#F7D9C4', '#FAACA8', '#DFE7FD', '#B4F8C8', '#FBE7C6',
-  '#A0E7E5', '#FFAEBC', '#FBE4D8', '#D5AAFF', '#85E3FF',
-  '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#FFE4CC',
-  '#E6E6FA', '#FFE5B4', '#F0E68C', '#D8BFD8', '#FFE4E1',
-  '#E0FFFF', '#F5DEB3'
-] as const;
+export const PASTEL_COLORS = AVATAR_COLORS.PALETTE;
 
 // Common emojis for avatar selection
 export const COMMON_EMOJIS = [
@@ -87,7 +80,7 @@ export const COMMON_EMOJIS = [
 ] as const;
 
 // Default values
-const DEFAULT_COLOR = '#FFB3BA'; // Pastel pink
+const DEFAULT_COLOR = AVATAR_COLORS.DEFAULT; // Pastel pink
 const DEFAULT_EMOJI = '😀';
 
 /**

@@ -35,9 +35,14 @@ export const getPersonSchema = z.object({
   id: idValidator,
 });
 
+export const getBatchPersonsSchema = z.object({
+  ids: z.array(idValidator).min(1).max(100), // Limit to 100 persons per batch
+});
+
 export type CreatePersonInput = z.infer<typeof createPersonSchema>;
 export type UpdatePersonInput = z.infer<typeof updatePersonSchema>;
 export type DeletePersonInput = z.infer<typeof deletePersonSchema>;
 export type RestorePersonInput = z.infer<typeof restorePersonSchema>;
 export type ListPersonsInput = z.infer<typeof listPersonsSchema>;
 export type GetPersonInput = z.infer<typeof getPersonSchema>;
+export type GetBatchPersonsInput = z.infer<typeof getBatchPersonsSchema>;

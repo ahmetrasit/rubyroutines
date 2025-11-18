@@ -5,6 +5,7 @@ import { trpc } from '@/lib/trpc/client';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { RealtimeStatus } from '@/components/realtime-status';
+import { ROLE_COLORS } from '@/lib/constants/theme';
 
 interface ModeSwitcherProps {
   currentMode: 'parent' | 'teacher' | 'admin';
@@ -26,9 +27,9 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
   const isAdmin = session?.user?.isAdmin || false;
 
   // Default colors if not set
-  const parentColor = parentRole?.color || '#9333ea'; // purple-600
-  const teacherColor = teacherRole?.color || '#3b82f6'; // blue-500
-  const adminColor = '#dc2626'; // red-600
+  const parentColor = parentRole?.color || ROLE_COLORS.PARENT; // purple-600
+  const teacherColor = teacherRole?.color || ROLE_COLORS.TEACHER; // blue-500
+  const adminColor = ROLE_COLORS.PRINCIPAL; // Using principal color for admin
 
   const handleModeSwitch = (mode: 'parent' | 'teacher' | 'admin') => {
     if (mode === 'parent') {

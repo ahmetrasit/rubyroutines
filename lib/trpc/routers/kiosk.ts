@@ -206,12 +206,16 @@ export const kioskRouter = router({
       }
 
       // Get person's routines and tasks
+      // REQUIREMENT #4: Exclude teacher-only routines from kiosk mode
       const person = await ctx.prisma.person.findUnique({
         where: { id: input.personId },
         include: {
           assignments: {
             where: {
-              routine: { status: 'ACTIVE' }
+              routine: {
+                status: 'ACTIVE',
+                isTeacherOnly: false // CRITICAL: Never show teacher-only routines in kiosk
+              }
             },
             include: {
               routine: {

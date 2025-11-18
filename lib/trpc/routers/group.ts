@@ -1,6 +1,7 @@
 import { router, protectedProcedure } from '../init';
 import { TRPCError } from '@trpc/server';
 import { EntityStatus } from '@/lib/types/prisma-enums';
+import { createDefaultTeacherOnlyRoutine } from '@/lib/services/teacher-only-routine.service';
 import {
   createGroupSchema,
   updateGroupSchema,
@@ -265,6 +266,22 @@ export const groupRouter = router({
         data: { kioskLastUpdatedAt: now }
       })
     ]);
+
+    // Get role and person details to determine if teacher-only routine should be created
+    const role = await ctx.prisma.role.findUnique({
+      where: { id: group.roleId },
+      select: { type: true }
+    });
+
+    const addedPerson = await ctx.prisma.person.findUnique({
+      where: { id: input.personId },
+      select: { isAccountOwner: true }
+    });
+
+    // Create teacher-only routine if adding student to classroom
+    if (role?.type === 'TEACHER' && !addedPerson?.isAccountOwner) {
+      await createDefaultTeacherOnlyRoutine(group.roleId, input.personId, role.type);
+    }
 
     return member;
   }),

@@ -5,6 +5,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { logger } from '@/lib/utils/logger';
+import { AVATAR_COLORS, ROLE_COLORS } from '@/lib/constants/theme';
 
 interface CreateDefaultDataOptions {
   userId: string;
@@ -21,7 +22,7 @@ async function createDefaultPerson(roleId: string, prisma: any) {
       roleId,
       name: 'Me',
       avatar: JSON.stringify({
-        color: '#BAE1FF', // Light blue
+        color: AVATAR_COLORS.CHILD, // Light blue
         emoji: '👤',
       }),
       isAccountOwner: true, // Mark as account owner
@@ -44,7 +45,7 @@ async function createDefaultRoutine(
       name: '☀️ Daily Routine',
       description: 'Default routine for daily tasks',
       resetPeriod: 'DAILY',
-      color: '#3B82F6',
+      color: AVATAR_COLORS.ROUTINE,
       status: 'ACTIVE',
       assignments: {
         create: {
@@ -116,13 +117,13 @@ export async function createDefaultRoles({
         userId,
         type: 'PARENT',
         tier: 'FREE',
-        color: '#9333ea', // Purple for parent mode
+        color: ROLE_COLORS.PARENT, // Purple for parent mode
       },
       {
         userId,
         type: 'TEACHER',
         tier: 'FREE',
-        color: '#3b82f6', // Blue for teacher mode
+        color: ROLE_COLORS.TEACHER, // Blue for teacher mode
       },
     ],
   });
@@ -172,7 +173,7 @@ export async function ensureUserHasRoles(
       userId,
       type: 'PARENT',
       tier: 'FREE',
-      color: '#9333ea',
+      color: ROLE_COLORS.PARENT,
     });
   }
   if (!hasTeacher) {
@@ -180,7 +181,7 @@ export async function ensureUserHasRoles(
       userId,
       type: 'TEACHER',
       tier: 'FREE',
-      color: '#3b82f6',
+      color: ROLE_COLORS.TEACHER,
     });
   }
 

@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
+import { useSession } from 'next-auth/react';
 
 interface Task {
   id: string;
@@ -26,6 +27,8 @@ interface Task {
   totalValue?: number;
   entryNumber?: number;
   summedValue?: number;
+  isTeacherOnly?: boolean;
+  routineName?: string;
   completions?: Array<{
     id: string;
     completedAt: Date;
@@ -43,12 +46,21 @@ interface PersonCheckinModalProps {
 export function PersonCheckinModal({ personId, personName, isOpen, onClose }: PersonCheckinModalProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
+  const { data: session } = useSession();
 
   // Fetch person details with routines and tasks
   const { data: person, isLoading: tasksLoading } = trpc.person.getById.useQuery(
     { id: personId },
     { enabled: isOpen && !!personId }
   );
+
+  // Get current user's role to check if they're a teacher
+  const { data: currentRole } = trpc.role.list.useQuery(undefined, {
+    enabled: isOpen && !!session?.user?.id,
+    select: (roles) => roles.find((r) => r.userId === session?.user?.id),
+  });
+
+  const isTeacher = currentRole?.type === 'TEACHER';
 
   // Flatten all tasks from all routines assigned to this person
   const tasks: Task[] = person?.assignments?.flatMap((assignment: any) =>
@@ -70,6 +82,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
       return {
         ...task,
         routineName: assignment.routine.name,
+        isTeacherOnly: assignment.routine.isTeacherOnly || false,
         isComplete,
         completionCount: periodCompletions.length,
         entryNumber: lastCompletion?.entryNumber || periodCompletions.length,
@@ -127,20 +140,34 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     undoMutation.mutate({ completionId });
   };
 
-  // Group tasks by type
-  const simpleTasks = tasks.filter((t) => t.type === TaskType.SIMPLE);
-  const multiTasks = tasks.filter((t) => t.type === TaskType.MULTIPLE_CHECKIN);
-  const progressTasks = tasks.filter((t) => t.type === TaskType.PROGRESS);
+  // REQUIREMENT #4 & WORKFLOW #1: Separate teacher-only tasks from regular tasks
+  const regularTasks = tasks.filter((t) => !t.isTeacherOnly);
+  const teacherOnlyTasks = tasks.filter((t) => t.isTeacherOnly);
+
+  // Group regular tasks by type
+  const simpleTasks = regularTasks.filter((t) => t.type === TaskType.SIMPLE);
+  const multiTasks = regularTasks.filter((t) => t.type === TaskType.MULTIPLE_CHECKIN);
+  const progressTasks = regularTasks.filter((t) => t.type === TaskType.PROGRESS);
+
+  // Group teacher-only tasks by type
+  const teacherSimpleTasks = teacherOnlyTasks.filter((t) => t.type === TaskType.SIMPLE);
+  const teacherMultiTasks = teacherOnlyTasks.filter((t) => t.type === TaskType.MULTIPLE_CHECKIN);
+  const teacherProgressTasks = teacherOnlyTasks.filter((t) => t.type === TaskType.PROGRESS);
 
   // Calculate stats for Simple tasks
   const simpleCompleted = simpleTasks.filter((t) => t.isComplete).length;
   const simpleTotal = simpleTasks.length;
+
+  // Calculate stats for Teacher-only Simple tasks
+  const teacherSimpleCompleted = teacherSimpleTasks.filter((t) => t.isComplete).length;
+  const teacherSimpleTotal = teacherSimpleTasks.length;
 
   // State for collapsible sections
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [simpleOpen, setSimpleOpen] = useState(false);
   const [multiOpen, setMultiOpen] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
+  const [teacherNotesOpen, setTeacherNotesOpen] = useState(false);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -300,6 +327,95 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                           onUndo={handleUndo}
                           isPending={completeMutation.isPending || undoMutation.isPending}
                         />
+                      </div>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              )}
+
+              {/* WORKFLOW #1: Teacher Notes Section - Only visible to teachers */}
+              {isTeacher && teacherOnlyTasks.length > 0 && (
+                <Collapsible open={teacherNotesOpen} onOpenChange={setTeacherNotesOpen}>
+                  <div className="border-2 border-purple-400 rounded-lg bg-purple-50">
+                    <CollapsibleTrigger asChild>
+                      <button className="w-full p-4 flex items-center justify-between hover:bg-purple-100 transition-colors">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-lg font-bold text-purple-900">📋 Teacher Notes</h3>
+                            <span className="px-2 py-0.5 text-xs font-semibold bg-purple-200 text-purple-800 rounded-full">
+                              Teacher Only
+                            </span>
+                          </div>
+                          {teacherSimpleTotal > 0 && (
+                            <div>
+                              <Progress
+                                value={teacherSimpleCompleted}
+                                max={teacherSimpleTotal}
+                                className="h-2 bg-purple-200"
+                              />
+                              <p className="text-xs text-purple-700 mt-1">
+                                {teacherSimpleCompleted} of {teacherSimpleTotal} completed
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        {teacherNotesOpen ? (
+                          <ChevronDown className="h-5 w-5 text-purple-700 flex-shrink-0 ml-2" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-purple-700 flex-shrink-0 ml-2" />
+                        )}
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="p-4 pt-0 border-t border-purple-300">
+                        {/* Teacher Simple Tasks */}
+                        {teacherSimpleTasks.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-purple-900 mb-2">✓ Simple Tasks</h4>
+                            <TaskColumn
+                              title=""
+                              tasks={teacherSimpleTasks}
+                              personId={personId}
+                              onComplete={handleComplete}
+                              onUndo={handleUndo}
+                              isPending={completeMutation.isPending || undoMutation.isPending}
+                            />
+                          </div>
+                        )}
+
+                        {/* Teacher Multi Check-in Tasks */}
+                        {teacherMultiTasks.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-purple-900 mb-2">
+                              ✔️ Check-ins ({teacherMultiTasks.length})
+                            </h4>
+                            <TaskColumn
+                              title=""
+                              tasks={teacherMultiTasks}
+                              personId={personId}
+                              onComplete={handleComplete}
+                              onUndo={handleUndo}
+                              isPending={completeMutation.isPending || undoMutation.isPending}
+                            />
+                          </div>
+                        )}
+
+                        {/* Teacher Progress Tasks */}
+                        {teacherProgressTasks.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-purple-900 mb-2">
+                              📊 Progress ({teacherProgressTasks.length})
+                            </h4>
+                            <TaskColumn
+                              title=""
+                              tasks={teacherProgressTasks}
+                              personId={personId}
+                              onComplete={handleComplete}
+                              onUndo={handleUndo}
+                              isPending={completeMutation.isPending || undoMutation.isPending}
+                            />
+                          </div>
+                        )}
                       </div>
                     </CollapsibleContent>
                   </div>

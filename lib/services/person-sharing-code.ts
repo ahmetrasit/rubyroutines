@@ -45,6 +45,29 @@ export async function generatePersonSharingInvite(params: GenerateInviteParams):
     });
   }
 
+  // RESTRICTION: Validate that account owner persons cannot be shared via person sharing
+  // Account owners should use co-parent/co-teacher invitations instead
+  if (ownerPersonId && shareType === 'PERSON') {
+    const person = await prisma.person.findUnique({
+      where: { id: ownerPersonId },
+      select: { isAccountOwner: true, name: true },
+    });
+
+    if (!person) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Person not found',
+      });
+    }
+
+    if (person.isAccountOwner) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Account owner persons cannot be shared via person sharing codes. Please use co-parent or co-teacher invitations instead.',
+      });
+    }
+  }
+
   let attempts = 0;
   const maxAttempts = 50;
 
@@ -256,6 +279,71 @@ export async function claimPersonSharingInvite(params: ClaimInviteParams) {
       code: 'BAD_REQUEST',
       message: 'You have already claimed this invite',
     });
+  }
+
+  // RESTRICTION: Validate appropriate person sharing based on role types and person type
+  // A family member (child) can only be connected to:
+  // 1. A teacher (as a student)
+  // 2. Another parent (as a co-parent's child)
+  // A family member CANNOT be connected to another parent's or teacher's account owner person
+  if (invite.ownerPerson && invite.shareType === 'PERSON') {
+    // Get the full person details to check isAccountOwner
+    const ownerPerson = await prisma.person.findUnique({
+      where: { id: invite.ownerPerson.id },
+      select: { isAccountOwner: true },
+    });
+
+    // Get the claiming role details to check role type
+    const claimingRole = await prisma.role.findUnique({
+      where: { id: claimingRoleId },
+      select: { type: true },
+    });
+
+    if (!ownerPerson || !claimingRole) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Invalid person or role',
+      });
+    }
+
+    // If sharing a family member (child, not account owner)
+    if (!ownerPerson.isAccountOwner) {
+      const ownerRoleType = invite.ownerRole.type;
+      const claimerRoleType = claimingRole.type;
+
+      // REQUIREMENT #5: Parent sharing a child
+      if (ownerRoleType === 'PARENT') {
+        // Can ONLY be claimed by TEACHER (not another parent)
+        // Parent-to-parent sharing must use Co-Parent system
+        if (claimerRoleType !== 'TEACHER') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Family member cards can only be used to connect to a teacher. To share with another parent, please use the Co-Parent invitation system (Settings > Co-Parents).',
+          });
+        }
+      }
+
+      // REQUIREMENT #5: Teacher sharing a student
+      if (ownerRoleType === 'TEACHER') {
+        // Can ONLY be claimed by another TEACHER (not parent)
+        // Teacher-to-parent connections must use Connection Code system
+        if (claimerRoleType !== 'TEACHER') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Teacher student cards can only be shared with other teachers for classroom collaboration. To connect with parents, please generate a Connection Code instead (Student page > Generate Code).',
+          });
+        }
+      }
+    }
+
+    // Additional check: Prevent sharing account owner persons (adults) across different families
+    // Account owners should not be shared via person sharing - they should use co-parent/co-teacher invites
+    if (ownerPerson.isAccountOwner) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Account owner persons cannot be shared via person sharing codes. Please use co-parent or co-teacher invitations instead.',
+      });
+    }
   }
 
   // Use transaction to ensure atomicity: create connection and update invite together

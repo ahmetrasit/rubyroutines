@@ -1,11 +1,12 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, CheckCircle, Link2 } from 'lucide-react';
+import { Pencil, Trash2, CheckCircle, Link2, Users } from 'lucide-react';
 import { useState, memo } from 'react';
 import { PersonForm } from './person-form';
 import { PersonCheckinModal } from './person-checkin-modal';
 import { PersonConnectionModal } from '@/components/sharing/PersonConnectionModal';
+import { TeacherBulkCheckin } from '@/components/classroom/teacher-bulk-checkin';
 import { trpc } from '@/lib/trpc/client';
 import { useAvatar } from '@/lib/hooks';
 import { useDeleteMutation } from '@/lib/hooks';
@@ -32,6 +33,7 @@ export const PersonCard = memo(function PersonCard({
   const [showEdit, setShowEdit] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
   const [showConnection, setShowConnection] = useState(false);
+  const [showBulkCheckin, setShowBulkCheckin] = useState(false);
   const utils = trpc.useUtils();
 
   // Parse avatar data using custom hook
@@ -79,6 +81,12 @@ export const PersonCard = memo(function PersonCard({
   const { data: personShares } = trpc.personSharing.getPersonShares.useQuery(
     { personId: person.id },
     { enabled: !!person.id }
+  );
+
+  // Get classroom details for bulk check-in
+  const { data: classroom } = trpc.group.getById.useQuery(
+    { id: classroomId! },
+    { enabled: !!classroomId && person.isAccountOwner && roleType === 'TEACHER' }
   );
 
   const handleDelete = () => {
@@ -234,6 +242,20 @@ export const PersonCard = memo(function PersonCard({
             <CheckCircle className="h-4 w-4 mr-1" />
             Check-in
           </Button>
+          {/* WORKFLOW #2: Bulk check-in button for teachers in classroom context */}
+          {person.isAccountOwner && roleType === 'TEACHER' && classroomId && (
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowBulkCheckin(true);
+              }}
+              className="flex-1 text-white bg-purple-600 hover:bg-purple-700"
+            >
+              <Users className="h-4 w-4 mr-1" />
+              Bulk Check-in
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -286,6 +308,16 @@ export const PersonCard = memo(function PersonCard({
           roleId={roleId}
           roleType={roleType}
           userId={userId}
+        />
+      )}
+
+      {showBulkCheckin && classroomId && roleId && classroom && (
+        <TeacherBulkCheckin
+          classroomId={classroomId}
+          classroomName={classroom.name}
+          roleId={roleId}
+          isOpen={showBulkCheckin}
+          onClose={() => setShowBulkCheckin(false)}
         />
       )}
     </>

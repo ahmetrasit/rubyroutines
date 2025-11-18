@@ -309,7 +309,9 @@ export const taskRouter = router({
           routine: {
             select: {
               resetPeriod: true,
-              resetDay: true
+              resetDay: true,
+              isTeacherOnly: true,
+              roleId: true,
             }
           },
           completions: {
@@ -324,6 +326,29 @@ export const taskRouter = router({
           code: 'NOT_FOUND',
           message: 'Task not found',
         });
+      }
+
+      // REQUIREMENT #4: Only teachers/co-teachers can complete teacher-only routine tasks
+      if (task.routine.isTeacherOnly) {
+        const requestingRole = await ctx.prisma.role.findFirst({
+          where: { userId: ctx.user.id },
+          select: { type: true, id: true },
+        });
+
+        if (!requestingRole || requestingRole.type !== 'TEACHER') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only teachers can complete tasks in teacher-only routines',
+          });
+        }
+
+        // Verify this teacher owns or has access to this routine
+        if (requestingRole.id !== task.routine.roleId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You do not have permission to complete this task',
+          });
+        }
       }
 
       // Validate value for PROGRESS tasks

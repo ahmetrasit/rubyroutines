@@ -139,6 +139,8 @@ model Person {
 
   @@index([roleId])
   @@index([status])
+  @@index([roleId, status]) // Composite index for filtered person queries
+  @@index([roleId, isAccountOwner]) // Index for finding account owner quickly
   @@map("persons")
 }
 
@@ -167,6 +169,8 @@ model Group {
   @@index([roleId])
   @@index([type])
   @@index([status])
+  @@index([roleId, status]) // Composite index for filtered group queries
+  @@index([roleId, type, status]) // Composite index for role-based group type filtering
   @@map("groups")
 }
 
@@ -218,6 +222,7 @@ model Routine {
   startTime               String?        // For limited daily routines (HH:MM format)
   endTime                 String?        // For limited daily routines (HH:MM format)
   color                   String?        // Hex color for routine border
+  isTeacherOnly           Boolean        @default(false) // Teacher-only routines: visible only to teacher/co-teacher, not to students or in kiosk
   status                  EntityStatus   @default(ACTIVE)
   archivedAt              DateTime?
   sourceMarketplaceItemId String?
@@ -237,6 +242,9 @@ model Routine {
   @@index([roleId])
   @@index([type])
   @@index([status])
+  @@index([roleId, isTeacherOnly, status]) // Composite index for filtered queries
+  @@index([roleId, type, status]) // Composite index for role-based type filtering
+  @@index([isTeacherOnly]) // Single column index for teacher-only filtering
   @@map("routines")
 }
 
@@ -307,6 +315,8 @@ model Task {
   @@index([isSmart])
   @@index([conditionId])
   @@index([status])
+  @@index([routineId, status]) // Composite index for active tasks in routines
+  @@index([routineId, order]) // Composite index for ordered task retrieval
   @@map("tasks")
 }
 
@@ -366,6 +376,7 @@ model Goal {
 
   @@index([roleId])
   @@index([status])
+  @@index([roleId, status]) // Composite index for active goals by role
   @@map("goals")
 }
 
@@ -512,6 +523,8 @@ model Code {
   @@index([personId])
   @@index([status])
   @@index([expiresAt])
+  @@index([code, status]) // Composite index for code lookup with status check
+  @@index([roleId, status, type]) // Composite index for role-based code queries
   @@map("codes")
 }
 

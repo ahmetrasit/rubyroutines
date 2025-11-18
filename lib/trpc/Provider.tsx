@@ -13,7 +13,46 @@ function getBaseUrl() {
 }
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: (failureCount, error: any) => {
+              // Don't retry on client errors (4xx)
+              if (error?.data?.httpStatus >= 400 && error?.data?.httpStatus < 500) {
+                return false;
+              }
+              // Retry up to 3 times for server errors (5xx) and network errors
+              return failureCount < 3;
+            },
+            retryDelay: (attemptIndex) => {
+              // Exponential backoff: 1s, 2s, 4s
+              return Math.min(1000 * Math.pow(2, attemptIndex), 10000);
+            },
+          },
+          mutations: {
+            retry: (failureCount, error: any) => {
+              // Don't retry on client errors or validation errors
+              if (error?.data?.httpStatus >= 400 && error?.data?.httpStatus < 500) {
+                return false;
+              }
+              // Don't retry on explicit business logic errors
+              if (error?.data?.code === 'BAD_REQUEST') return false;
+              if (error?.data?.code === 'FORBIDDEN') return false;
+              if (error?.data?.code === 'NOT_FOUND') return false;
+              if (error?.data?.code === 'CONFLICT') return false;
+              // Retry up to 2 times for server/network errors (mutations are more sensitive)
+              return failureCount < 2;
+            },
+            retryDelay: (attemptIndex) => {
+              // Exponential backoff: 1s, 2s
+              return Math.min(1000 * Math.pow(2, attemptIndex), 5000);
+            },
+          },
+        },
+      })
+  );
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
