@@ -153,7 +153,7 @@ export async function createDefaultRoles({
 
 /**
  * Ensure a user has both PARENT and TEACHER roles
- * Creates missing roles if needed
+ * Creates missing roles if needed and initializes roles without persons
  */
 export async function ensureUserHasRoles(
   userId: string,
@@ -161,6 +161,11 @@ export async function ensureUserHasRoles(
 ): Promise<void> {
   const existingRoles = await prisma.role.findMany({
     where: { userId, deletedAt: null },
+    include: {
+      persons: {
+        where: { status: 'ACTIVE' },
+      },
+    },
   });
 
   const hasParent = existingRoles.some((r: any) => r.type === 'PARENT');
@@ -188,23 +193,34 @@ export async function ensureUserHasRoles(
   if (rolesToCreate.length > 0) {
     await prisma.role.createMany({ data: rolesToCreate });
 
-    // Initialize the new roles
-    const newRoles = await prisma.role.findMany({
-      where: {
-        userId,
-        type: { in: rolesToCreate.map((r) => r.type) },
-      },
+    logger.info('Created missing roles for user', {
+      userId,
+      createdRoles: rolesToCreate.map((r) => r.type),
     });
+  }
 
+  // Get all roles (existing + newly created) and initialize those without persons
+  const allRoles = await prisma.role.findMany({
+    where: { userId, deletedAt: null },
+    include: {
+      persons: {
+        where: { status: 'ACTIVE' },
+      },
+    },
+  });
+
+  const rolesToInitialize = allRoles.filter((role: any) => role.persons.length === 0);
+
+  if (rolesToInitialize.length > 0) {
     await Promise.all(
-      newRoles.map((role: any) =>
+      rolesToInitialize.map((role: any) =>
         initializeRole(role.id, role.type, prisma)
       )
     );
 
-    logger.info('Created missing roles for user', {
+    logger.info('Initialized roles without persons for user', {
       userId,
-      createdRoles: rolesToCreate.map((r) => r.type),
+      initializedRoles: rolesToInitialize.map((r: any) => r.type),
     });
   }
 }

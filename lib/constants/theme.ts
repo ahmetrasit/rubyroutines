@@ -19,24 +19,83 @@ export const ROLE_COLORS = {
   TEACHER_ONLY: '#8B5CF6',
 } as const;
 
-/** Avatar colors - Soft pastel palette */
+/** Avatar colors - Organized by color family, darker tones */
 export const AVATAR_COLORS = {
-  /** Default avatar colors array */
+  /** Organized color palette grouped by hue */
   PALETTE: [
-    '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF',
-    '#E0BBE4', '#FFDFD3', '#FEC8D8', '#D4F1F4', '#C9E4DE',
-    '#F7D9C4', '#FAACA8', '#DFE7FD', '#B4F8C8', '#FBE7C6',
-    '#A0E7E5', '#FFAEBC', '#FBE4D8', '#D5AAFF', '#85E3FF',
-    '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#FFE4CC',
-    '#E6E6FA', '#FFE5B4', '#F0E68C', '#D8BFD8', '#FFE4E1',
-    '#E0FFFF', '#F5DEB3'
+    // Reds & Pinks
+    '#E57373', '#EF5350', '#F06292', '#EC407A', '#E91E63',
+    '#D81B60', '#C2185B', '#AD1457', '#880E4F',
+
+    // Oranges & Corals
+    '#FF8A65', '#FF7043', '#FF6F00', '#F4511E', '#E64A19',
+    '#D84315', '#BF360C', '#FF9800', '#FB8C00',
+
+    // Yellows & Ambers
+    '#FFD54F', '#FFCA28', '#FFC107', '#FFB300', '#FFA000',
+    '#FF8F00', '#FF6F00', '#F9A825', '#F57F17',
+
+    // Greens
+    '#81C784', '#66BB6A', '#4CAF50', '#43A047', '#388E3C',
+    '#2E7D32', '#1B5E20', '#00C853', '#00B248',
+
+    // Teals & Cyans
+    '#4DB6AC', '#26A69A', '#009688', '#00897B', '#00796B',
+    '#00695C', '#004D40', '#00BCD4', '#00ACC1',
+
+    // Blues
+    '#64B5F6', '#42A5F5', '#2196F3', '#1E88E5', '#1976D2',
+    '#1565C0', '#0D47A1', '#03A9F4', '#039BE5',
+
+    // Purples & Violets
+    '#BA68C8', '#AB47BC', '#9C27B0', '#8E24AA', '#7B1FA2',
+    '#6A1B9A', '#4A148C', '#9575CD', '#7E57C2',
+
+    // Neutrals & Browns
+    '#A1887F', '#8D6E63', '#795548', '#6D4C41', '#5D4037',
+    '#90A4AE', '#78909C', '#607D8B', '#546E7A',
+  ],
+  /** Grouped colors for organized display */
+  GROUPS: [
+    {
+      label: 'Reds & Pinks',
+      colors: ['#E57373', '#EF5350', '#F06292', '#EC407A', '#E91E63', '#D81B60', '#C2185B', '#AD1457', '#880E4F'],
+    },
+    {
+      label: 'Oranges',
+      colors: ['#FF8A65', '#FF7043', '#FF6F00', '#F4511E', '#E64A19', '#D84315', '#BF360C', '#FF9800', '#FB8C00'],
+    },
+    {
+      label: 'Yellows',
+      colors: ['#FFD54F', '#FFCA28', '#FFC107', '#FFB300', '#FFA000', '#FF8F00', '#FF6F00', '#F9A825', '#F57F17'],
+    },
+    {
+      label: 'Greens',
+      colors: ['#81C784', '#66BB6A', '#4CAF50', '#43A047', '#388E3C', '#2E7D32', '#1B5E20', '#00C853', '#00B248'],
+    },
+    {
+      label: 'Teals & Cyans',
+      colors: ['#4DB6AC', '#26A69A', '#009688', '#00897B', '#00796B', '#00695C', '#004D40', '#00BCD4', '#00ACC1'],
+    },
+    {
+      label: 'Blues',
+      colors: ['#64B5F6', '#42A5F5', '#2196F3', '#1E88E5', '#1976D2', '#1565C0', '#0D47A1', '#03A9F4', '#039BE5'],
+    },
+    {
+      label: 'Purples',
+      colors: ['#BA68C8', '#AB47BC', '#9C27B0', '#8E24AA', '#7B1FA2', '#6A1B9A', '#4A148C', '#9575CD', '#7E57C2'],
+    },
+    {
+      label: 'Browns & Grays',
+      colors: ['#A1887F', '#8D6E63', '#795548', '#6D4C41', '#5D4037', '#90A4AE', '#78909C', '#607D8B', '#546E7A'],
+    },
   ],
   /** Default single color */
-  DEFAULT: '#FFB3BA',
+  DEFAULT: '#E57373',
   /** Child/Person default */
-  CHILD: '#BAE1FF',
+  CHILD: '#64B5F6',
   /** Routine default */
-  ROUTINE: '#3B82F6',
+  ROUTINE: '#1976D2',
 } as const;
 
 /** Semantic colors for UI feedback */

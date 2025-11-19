@@ -1,19 +1,29 @@
 import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
-import { ResetPeriod, EntityStatus } from '@/lib/types/prisma-enums';
+import { ResetPeriod, EntityStatus, GoalType } from '@/lib/types/prisma-enums';
 import { calculateGoalProgress, calculateGoalProgressBatch } from '@/lib/services/goal-progress';
 import { checkTierLimit, mapDatabaseLimitsToComponentFormat } from '@/lib/services/tier-limits';
 import { TRPCError } from '@trpc/server';
 import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
+import {
+  createGoalSchema,
+  updateGoalSchema,
+  listGoalsSchema,
+  getGoalSchema,
+  archiveGoalSchema,
+  getGoalProgressSchema,
+  linkTaskToGoalSchema,
+  linkRoutineToGoalSchema,
+  unlinkTaskFromGoalSchema,
+  unlinkRoutineFromGoalSchema,
+} from '@/lib/validation/goal';
 
 export const goalRouter = router({
   /**
    * List all active goals for a role
    */
   list: protectedProcedure
-    .input(z.object({
-      roleId: z.string().uuid()
-    }))
+    .input(listGoalsSchema)
     .query(async ({ ctx, input }) => {
       // Verify user owns this role
       const role = await ctx.prisma.role.findUnique({
@@ -24,11 +34,24 @@ export const goalRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
+      const where: any = {
+        roleId: input.roleId,
+        status: input.includeInactive ? undefined : EntityStatus.ACTIVE
+      };
+
+      // Add filters if provided
+      if (input.personId) {
+        where.personIds = { has: input.personId };
+      }
+      if (input.groupId) {
+        where.groupIds = { has: input.groupId };
+      }
+      if (input.type) {
+        where.type = input.type;
+      }
+
       const goals = await ctx.prisma.goal.findMany({
-        where: {
-          roleId: input.roleId,
-          status: EntityStatus.ACTIVE
-        },
+        where,
         include: {
           taskLinks: {
             include: {
@@ -43,7 +66,8 @@ export const goalRouter = router({
             include: {
               routine: true
             }
-          }
+          },
+          progress: true // Include progress records
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -110,16 +134,7 @@ export const goalRouter = router({
    * Create a new goal
    */
   create: protectedProcedure
-    .input(z.object({
-      roleId: z.string().uuid(),
-      name: z.string().min(1).max(100),
-      description: z.string().max(500).optional(),
-      target: z.number().positive(),
-      period: z.nativeEnum(ResetPeriod),
-      resetDay: z.number().min(0).max(99).optional(),
-      personIds: z.array(z.string().cuid()).default([]),
-      groupIds: z.array(z.string().cuid()).default([])
-    }))
+    .input(createGoalSchema)
     .mutation(async ({ ctx, input }) => {
       // Verify user owns this role
       const role = await ctx.prisma.role.findUnique({
@@ -145,7 +160,9 @@ export const goalRouter = router({
           roleId: input.roleId,
           name: input.name,
           description: input.description,
+          type: input.type || GoalType.COMPLETION_COUNT,
           target: input.target,
+          unit: input.unit,
           period: input.period,
           resetDay: input.resetDay,
           personIds: input.personIds,
@@ -160,16 +177,7 @@ export const goalRouter = router({
    * Update existing goal
    */
   update: protectedProcedure
-    .input(z.object({
-      id: z.string().uuid(),
-      name: z.string().min(1).max(100).optional(),
-      description: z.string().max(500).optional(),
-      target: z.number().positive().optional(),
-      period: z.nativeEnum(ResetPeriod).optional(),
-      resetDay: z.number().min(0).max(99).optional(),
-      personIds: z.array(z.string().cuid()).optional(),
-      groupIds: z.array(z.string().cuid()).optional()
-    }))
+    .input(updateGoalSchema)
     .mutation(async ({ ctx, input }) => {
       const goal = await ctx.prisma.goal.findUnique({
         where: { id: input.id },
@@ -195,12 +203,85 @@ export const goalRouter = router({
     }),
 
   /**
+   * Get goal progress for a specific person and time range
+   */
+  getProgress: protectedProcedure
+    .input(getGoalProgressSchema)
+    .query(async ({ ctx, input }) => {
+      const goal = await ctx.prisma.goal.findUnique({
+        where: { id: input.goalId },
+        include: { role: true }
+      });
+
+      if (!goal) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Goal not found' });
+      }
+
+      if (goal.role.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      // Get current period boundaries if no date range specified
+      let startDate: Date, endDate: Date;
+      if (input.dateRange) {
+        startDate = input.dateRange.start;
+        endDate = input.dateRange.end;
+      } else {
+        const now = new Date();
+        if (goal.period === ResetPeriod.DAILY) {
+          startDate = new Date(now.setHours(0, 0, 0, 0));
+          endDate = new Date(now.setHours(23, 59, 59, 999));
+        } else if (goal.period === ResetPeriod.WEEKLY) {
+          const dayOfWeek = now.getDay();
+          const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() + daysToMonday);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 6);
+          endDate.setHours(23, 59, 59, 999);
+        } else {
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        }
+      }
+
+      // Get or create progress record for the person
+      const progress = await ctx.prisma.goalProgress.findFirst({
+        where: {
+          goalId: input.goalId,
+          personId: input.personId,
+          periodStart: {
+            gte: startDate
+          },
+          periodEnd: {
+            lte: endDate
+          }
+        }
+      });
+
+      if (!progress) {
+        // Create new progress record
+        return await ctx.prisma.goalProgress.create({
+          data: {
+            goalId: input.goalId,
+            personId: input.personId || '',
+            currentValue: 0,
+            achieved: false,
+            periodStart: startDate,
+            periodEnd: endDate
+          }
+        });
+      }
+
+      return progress;
+    }),
+
+  /**
    * Archive goal (soft delete)
    */
   archive: protectedProcedure
-    .input(z.object({
-      id: z.string().uuid()
-    }))
+    .input(archiveGoalSchema)
     .mutation(async ({ ctx, input }) => {
       const goal = await ctx.prisma.goal.findUnique({
         where: { id: input.id },
@@ -480,5 +561,58 @@ export const goalRouter = router({
       }));
 
       return goalsWithProgress;
+    }),
+
+  /**
+   * Batch create goals (for teacher assignment to multiple students)
+   */
+  batchCreate: protectedProcedure
+    .input(z.object({
+      roleId: z.string().uuid(),
+      goals: z.array(createGoalSchema.omit({ roleId: true }))
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify user owns this role
+      const role = await ctx.prisma.role.findUnique({
+        where: { id: input.roleId },
+        include: {
+          goals: { where: { status: 'ACTIVE' } }
+        }
+      });
+
+      if (!role || role.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to create goals for this role'
+        });
+      }
+
+      // Check tier limits
+      const tierLimits = await getEffectiveTierLimits(ctx.user.id);
+      const limits = mapDatabaseLimitsToComponentFormat(tierLimits);
+
+      if (role.goals.length + input.goals.length > limits.max_goals) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: `Goal limit (${limits.max_goals}) would be exceeded`
+        });
+      }
+
+      // Create all goals in a transaction
+      const createdGoals = await ctx.prisma.$transaction(
+        input.goals.map(goalData =>
+          ctx.prisma.goal.create({
+            data: {
+              roleId: input.roleId,
+              ...goalData,
+              status: EntityStatus.ACTIVE,
+              currentStreak: 0,
+              longestStreak: 0
+            }
+          })
+        )
+      );
+
+      return createdGoals;
     })
 });

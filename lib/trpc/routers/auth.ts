@@ -164,6 +164,9 @@ export const authRouter = router({
             },
           },
         });
+
+        // Ensure migrated user has default persons, routines, and groups for their roles
+        await ensureUserHasRoles(data.user.id, ctx.prisma);
       } else {
         // Normal flow - upsert user
         const user = await ctx.prisma.user.upsert({

@@ -113,6 +113,7 @@ export async function GET(request: Request) {
               color: '#BAE1FF',
               emoji: '👤',
             }),
+            isAccountOwner: true,
             status: 'ACTIVE',
           },
         });
@@ -142,6 +143,7 @@ export async function GET(request: Request) {
               color: '#BAE1FF',
               emoji: '👤',
             }),
+            isAccountOwner: true,
             status: 'ACTIVE',
           },
         });
@@ -230,6 +232,7 @@ export async function GET(request: Request) {
                   color: '#BAE1FF',
                   emoji: '👤',
                 }),
+                isAccountOwner: true,
                 status: 'ACTIVE',
               },
             });
@@ -271,6 +274,7 @@ export async function GET(request: Request) {
                   color: '#BAE1FF',
                   emoji: '👤',
                 }),
+                isAccountOwner: true,
                 status: 'ACTIVE',
               },
             });

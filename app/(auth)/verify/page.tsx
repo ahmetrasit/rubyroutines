@@ -66,13 +66,24 @@ export default function VerifyPage() {
           </ul>
         </div>
 
-        <div className="text-center pt-4">
-          <a
-            href="/signup"
-            className="text-sm text-blue-600 hover:text-blue-700 underline"
-          >
-            Back to signup
-          </a>
+        <div className="text-center pt-4 space-y-2">
+          <p className="text-sm text-gray-600">
+            Already verified your email?{' '}
+            <a
+              href="/login"
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Go to login
+            </a>
+          </p>
+          <p>
+            <a
+              href="/signup"
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
+            >
+              Back to signup
+            </a>
+          </p>
         </div>
       </div>
     </div>

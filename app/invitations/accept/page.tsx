@@ -37,7 +37,7 @@ export default function AcceptInvitationPage() {
       } else if (invitation?.type === 'CO_TEACHER') {
         router.push('/teacher/sharing');
       } else {
-        router.push('/dashboard');
+        router.push('/parent');
       }
     },
     onError: (error) => {
@@ -57,7 +57,7 @@ export default function AcceptInvitationPage() {
         description: 'You have declined this invitation',
         variant: 'success',
       });
-      router.push('/dashboard');
+      router.push('/parent');
     },
     onError: (error) => {
       toast({
@@ -116,8 +116,8 @@ export default function AcceptInvitationPage() {
               <p className="text-gray-600 mb-6">
                 {error?.message || 'This invitation link is invalid or has expired.'}
               </p>
-              <Button onClick={() => router.push('/dashboard')}>
-                Go to Dashboard
+              <Button onClick={() => router.push('/parent')}>
+                Go to Home
               </Button>
             </div>
           </CardContent>

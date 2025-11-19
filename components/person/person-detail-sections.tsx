@@ -6,6 +6,7 @@ import { trpc } from '@/lib/trpc/client';
 import { isRoutineVisible } from '@/lib/services/visibility-rules';
 import { RoutineForm } from '@/components/routine/routine-form';
 import { GoalForm } from '@/components/goal/goal-form';
+import { GoalDetailModal } from '@/components/goal/goal-detail-modal';
 import { Button } from '@/components/ui/button';
 import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
 import { RoutineShareModal } from '@/components/routine/routine-share-modal';
@@ -25,7 +26,9 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
   const [showRoutineForm, setShowRoutineForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingRoutine, setEditingRoutine] = useState<any>(null);
+  const [editingGoal, setEditingGoal] = useState<any>(null);
   const [sharingRoutine, setSharingRoutine] = useState<any>(null);
+  const [selectedGoal, setSelectedGoal] = useState<any>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -38,6 +41,25 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
     { roleId },
     { enabled: !!roleId }
   );
+
+  const deleteGoalMutation = trpc.goal.archive.useMutation({
+    onSuccess: (data, variables) => {
+      const goal = goals?.find((g) => g.id === variables.id);
+      toast({
+        title: 'Success',
+        description: `${goal?.name || 'Goal'} has been archived`,
+        variant: 'success',
+      });
+      utils.goal.list.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   const deleteMutation = trpc.routine.delete.useMutation({
     onSuccess: (data, variables) => {
@@ -87,6 +109,12 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
   const handleDelete = (routine: any) => {
     if (confirm(`Are you sure you want to archive "${routine.name}"?`)) {
       deleteMutation.mutate({ id: routine.id });
+    }
+  };
+
+  const handleDeleteGoal = (goal: any) => {
+    if (confirm(`Are you sure you want to archive "${goal.name}"?`)) {
+      deleteGoalMutation.mutate({ id: goal.id });
     }
   };
 
@@ -339,23 +367,89 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
             ) : filteredGoals.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {filteredGoals.map((goal: any) => {
-                  // Extract emoji from name if present
-                  const emojiMatch = goal.name.match(/^(\p{Emoji}+)\s*/u);
-                  const emoji = emojiMatch ? emojiMatch[1] : '🎯';
-                  const displayName = emojiMatch
-                    ? goal.name.substring(emoji.length).trim()
-                    : goal.name;
+                  // Use the dedicated icon field if available, otherwise extract from name
+                  let emoji = goal.icon || '🎯';
+                  let displayName = goal.name;
+
+                  // If no icon field, try extracting from name (backward compatibility)
+                  if (!goal.icon) {
+                    const emojiMatch = goal.name.match(/^(\p{Emoji}+)\s*/u);
+                    if (emojiMatch) {
+                      emoji = emojiMatch[1];
+                      displayName = goal.name.substring(emoji.length).trim();
+                    }
+                  }
+
+                  // Calculate progress
+                  const progress = goal.progress || { current: 0, target: goal.target, percentage: 0 };
+                  const progressPercentage = Math.min(100, (progress.current / progress.target) * 100);
 
                   return (
                     <div
                       key={goal.id}
-                      className="bg-white rounded-lg border-2 border-gray-200 p-4 cursor-pointer transition-all hover:shadow-md hover:border-primary-300"
+                      onClick={() => setSelectedGoal(goal)}
+                      className="bg-white rounded-lg border-4 p-3 transition-all hover:shadow-md cursor-pointer"
+                      style={{
+                        borderColor: goal.color || '#E5E7EB',
+                      }}
                     >
-                      <div className="flex flex-col items-center text-center gap-2">
-                        <div className="text-3xl">{emoji}</div>
-                        <h3 className="font-semibold text-gray-900 text-sm">
+                      {/* Row 1: Emoji and Name */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">{emoji}</span>
+                        <h3 className="font-semibold text-gray-900 text-sm flex-1 line-clamp-1">
                           {displayName}
                         </h3>
+                      </div>
+
+                      {/* Row 2: Progress info */}
+                      <div className="mb-2 text-xs text-gray-600">
+                        <div className="flex items-center justify-between mb-1">
+                          <span>{progress.current} / {progress.target}</span>
+                          <span>{progressPercentage.toFixed(0)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div
+                            className="h-1.5 rounded-full transition-all"
+                            style={{
+                              width: `${progressPercentage}%`,
+                              backgroundColor: goal.color || '#3B82F6'
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Row 3: Period */}
+                      <div className="mb-2 text-xs text-gray-600">
+                        {goal.period?.toLowerCase() || 'Custom'}
+                      </div>
+
+                      {/* Row 4: Action buttons */}
+                      <div className="flex items-center gap-1 relative z-10">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingGoal(goal);
+                            setShowGoalForm(true);
+                          }}
+                          title="Edit"
+                          className="h-7 px-2 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteGoal(goal);
+                          }}
+                          title="Delete"
+                          className="h-7 px-2 text-xs text-gray-600 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                   );
@@ -430,15 +524,20 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
                   <div key={routineName}>
                     <h3 className="font-semibold text-gray-700 mb-3">{routineName}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {routineTasks.map((task: any) => (
+                      {routineTasks.map((task: any) => {
+                        // Use the dedicated emoji field from the task
+                        const taskEmoji = task.emoji || '✅';
+                        const taskDisplayName = task.name;
+
+                        return (
                         <div
                           key={task.id}
                           className="flex flex-col gap-2 p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
                         >
                           <div className="flex items-start gap-2">
-                            <div className="text-xl">✅</div>
+                            <div className="text-xl">{taskEmoji}</div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 text-sm line-clamp-2">{task.name}</p>
+                              <p className="font-medium text-gray-900 text-sm line-clamp-2">{taskDisplayName}</p>
                             </div>
                           </div>
                           {task.description && (
@@ -458,7 +557,8 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
                             )}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -494,7 +594,18 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
         <GoalForm
           roleId={roleId}
           personId={personId}
-          onClose={() => setShowGoalForm(false)}
+          goal={editingGoal}
+          onClose={() => {
+            setShowGoalForm(false);
+            setEditingGoal(null);
+          }}
+        />
+      )}
+
+      {selectedGoal && (
+        <GoalDetailModal
+          goal={selectedGoal}
+          onClose={() => setSelectedGoal(null)}
         />
       )}
 

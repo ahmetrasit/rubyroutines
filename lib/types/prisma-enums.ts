@@ -103,3 +103,29 @@ export enum InvitationStatus {
   REJECTED = 'REJECTED',
   EXPIRED = 'EXPIRED',
 }
+
+export enum GoalType {
+  COMPLETION_COUNT = 'COMPLETION_COUNT',
+  STREAK = 'STREAK',
+  TIME_BASED = 'TIME_BASED',
+  VALUE_BASED = 'VALUE_BASED',
+  PERCENTAGE = 'PERCENTAGE',
+}
+
+export enum TimeOperator {
+  BEFORE = 'BEFORE',
+  AFTER = 'AFTER',
+  BETWEEN = 'BETWEEN',
+}
+
+export enum ShareType {
+  PERSON = 'PERSON',
+  ROUTINE_ACCESS = 'ROUTINE_ACCESS',
+  FULL_ROLE = 'FULL_ROLE',
+}
+
+export enum PermissionLevel {
+  VIEW = 'VIEW',
+  EDIT = 'EDIT',
+  MANAGE = 'MANAGE',
+}

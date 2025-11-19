@@ -12,7 +12,6 @@ import { useToast } from '@/components/ui/toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
-import { useSession } from 'next-auth/react';
 
 interface Task {
   id: string;
@@ -46,7 +45,7 @@ interface PersonCheckinModalProps {
 export function PersonCheckinModal({ personId, personName, isOpen, onClose }: PersonCheckinModalProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
-  const { data: session } = useSession();
+  const { data: session } = trpc.auth.getSession.useQuery();
 
   // Fetch person details with routines and tasks
   const { data: person, isLoading: tasksLoading } = trpc.person.getById.useQuery(

@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, CheckCircle, Link2, Users } from 'lucide-react';
+import { Pencil, Trash2, CheckCircle, Link2, Users, Target, TrendingUp } from 'lucide-react';
 import { useState, memo } from 'react';
 import { PersonForm } from './person-form';
 import { PersonCheckinModal } from './person-checkin-modal';
@@ -83,6 +83,12 @@ export const PersonCard = memo(function PersonCard({
     { enabled: !!person.id }
   );
 
+  // Get goals for this person
+  const { data: goals } = trpc.goal.list.useQuery(
+    { roleId: roleId!, personId: person.id },
+    { enabled: !!roleId && !!person.id }
+  );
+
   // Get classroom details for bulk check-in
   const { data: classroom } = trpc.group.getById.useQuery(
     { id: classroomId! },
@@ -122,11 +128,17 @@ export const PersonCard = memo(function PersonCard({
   // FEATURE: Real-time counts and completion stats to be implemented
   const routineCount = personDetails?.assignments?.length || 0;
   const taskCount = personDetails?.assignments?.flatMap((a: any) => a.routine.tasks).length || 0;
-  const goalCount = 0; // TODO: Implement goals
 
-  const goalsAccomplished = 0;
-  const goalsTotal = goalCount;
-  const goalProgress = goalsTotal > 0 ? (goalsAccomplished / goalsTotal) * 100 : 0;
+  // Goal statistics
+  const activeGoals = goals?.filter(g => g.status === 'ACTIVE') || [];
+  const goalCount = activeGoals.length;
+  const goalsAccomplished = activeGoals.filter(g => g.progress?.achieved).length;
+  const goalProgress = goalCount > 0 ? (goalsAccomplished / goalCount) * 100 : 0;
+
+  // Calculate average goal progress
+  const avgGoalProgress = activeGoals.length > 0
+    ? activeGoals.reduce((sum, g) => sum + (g.progress?.percentage || 0), 0) / activeGoals.length
+    : 0;
 
   // Calculate connection counts
   const classroomCount = personDetails?.groupMembers?.length || 0;
@@ -211,7 +223,7 @@ export const PersonCard = memo(function PersonCard({
 
           {/* Second row: Goal completion progress bar */}
           <div className="h-6 bg-gray-200 rounded-full overflow-hidden relative">
-            {goalsTotal > 0 ? (
+            {goalCount > 0 ? (
               <>
                 <div
                   className="h-full bg-blue-500 transition-all"
@@ -219,7 +231,7 @@ export const PersonCard = memo(function PersonCard({
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-xs font-medium text-gray-700">
-                    Goals: {goalsAccomplished}/{goalsTotal}
+                    Goals: {goalsAccomplished}/{goalCount}
                   </span>
                 </div>
               </>

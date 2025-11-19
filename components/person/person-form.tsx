@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RotateCcw } from 'lucide-react';
-import { PASTEL_COLORS, parseAvatar, serializeAvatar } from '@/lib/utils/avatar';
+import { parseAvatar, serializeAvatar } from '@/lib/utils/avatar';
+import { AVATAR_COLORS } from '@/lib/constants/theme';
 import { useCreateMutation, useUpdateMutation } from '@/lib/hooks';
 import { EntityStatus } from '@/lib/types/prisma-enums';
 import { useToast } from '@/components/ui/toast';
@@ -181,7 +182,11 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     updateMutationBase,
     {
       entityName: 'Person',
-      invalidateQueries: [() => utils.person.list.invalidate()],
+      invalidateQueries: [
+        () => utils.person.list.invalidate(),
+        () => utils.person.getById.invalidate(),
+        () => utils.personSharing.getAccessiblePersons.invalidate(),
+      ],
       closeDialog: onClose,
     }
   );
@@ -314,24 +319,29 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
               <span className="text-sm text-gray-700">{selectedColor}</span>
             </button>
             {showColorPicker && (
-              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border">
+              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border max-h-[500px] overflow-y-auto">
                 <HexColorPicker color={selectedColor} onChange={setSelectedColor} />
-                <div className="mt-3 pt-3 border-t">
-                  <Label className="text-xs mb-2 block">Quick Colors</Label>
-                  <div className="grid grid-cols-6 gap-2">
-                    {PASTEL_COLORS.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => {
-                          setSelectedColor(color);
-                          setShowColorPicker(false);
-                        }}
-                        className="w-8 h-8 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
+                <div className="mt-3 pt-3 border-t space-y-1">
+                  {AVATAR_COLORS.GROUPS.map((group) => (
+                    <div key={group.label} className="grid grid-cols-9 gap-0.5">
+                      {group.colors.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => {
+                            setSelectedColor(color);
+                            setShowColorPicker(false);
+                          }}
+                          className="w-7 h-7 rounded-md border-2 hover:scale-110 transition-transform"
+                          style={{
+                            backgroundColor: color,
+                            borderColor: selectedColor === color ? '#000' : '#e5e7eb'
+                          }}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

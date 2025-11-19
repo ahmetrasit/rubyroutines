@@ -5,6 +5,10 @@ import {
   getGoalProgress,
   getTaskHeatmap,
   exportAnalyticsCSV,
+  getGoalAchievementRate,
+  getGoalTypeDistribution,
+  getStreakLeaderboard,
+  getGoalTrends,
 } from '@/lib/services/analytics.service';
 import { subDays } from 'date-fns';
 
@@ -104,5 +108,84 @@ export const analyticsRouter = router({
       );
 
       return { csv };
+    }),
+
+  /**
+   * Get goal achievement rate and statistics
+   */
+  goalAchievementRate: authorizedProcedure
+    .input(
+      z.object({
+        roleId: z.string().uuid(),
+        personId: z.string().cuid().nullable().optional(),
+        groupId: z.string().cuid().nullable().optional(),
+        period: z.enum(['WEEK', 'MONTH', 'QUARTER', 'YEAR']).default('MONTH'),
+      })
+    )
+    .query(async ({ input }) => {
+      const data = await getGoalAchievementRate(
+        input.roleId,
+        input.personId || null,
+        input.groupId || null,
+        input.period
+      );
+      return data;
+    }),
+
+  /**
+   * Get goal type distribution
+   */
+  goalTypeDistribution: authorizedProcedure
+    .input(
+      z.object({
+        roleId: z.string().uuid(),
+        personId: z.string().cuid().nullable().optional(),
+        groupId: z.string().cuid().nullable().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const data = await getGoalTypeDistribution(
+        input.roleId,
+        input.personId || null,
+        input.groupId || null
+      );
+      return data;
+    }),
+
+  /**
+   * Get streak leaderboard
+   */
+  streakLeaderboard: authorizedProcedure
+    .input(
+      z.object({
+        roleId: z.string().uuid(),
+        limit: z.number().min(1).max(50).default(10),
+      })
+    )
+    .query(async ({ input }) => {
+      const data = await getStreakLeaderboard(input.roleId, input.limit);
+      return data;
+    }),
+
+  /**
+   * Get goal trends over time
+   */
+  goalTrends: authorizedProcedure
+    .input(
+      z.object({
+        roleId: z.string().uuid(),
+        personId: z.string().cuid().nullable().optional(),
+        groupId: z.string().cuid().nullable().optional(),
+        period: z.enum(['WEEK', 'MONTH', 'QUARTER', 'YEAR']).default('MONTH'),
+      })
+    )
+    .query(async ({ input }) => {
+      const data = await getGoalTrends(
+        input.roleId,
+        input.personId || null,
+        input.groupId || null,
+        input.period
+      );
+      return data;
     }),
 });

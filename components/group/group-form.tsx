@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 import { HexColorPicker } from 'react-colorful';
-import { PASTEL_COLORS } from '@/lib/utils/avatar';
+import { AVATAR_COLORS } from '@/lib/constants/theme';
 
 interface GroupFormProps {
   group?: any;
@@ -192,24 +192,29 @@ export function GroupForm({ group, roleId, roleType, onClose }: GroupFormProps) 
               <span className="text-sm text-gray-700">{color}</span>
             </button>
             {showColorPicker && (
-              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border">
+              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border max-h-[500px] overflow-y-auto">
                 <HexColorPicker color={color} onChange={setColor} />
-                <div className="mt-3 pt-3 border-t">
-                  <Label className="text-xs mb-2 block">Quick Colors</Label>
-                  <div className="grid grid-cols-6 gap-2">
-                    {PASTEL_COLORS.map((presetColor) => (
-                      <button
-                        key={presetColor}
-                        type="button"
-                        onClick={() => {
-                          setColor(presetColor);
-                          setShowColorPicker(false);
-                        }}
-                        className="w-8 h-8 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
-                        style={{ backgroundColor: presetColor }}
-                      />
-                    ))}
-                  </div>
+                <div className="mt-3 pt-3 border-t space-y-1">
+                  {AVATAR_COLORS.GROUPS.map((group) => (
+                    <div key={group.label} className="grid grid-cols-9 gap-0.5">
+                      {group.colors.map((presetColor) => (
+                        <button
+                          key={presetColor}
+                          type="button"
+                          onClick={() => {
+                            setColor(presetColor);
+                            setShowColorPicker(false);
+                          }}
+                          className="w-7 h-7 rounded-md border-2 hover:scale-110 transition-transform"
+                          style={{
+                            backgroundColor: presetColor,
+                            borderColor: color === presetColor ? '#000' : '#e5e7eb'
+                          }}
+                          title={presetColor}
+                        />
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

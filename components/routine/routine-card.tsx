@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Eye, EyeOff, Clock, Share2 } from 'lucide-react';
+import { Pencil, Trash2, Eye, EyeOff, Clock, Share2, GitBranch } from 'lucide-react';
 import { useState, memo } from 'react';
 import { RoutineForm } from './routine-form';
 import { VisibilityOverrideDialog } from './visibility-override-dialog';
@@ -43,6 +43,12 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
+  // Fetch conditions for this routine if it's a smart routine
+  const { data: conditions } = trpc.condition.list.useQuery(
+    { routineId: routine.id },
+    { enabled: routine.type === 'SMART' }
+  );
+
   const deleteMutation = trpc.routine.delete.useMutation({
     onSuccess: () => {
       toast({
@@ -83,6 +89,12 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-lg truncate">{routine.name}</h3>
               {!visible && <EyeOff className="h-4 w-4 text-gray-400" />}
+              {routine.type === 'SMART' && conditions && conditions.length > 0 && (
+                <div className="flex items-center gap-1 text-xs text-purple-600" title={`${conditions.length} condition${conditions.length !== 1 ? 's' : ''}`}>
+                  <GitBranch className="h-3 w-3" />
+                  <span>{conditions.length}</span>
+                </div>
+              )}
             </div>
 
             {routine.description && (

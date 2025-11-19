@@ -121,6 +121,8 @@ export const groupRouter = router({
           name: input.name,
           type: input.type,
           description: input.description,
+          emoji: input.emoji,
+          color: input.color,
           status: EntityStatus.ACTIVE,
           // Add "Me" person as member if this is a classroom
           members: mePerson ? {

@@ -130,6 +130,7 @@ model Person {
   groupMembers            GroupMember[]
   assignments             RoutineAssignment[]
   taskCompletions         TaskCompletion[]
+  goalProgress            GoalProgress[]
   studentConnections      StudentParentConnection[] @relation("StudentPerson")
   parentConnections       StudentParentConnection[] @relation("ParentPerson")
   connectionCodes         ConnectionCode[]
@@ -357,11 +358,26 @@ model Goal {
   roleId                  String
   name                    String
   description             String?
+  icon                    String?      // Serialized icon/emoji data
+  color                   String?      // Hex color code
+
+  // Goal Configuration (Phase 1 - Basic)
+  type                    GoalType     @default(COMPLETION_COUNT)
   target                  Float
+  unit                    String?      // e.g., "tasks", "minutes", "books"
   period                  ResetPeriod  @default(WEEKLY)
   resetDay                Int?
+
+  // Goal Scope (Phase 1 - Simple)
   personIds               String[]     @default([])
   groupIds                String[]     @default([])
+
+  // Progress Tracking (Phase 1 - Basic)
+  currentStreak           Int          @default(0)
+  longestStreak           Int          @default(0)
+  lastAchievedAt          DateTime?
+
+  // Metadata
   status                  EntityStatus @default(ACTIVE)
   archivedAt              DateTime?
   sourceMarketplaceItemId String?
@@ -372,11 +388,13 @@ model Goal {
   role                  Role              @relation(fields: [roleId], references: [id], onDelete: Cascade)
   taskLinks             GoalTaskLink[]
   routineLinks          GoalRoutineLink[]
+  progress              GoalProgress[]
   targetConditionChecks ConditionCheck[]  @relation("TargetGoalConditionChecks")
 
   @@index([roleId])
   @@index([status])
   @@index([roleId, status]) // Composite index for active goals by role
+  @@index([roleId, type])
   @@map("goals")
 }
 
@@ -414,16 +432,49 @@ model GoalRoutineLink {
   @@map("goal_routine_links")
 }
 
+// Track goal progress for each person
+model GoalProgress {
+  id          String   @id @default(uuid())
+  goalId      String
+  personId    String
+  currentValue Float   @default(0)    // Current progress value
+  achieved    Boolean  @default(false) // Whether goal was achieved this period
+  periodStart DateTime // Start of the tracking period
+  periodEnd   DateTime // End of the tracking period
+  achievedAt  DateTime? // When the goal was achieved (if achieved)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  goal   Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, personId, periodStart]) // One progress per person per period
+  @@index([goalId, personId])
+  @@index([periodStart, periodEnd])
+  @@map("goal_progress")
+}
+
+enum GoalType {
+  COMPLETION_COUNT     // Count of task/routine completions (Phase 1)
+  STREAK              // Consecutive days/weeks/months (Phase 1)
+  TIME_BASED          // Total time spent (Phase 2)
+  VALUE_BASED         // Sum of values (Phase 2)
+  PERCENTAGE          // % of routines completed (Phase 2)
+}
+
 model Condition {
   id              String         @id @default(cuid())
-  routineId       String
+  routineId       String?        // Optional: can be standalone for Phase 2
+  name            String?        // Optional name for complex conditions
+  description     String?        // Help text explaining the condition
   controlsRoutine Boolean        @default(false) // true = controls routine visibility, false = controls task(s)
   logic           ConditionLogic @default(AND)   // AND or OR between checks
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
   // Relations
-  routine         Routine          @relation("RoutineConditions", fields: [routineId], references: [id], onDelete: Cascade)
+  routine         Routine?         @relation("RoutineConditions", fields: [routineId], references: [id], onDelete: Cascade)
   controlledTasks Task[]           // Multiple tasks can share this condition (via Task.conditionId)
   checks          ConditionCheck[] // Individual condition checks
 
@@ -443,9 +494,18 @@ model ConditionCheck {
   negate          Boolean           @default(false) // NOT operator
   operator        ConditionOperator
   value           String?           // Comparison value (for count, percentage, etc.)
+  value2          String?           // For range operators (Phase 2)
+
+  // Targets
   targetTaskId    String?
   targetRoutineId String?
   targetGoalId    String?
+
+  // Time-based conditions (Phase 1)
+  timeOperator    TimeOperator?
+  timeValue       String?           // Time in HH:MM format
+  dayOfWeek       Int[]            @default([]) // 0-6 for specific days
+
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -463,6 +523,7 @@ model ConditionCheck {
 }
 
 enum ConditionOperator {
+  // Task operators
   TASK_COMPLETED       // Check if task is completed
   TASK_NOT_COMPLETED   // Check if task is not completed
   TASK_COUNT_EQUALS    // Check task completion count
@@ -471,11 +532,27 @@ enum ConditionOperator {
   TASK_VALUE_EQUALS    // For PROGRESS tasks
   TASK_VALUE_GT
   TASK_VALUE_LT
+
+  // Routine operators
   ROUTINE_PERCENT_EQUALS // Routine completion percentage
   ROUTINE_PERCENT_GT
   ROUTINE_PERCENT_LT
+
+  // Goal operators
   GOAL_ACHIEVED        // Check if goal is achieved
   GOAL_NOT_ACHIEVED
+  GOAL_PROGRESS_GT     // Check goal progress (Phase 1)
+  GOAL_PROGRESS_LT
+
+  // Time operators (Phase 1)
+  TIME_OF_DAY         // Current time check
+  DAY_OF_WEEK         // Current day check
+}
+
+enum TimeOperator {
+  BEFORE
+  AFTER
+  BETWEEN
 }
 
 // ============================================================================

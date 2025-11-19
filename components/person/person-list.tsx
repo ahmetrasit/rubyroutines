@@ -54,7 +54,7 @@ export function PersonList({
   );
 
   // Get shared persons using the personSharing API
-  const { data: accessiblePersons } = trpc.personSharing.getAccessiblePersons.useQuery(
+  const { data: accessiblePersons, isLoading: isLoadingAccessible } = trpc.personSharing.getAccessiblePersons.useQuery(
     { roleId },
     {
       enabled: !!roleId,
@@ -66,13 +66,17 @@ export function PersonList({
     }
   );
 
-  if (isLoading) {
+  if (isLoading || isLoadingAccessible) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500">Loading...</p>
       </div>
     );
   }
+
+  // Debug logging
+  console.log('PersonList - accessiblePersons:', accessiblePersons);
+  console.log('PersonList - persons:', persons);
 
   // Combine owned and shared persons
   const allAccessiblePersons = [
@@ -81,8 +85,11 @@ export function PersonList({
   ];
 
   // Separate adults (Me) from children - for owned persons only
-  const adults = persons?.filter((person) => person.isAccountOwner) || [];
-  const ownedChildren = persons?.filter((person) => !person.isAccountOwner) || [];
+  const adults = accessiblePersons?.ownedPersons?.filter((person) => person.isAccountOwner) || [];
+  const ownedChildren = accessiblePersons?.ownedPersons?.filter((person) => !person.isAccountOwner) || [];
+
+  console.log('PersonList - adults:', adults);
+  console.log('PersonList - ownedChildren:', ownedChildren);
 
   // Get shared children separately
   const sharedChildren = accessiblePersons?.sharedPersons?.filter(

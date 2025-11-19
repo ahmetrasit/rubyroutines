@@ -24,7 +24,7 @@ export default function WelcomePage() {
   const handleSkip = () => {
     // Mark onboarding as completed
     localStorage.setItem('onboarding_completed', 'true');
-    router.push('/dashboard');
+    router.push('/parent');
   };
 
   if (isLoading) {

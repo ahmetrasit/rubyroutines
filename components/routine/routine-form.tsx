@@ -17,7 +17,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 import { HexColorPicker } from 'react-colorful';
-import { PASTEL_COLORS } from '@/lib/utils/avatar';
+import { AVATAR_COLORS } from '@/lib/constants/theme';
+import { ConditionForm } from '@/components/condition/condition-form';
+import { GitBranch } from 'lucide-react';
 
 interface RoutineFormProps {
   routine?: Routine;
@@ -325,24 +327,29 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
               <span className="text-sm text-gray-700">{color}</span>
             </button>
             {showColorPicker && (
-              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border">
+              <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border max-h-[500px] overflow-y-auto">
                 <HexColorPicker color={color} onChange={setColor} />
-                <div className="mt-3 pt-3 border-t">
-                  <Label className="text-xs mb-2 block">Quick Colors</Label>
-                  <div className="grid grid-cols-6 gap-2">
-                    {PASTEL_COLORS.map((presetColor) => (
-                      <button
-                        key={presetColor}
-                        type="button"
-                        onClick={() => {
-                          setColor(presetColor);
-                          setShowColorPicker(false);
-                        }}
-                        className="w-8 h-8 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
-                        style={{ backgroundColor: presetColor }}
-                      />
-                    ))}
-                  </div>
+                <div className="mt-3 pt-3 border-t space-y-1">
+                  {AVATAR_COLORS.GROUPS.map((group) => (
+                    <div key={group.label} className="grid grid-cols-9 gap-0.5">
+                      {group.colors.map((presetColor) => (
+                        <button
+                          key={presetColor}
+                          type="button"
+                          onClick={() => {
+                            setColor(presetColor);
+                            setShowColorPicker(false);
+                          }}
+                          className="w-7 h-7 rounded-md border-2 hover:scale-110 transition-transform"
+                          style={{
+                            backgroundColor: presetColor,
+                            borderColor: color === presetColor ? '#000' : '#e5e7eb'
+                          }}
+                          title={presetColor}
+                        />
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -619,20 +626,39 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
               </div>
             )}
 
-            {/* Conditions Modal Placeholder */}
-            {showConditionsModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                  <h3 className="text-lg font-bold mb-2">Conditions</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Condition builder coming soon. You can still create a smart routine, but conditions will need to be
-                    configured later.
-                  </p>
-                  <Button onClick={() => setShowConditionsModal(false)}>
+            {/* Conditions Modal */}
+            {showConditionsModal && routine?.id && (
+              <ConditionForm
+                routineId={routine.id}
+                onClose={() => setShowConditionsModal(false)}
+              />
+            )}
+
+            {/* Show message if creating new routine with conditions */}
+            {showConditionsModal && !routine?.id && (
+              <Dialog open onOpenChange={() => setShowConditionsModal(false)}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <GitBranch className="h-5 w-5" />
+                      Conditions
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <p className="text-sm text-gray-600">
+                      Conditions can be added after creating the routine. Save the routine first, then edit it to add conditions.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => setShowConditionsModal(false)}
+                    variant="outline"
+                    className="w-full"
+                  >
                     Got it
                   </Button>
-                </div>
-              </div>
+                </DialogContent>
+              </Dialog>
             )}
           </div>
 

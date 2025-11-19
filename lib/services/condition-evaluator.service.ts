@@ -3,7 +3,7 @@
  * Evaluates conditions for smart tasks and smart routines
  */
 
-import { ConditionLogic, ConditionOperator } from '@/lib/types/prisma-enums';
+import { ConditionLogic, ConditionOperator, TimeOperator } from '@/lib/types/prisma-enums';
 import { getResetPeriodStart } from './reset-period';
 import type { PrismaClient } from '@prisma/client';
 
@@ -19,13 +19,19 @@ export interface ConditionEvaluation {
   }[];
 }
 
+export interface EvaluationContext {
+  currentTime?: string;  // ISO string
+  dayOfWeek?: number;    // 0-6 (Sunday-Saturday)
+}
+
 /**
- * Evaluate a condition for a specific person
+ * Evaluate a condition for a specific person with optional context (Phase 1 enhancement)
  */
 export async function evaluateCondition(
   prisma: PrismaClient,
   conditionId: string,
-  personId: string
+  personId: string,
+  context?: EvaluationContext
 ): Promise<ConditionEvaluation> {
   // Fetch condition with all checks
   const condition = await prisma.condition.findUnique({
@@ -55,8 +61,12 @@ export async function evaluateCondition(
     condition.checks.map(async (check) => {
       let checkResult = false;
 
-      // Evaluate based on operator
-      if (check.targetTaskId && check.targetTask) {
+      // Evaluate based on operator - Phase 1 enhancement with time-based conditions
+      if (check.operator === 'TIME_OF_DAY') {
+        checkResult = evaluateTimeOfDayCheck(check, context);
+      } else if (check.operator === 'DAY_OF_WEEK') {
+        checkResult = evaluateDayOfWeekCheck(check, context);
+      } else if (check.targetTaskId && check.targetTask) {
         checkResult = await evaluateTaskCheck(prisma, check, personId);
       } else if (check.targetRoutineId && check.targetRoutine) {
         checkResult = await evaluateRoutineCheck(prisma, check, personId);
@@ -281,12 +291,63 @@ async function evaluateGoalCheck(
 }
 
 /**
+ * Evaluate time of day check (Phase 1)
+ */
+function evaluateTimeOfDayCheck(
+  check: any,
+  context?: EvaluationContext
+): boolean {
+  if (!check.timeValue || !check.timeOperator) return false;
+
+  const now = context?.currentTime ? new Date(context.currentTime) : new Date();
+  const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+
+  // Parse time value (HH:MM format)
+  const [hours, minutes] = check.timeValue.split(':').map(Number);
+  const targetTimeMinutes = hours * 60 + minutes;
+
+  switch (check.timeOperator) {
+    case 'BEFORE':
+      return currentTimeMinutes < targetTimeMinutes;
+    case 'AFTER':
+      return currentTimeMinutes > targetTimeMinutes;
+    case 'BETWEEN':
+      // For BETWEEN, we need value2 as the end time
+      if (check.value2) {
+        const [endHours, endMinutes] = check.value2.split(':').map(Number);
+        const endTimeMinutes = endHours * 60 + endMinutes;
+        return currentTimeMinutes >= targetTimeMinutes && currentTimeMinutes <= endTimeMinutes;
+      }
+      return false;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Evaluate day of week check (Phase 1)
+ */
+function evaluateDayOfWeekCheck(
+  check: any,
+  context?: EvaluationContext
+): boolean {
+  if (!check.dayOfWeek || check.dayOfWeek.length === 0) return false;
+
+  const currentDayOfWeek = context?.dayOfWeek !== undefined
+    ? context.dayOfWeek
+    : new Date().getDay();
+
+  return check.dayOfWeek.includes(currentDayOfWeek);
+}
+
+/**
  * Check if a task should be visible based on its condition
  */
 export async function isTaskVisible(
   prisma: PrismaClient,
   taskId: string,
-  personId: string
+  personId: string,
+  context?: EvaluationContext
 ): Promise<boolean> {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
@@ -298,7 +359,7 @@ export async function isTaskVisible(
   if (!task.isSmart || !task.conditionId) return true;
 
   // Smart tasks visibility depends on condition evaluation
-  const evaluation = await evaluateCondition(prisma, task.conditionId, personId);
+  const evaluation = await evaluateCondition(prisma, task.conditionId, personId, context);
   return evaluation.result;
 }
 
@@ -308,7 +369,8 @@ export async function isTaskVisible(
 export async function isSmartRoutineVisible(
   prisma: PrismaClient,
   routineId: string,
-  personId: string
+  personId: string,
+  context?: EvaluationContext
 ): Promise<boolean> {
   const routine = await prisma.routine.findUnique({
     where: { id: routineId },
@@ -329,10 +391,10 @@ export async function isSmartRoutineVisible(
   // If no conditions, show the routine
   if (routine.conditions.length === 0) return true;
 
-  // Evaluate all routine-controlling conditions
+  // Evaluate all routine-controlling conditions with context (Phase 1)
   // All conditions must pass for routine to be visible
   const evaluations = await Promise.all(
-    routine.conditions.map((c) => evaluateCondition(prisma, c.id, personId))
+    routine.conditions.map((c) => evaluateCondition(prisma, c.id, personId, context))
   );
 
   return evaluations.every((e) => e.result);

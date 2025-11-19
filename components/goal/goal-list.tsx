@@ -1,30 +1,85 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, Target } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Plus, Pencil, Trash2, Target, Trophy, Filter, TrendingUp, Clock, Percent, Hash } from 'lucide-react';
 import { GoalForm } from './goal-form';
-import { GoalProgressBar } from './goal-progress-bar';
+import { GoalProgressCard } from './goal-progress-card';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { getTierLimit, ComponentTierLimits } from '@/lib/services/tier-limits';
+import { EntityStatus, GoalType } from '@/lib/types/prisma-enums';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface GoalListProps {
   roleId: string;
   personId?: string;
+  groupId?: string;
   effectiveLimits?: ComponentTierLimits | null;
 }
 
-export function GoalList({ roleId, personId, effectiveLimits = null }: GoalListProps) {
+export function GoalList({ roleId, personId, groupId, effectiveLimits = null }: GoalListProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('active');
+  const [typeFilter, setTypeFilter] = useState<GoalType | 'all'>('all');
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
+  // Fetch goals with progress
   const { data: goals, isLoading } = trpc.goal.list.useQuery(
-    { roleId },
+    {
+      roleId,
+      personId,
+      groupId,
+      includeInactive: statusFilter === 'all' || statusFilter === 'archived'
+    },
     { enabled: !!roleId }
   );
+
+  // Filter goals based on status and type
+  const filteredGoals = useMemo(() => {
+    if (!goals) return [];
+
+    return goals.filter(goal => {
+      // Status filter
+      if (statusFilter === 'active' && goal.status !== EntityStatus.ACTIVE) return false;
+      if (statusFilter === 'completed' && goal.progress?.achieved) return true;
+      if (statusFilter === 'archived' && goal.status === EntityStatus.INACTIVE) return true;
+
+      // Type filter
+      if (typeFilter !== 'all' && goal.type !== typeFilter) return false;
+
+      return true;
+    });
+  }, [goals, statusFilter, typeFilter]);
+
+  // Group goals by type
+  const groupedGoals = useMemo(() => {
+    const grouped: Record<GoalType, typeof filteredGoals> = {
+      [GoalType.COMPLETION_COUNT]: [],
+      [GoalType.STREAK]: [],
+      [GoalType.TIME_BASED]: [],
+      [GoalType.VALUE_BASED]: [],
+      [GoalType.PERCENTAGE]: [],
+    };
+
+    filteredGoals.forEach(goal => {
+      if (grouped[goal.type]) {
+        grouped[goal.type].push(goal);
+      }
+    });
+
+    return grouped;
+  }, [filteredGoals]);
 
   const deleteMutation = trpc.goal.archive.useMutation({
     onSuccess: () => {
@@ -60,104 +115,168 @@ export function GoalList({ roleId, personId, effectiveLimits = null }: GoalListP
     setEditingGoal(null);
   };
 
-  // Filter goals for specific person if personId provided
-  const filteredGoals = goals?.filter((goal) => {
-    if (!personId) return true;
-    return goal.personIds.includes(personId);
-  }) || [];
-
-  const activeGoals = filteredGoals.filter((g) => g.status === 'ACTIVE');
+  const activeGoals = filteredGoals.filter((g) => g.status === EntityStatus.ACTIVE);
 
   // Check tier limits
   const goalLimit = getTierLimit(effectiveLimits, 'goals');
   const currentGoalCount = activeGoals.length;
   const canAddGoal = currentGoalCount < goalLimit;
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Target className="h-5 w-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-900">Goals</h2>
-        </div>
-        {canAddGoal ? (
-          <Button size="sm" onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Goal
-          </Button>
-        ) : (
-          <Button size="sm" variant="outline" disabled>
-            🔒 Upgrade to add new goals
-          </Button>
-        )}
-      </div>
+  const hasGoals = goals && goals.length > 0;
 
-      {isLoading ? (
-        <div className="text-center py-8 text-gray-500">Loading goals...</div>
-      ) : activeGoals.length === 0 ? (
-        <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
-          <Target className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 mb-2">No goals yet</p>
-          <p className="text-sm text-gray-400 mb-4">Create goals to track your progress</p>
-          {canAddGoal ? (
-            <Button size="sm" onClick={() => setShowForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Goal
-            </Button>
-          ) : (
-            <p className="text-gray-500 text-sm">
-              🔒 Upgrade to add new goals
-            </p>
+  // Get icon for goal type
+  const getGoalIcon = (type: GoalType) => {
+    switch (type) {
+      case GoalType.COMPLETION_COUNT:
+        return Hash;
+      case GoalType.STREAK:
+        return TrendingUp;
+      case GoalType.TIME_BASED:
+        return Clock;
+      case GoalType.PERCENTAGE:
+        return Percent;
+      default:
+        return Target;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Target className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">Goals</h2>
+          {hasGoals && (
+            <span className="text-sm text-muted-foreground">
+              ({filteredGoals.length} {filteredGoals.length === 1 ? 'goal' : 'goals'})
+            </span>
           )}
         </div>
-      ) : (
-        <div className="grid gap-4">
-          {activeGoals.map((goal) => (
-            <div
-              key={goal.id}
-              className="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{goal.name}</h3>
-                  {goal.description && (
-                    <p className="text-sm text-gray-600 mt-1">{goal.description}</p>
-                  )}
-                  <div className="flex gap-2 mt-2 text-xs text-gray-500">
-                    <span className="px-2 py-1 bg-gray-100 rounded capitalize">
-                      {goal.period.toLowerCase()}
-                    </span>
-                    {goal.resetDay !== null && goal.resetDay !== undefined && (
-                      <span className="px-2 py-1 bg-gray-100 rounded">
-                        Resets: Day {goal.resetDay}
-                      </span>
-                    )}
-                  </div>
+
+        <div className="flex items-center gap-2">
+          {hasGoals && (
+            <>
+              {/* Status Filter */}
+              <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Filter status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Type Filter */}
+              <Select value={typeFilter} onValueChange={(value: any) => setTypeFilter(value)}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Filter type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value={GoalType.COMPLETION_COUNT}>Completion</SelectItem>
+                  <SelectItem value={GoalType.STREAK}>Streak</SelectItem>
+                  <SelectItem value={GoalType.TIME_BASED}>Time-based</SelectItem>
+                  <SelectItem value={GoalType.VALUE_BASED}>Value-based</SelectItem>
+                  <SelectItem value={GoalType.PERCENTAGE}>Percentage</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          )}
+
+          {canAddGoal ? (
+            <Button onClick={() => setShowForm(true)} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Goal
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" disabled>
+              Upgrade to add goals
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+        </div>
+      ) : hasGoals ? (
+        typeFilter === 'all' ? (
+          // Show grouped by type
+          Object.entries(groupedGoals).map(([type, typeGoals]) => {
+            if (typeGoals.length === 0) return null;
+            const Icon = getGoalIcon(type as GoalType);
+
+            return (
+              <div key={type} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-medium text-muted-foreground capitalize">
+                    {type.replace(/_/g, ' ').toLowerCase()}
+                  </h3>
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleEdit(goal)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDelete(goal)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {typeGoals.map(goal => (
+                    <GoalProgressCard
+                      key={goal.id}
+                      goal={goal}
+                      onEdit={() => handleEdit(goal)}
+                      onDelete={() => handleDelete(goal)}
+                    />
+                  ))}
                 </div>
               </div>
-
-              <GoalProgressBar goal={goal} />
+            );
+          })
+        ) : (
+          // Show filtered goals
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredGoals.map(goal => (
+              <GoalProgressCard
+                key={goal.id}
+                goal={goal}
+                onEdit={() => handleEdit(goal)}
+                onDelete={() => handleDelete(goal)}
+              />
+            ))}
+          </div>
+        )
+      ) : (
+        // Empty state
+        <Card className="p-12">
+          <div className="text-center space-y-4">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-primary/10 p-4">
+                <Trophy className="h-8 w-8 text-primary" />
+              </div>
             </div>
-          ))}
-        </div>
+            <div>
+              <h3 className="text-lg font-semibold">No goals yet</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Create your first goal to start tracking progress
+              </p>
+            </div>
+            {canAddGoal ? (
+              <Button onClick={() => setShowForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create First Goal
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Upgrade your plan to add goals
+              </p>
+            )}
+          </div>
+        </Card>
       )}
 
       {showForm && (

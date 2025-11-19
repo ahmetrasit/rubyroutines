@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function SignUpPage() {
+  const router = useRouter();
   const supabase = createClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -21,7 +23,7 @@ export default function SignUpPage() {
     onSuccess: async (data) => {
       // Supabase will send verification email automatically
       // Redirect to verify page to inform user
-      window.location.href = `/verify?email=${encodeURIComponent(email)}`;
+      router.push(`/verify?email=${encodeURIComponent(email)}`);
     },
     onError: (err) => {
       setError(err.message);

@@ -259,3 +259,329 @@ export async function exportAnalyticsCSV(
 
   return csv;
 }
+
+/**
+ * Get goal achievement rate and statistics
+ */
+export async function getGoalAchievementRate(
+  roleId: string,
+  personId: string | null,
+  groupId: string | null,
+  period: 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR'
+) {
+  const now = new Date();
+  let startDate: Date;
+
+  switch (period) {
+    case 'WEEK':
+      startDate = subDays(now, 7);
+      break;
+    case 'MONTH':
+      startDate = subDays(now, 30);
+      break;
+    case 'QUARTER':
+      startDate = subDays(now, 90);
+      break;
+    case 'YEAR':
+      startDate = subDays(now, 365);
+      break;
+  }
+
+  // Get all goals for the role
+  const goals = await prisma.goal.findMany({
+    where: {
+      roleId,
+      status: 'ACTIVE',
+      ...(personId && {
+        OR: [
+          { personIds: { has: personId } },
+          { scope: 'ROLE' }
+        ]
+      }),
+      ...(groupId && {
+        OR: [
+          { groupIds: { has: groupId } },
+          { scope: 'GROUP' }
+        ]
+      })
+    },
+    include: {
+      achievements: {
+        where: {
+          achievedAt: { gte: startDate },
+          ...(personId && { personId })
+        }
+      }
+    }
+  });
+
+  const totalGoals = goals.length;
+  const achievedGoals = goals.filter(g => g.achievements.length > 0).length;
+  const achievementRate = totalGoals > 0 ? Math.round((achievedGoals / totalGoals) * 100) : 0;
+
+  // Calculate active streaks
+  const activeStreaks = goals.filter(g => g.streakEnabled && g.currentStreak > 0).length;
+
+  // Calculate average progress
+  const progressValues = await Promise.all(
+    goals.map(async (goal) => {
+      const progress = await getGoalProgress(roleId, personId);
+      const goalProgress = progress.find(p => p.goalId === goal.id);
+      return goalProgress?.percentage || 0;
+    })
+  );
+
+  const averageProgress = progressValues.length > 0
+    ? Math.round(progressValues.reduce((a, b) => a + b, 0) / progressValues.length)
+    : 0;
+
+  // Determine trend (compare with previous period)
+  const prevStartDate = subDays(startDate, period === 'WEEK' ? 7 : period === 'MONTH' ? 30 : period === 'QUARTER' ? 90 : 365);
+  const prevGoals = await prisma.goal.findMany({
+    where: {
+      roleId,
+      status: 'ACTIVE',
+      createdAt: { lte: startDate }
+    },
+    include: {
+      achievements: {
+        where: {
+          achievedAt: { gte: prevStartDate, lt: startDate },
+          ...(personId && { personId })
+        }
+      }
+    }
+  });
+
+  const prevAchieved = prevGoals.filter(g => g.achievements.length > 0).length;
+  const prevRate = prevGoals.length > 0 ? (prevAchieved / prevGoals.length) * 100 : 0;
+  const trend = achievementRate > prevRate ? 'up' : achievementRate < prevRate ? 'down' : 'stable';
+
+  return {
+    totalGoals,
+    achievedGoals,
+    achievementRate,
+    activeStreaks,
+    averageProgress,
+    trend
+  };
+}
+
+/**
+ * Get goal type distribution
+ */
+export async function getGoalTypeDistribution(
+  roleId: string,
+  personId: string | null,
+  groupId: string | null
+) {
+  const goals = await prisma.goal.findMany({
+    where: {
+      roleId,
+      status: 'ACTIVE',
+      ...(personId && {
+        OR: [
+          { personIds: { has: personId } },
+          { scope: 'ROLE' }
+        ]
+      }),
+      ...(groupId && {
+        OR: [
+          { groupIds: { has: groupId } },
+          { scope: 'GROUP' }
+        ]
+      })
+    },
+    select: {
+      type: true
+    }
+  });
+
+  const distribution = goals.reduce((acc, goal) => {
+    acc[goal.type] = (acc[goal.type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  return distribution;
+}
+
+/**
+ * Get streak leaderboard
+ */
+export async function getStreakLeaderboard(roleId: string, limit: number = 10) {
+  const goals = await prisma.goal.findMany({
+    where: {
+      roleId,
+      status: 'ACTIVE',
+      streakEnabled: true,
+      currentStreak: { gt: 0 }
+    },
+    orderBy: {
+      currentStreak: 'desc'
+    },
+    take: limit,
+    include: {
+      role: {
+        include: {
+          user: true
+        }
+      }
+    }
+  });
+
+  // Get person names for individual goals
+  const leaderboard = await Promise.all(
+    goals.map(async (goal) => {
+      let personName = goal.role.user.email || 'Unknown';
+      let personId = null;
+
+      if (goal.personIds.length > 0) {
+        const person = await prisma.person.findFirst({
+          where: { id: goal.personIds[0] }
+        });
+        if (person) {
+          personName = person.name;
+          personId = person.id;
+        }
+      }
+
+      return {
+        id: goal.id,
+        name: personName,
+        personId,
+        goalName: goal.name,
+        currentStreak: goal.currentStreak,
+        longestStreak: goal.longestStreak
+      };
+    })
+  );
+
+  return leaderboard;
+}
+
+/**
+ * Get goal trends over time
+ */
+export async function getGoalTrends(
+  roleId: string,
+  personId: string | null,
+  groupId: string | null,
+  period: 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR'
+) {
+  const now = new Date();
+  let days: number;
+
+  switch (period) {
+    case 'WEEK':
+      days = 7;
+      break;
+    case 'MONTH':
+      days = 30;
+      break;
+    case 'QUARTER':
+      days = 90;
+      break;
+    case 'YEAR':
+      days = 365;
+      break;
+  }
+
+  const startDate = subDays(now, days);
+  const dateRange = eachDayOfInterval({ start: startDate, end: now });
+
+  // Get goals and their completions
+  const goals = await prisma.goal.findMany({
+    where: {
+      roleId,
+      status: 'ACTIVE',
+      ...(personId && {
+        OR: [
+          { personIds: { has: personId } },
+          { scope: 'ROLE' }
+        ]
+      }),
+      ...(groupId && {
+        OR: [
+          { groupIds: { has: groupId } },
+          { scope: 'GROUP' }
+        ]
+      })
+    },
+    include: {
+      taskLinks: {
+        include: {
+          task: {
+            include: {
+              completions: {
+                where: {
+                  completedAt: { gte: startDate },
+                  ...(personId && { personId })
+                }
+              }
+            }
+          }
+        }
+      },
+      routineLinks: {
+        include: {
+          routine: {
+            include: {
+              tasks: {
+                include: {
+                  completions: {
+                    where: {
+                      completedAt: { gte: startDate },
+                      ...(personId && { personId })
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Aggregate data by day
+  const trends = dateRange.map((date) => {
+    const dayStart = startOfDay(date);
+    const dayEnd = endOfDay(date);
+
+    let completed = 0;
+    let target = 0;
+
+    goals.forEach((goal) => {
+      target += goal.target;
+
+      // Count task completions for this day
+      goal.taskLinks.forEach((link) => {
+        const dayCompletions = link.task.completions.filter((c) => {
+          const completedDate = new Date(c.completedAt);
+          return completedDate >= dayStart && completedDate <= dayEnd;
+        });
+        completed += dayCompletions.length;
+      });
+
+      // Count routine task completions for this day
+      goal.routineLinks.forEach((link) => {
+        link.routine.tasks.forEach((task) => {
+          const dayCompletions = task.completions.filter((c) => {
+            const completedDate = new Date(c.completedAt);
+            return completedDate >= dayStart && completedDate <= dayEnd;
+          });
+          completed += dayCompletions.length;
+        });
+      });
+    });
+
+    return {
+      date: format(date, 'yyyy-MM-dd'),
+      completed,
+      target,
+      rate: target > 0 ? Math.round((completed / target) * 100) : 0
+    };
+  });
+
+  return trends;
+}

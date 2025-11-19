@@ -6,11 +6,14 @@ import {
   updateConditionSchema,
   deleteConditionSchema,
   getConditionByIdSchema,
+  getConditionSchema,
   listConditionsSchema,
   evaluateConditionSchema,
+  evaluateBatchSchema,
 } from '@/lib/validation/condition';
 import { evaluateCondition } from '@/lib/services/condition-evaluator.service';
 import { TRPCError } from '@trpc/server';
+import { ConditionOperator, TimeOperator } from '@/lib/types/prisma-enums';
 
 export const conditionRouter = router({
   /**
@@ -19,19 +22,21 @@ export const conditionRouter = router({
   create: protectedProcedure
     .input(createConditionSchema)
     .mutation(async ({ ctx, input }) => {
-      const { routineId, controlsRoutine, logic, checks } = input;
+      const { routineId, name, description, controlsRoutine, logic, checks } = input;
 
-      // Verify routine ownership
-      const routine = await prisma.routine.findUnique({
-        where: { id: routineId },
-        include: { role: true },
-      });
-
-      if (!routine || routine.role.userId !== ctx.user.id) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You do not have permission to add conditions to this routine',
+      // Verify routine ownership if routineId is provided
+      if (routineId) {
+        const routine = await prisma.routine.findUnique({
+          where: { id: routineId },
+          include: { role: true },
         });
+
+        if (!routine || routine.role.userId !== ctx.user.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You do not have permission to add conditions to this routine',
+          });
+        }
       }
 
       // Check for circular dependencies before creating
@@ -54,6 +59,8 @@ export const conditionRouter = router({
       const condition = await prisma.condition.create({
         data: {
           routineId,
+          name,
+          description,
           controlsRoutine,
           logic,
           checks: {
@@ -61,9 +68,14 @@ export const conditionRouter = router({
               negate: check.negate,
               operator: check.operator,
               value: check.value,
+              value2: check.value2,
               targetTaskId: check.targetTaskId,
               targetRoutineId: check.targetRoutineId,
               targetGoalId: check.targetGoalId,
+              // Time-based conditions (Phase 1)
+              timeOperator: check.timeOperator,
+              timeValue: check.timeValue,
+              dayOfWeek: check.dayOfWeek || [],
             })),
           },
         },
@@ -283,7 +295,7 @@ export const conditionRouter = router({
   evaluate: protectedProcedure
     .input(evaluateConditionSchema)
     .query(async ({ ctx, input }) => {
-      const { conditionId, personId } = input;
+      const { conditionId, personId, context } = input;
 
       // Verify condition ownership
       const condition = await prisma.condition.findUnique({
@@ -315,8 +327,8 @@ export const conditionRouter = router({
         });
       }
 
-      // Evaluate the condition
-      const evaluation = await evaluateCondition(prisma, conditionId, personId);
+      // Evaluate the condition with context
+      const evaluation = await evaluateCondition(prisma, conditionId, personId, context);
 
       return evaluation;
     }),
@@ -398,6 +410,70 @@ export const conditionRouter = router({
         routines,
         goals,
       };
+    }),
+
+  /**
+   * Batch evaluate conditions for multiple routines (Phase 1)
+   */
+  evaluateBatch: protectedProcedure
+    .input(evaluateBatchSchema)
+    .query(async ({ ctx, input }) => {
+      const { routineIds, personId, context } = input;
+
+      // Verify all routines belong to the user
+      const routines = await prisma.routine.findMany({
+        where: {
+          id: { in: routineIds },
+          role: { userId: ctx.user.id }
+        },
+        include: {
+          conditions: {
+            where: { controlsRoutine: true },
+            include: { checks: true }
+          }
+        }
+      });
+
+      if (routines.length !== routineIds.length) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to evaluate some of these routines',
+        });
+      }
+
+      // Verify person ownership
+      const person = await prisma.person.findUnique({
+        where: { id: personId },
+        include: { role: true },
+      });
+
+      if (!person || person.role.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to evaluate for this person',
+        });
+      }
+
+      // Evaluate all conditions and map results
+      const results = new Map<string, boolean>();
+
+      for (const routine of routines) {
+        if (routine.conditions.length === 0) {
+          results.set(routine.id, true); // No conditions means always visible
+        } else {
+          let isVisible = false;
+          for (const condition of routine.conditions) {
+            const evaluation = await evaluateCondition(prisma, condition.id, personId, context);
+            if (evaluation.passed) {
+              isVisible = true;
+              break; // At least one condition passed
+            }
+          }
+          results.set(routine.id, isVisible);
+        }
+      }
+
+      return Object.fromEntries(results);
     }),
 });
 

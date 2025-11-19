@@ -41,8 +41,8 @@ export default function Error({
             <Button onClick={() => reset()} variant="default">
               Try again
             </Button>
-            <Button onClick={() => window.location.href = '/dashboard'} variant="outline">
-              Go to Dashboard
+            <Button onClick={() => window.location.href = '/parent'} variant="outline">
+              Go to Home
             </Button>
           </div>
         </div>
