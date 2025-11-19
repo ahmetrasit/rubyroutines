@@ -10,6 +10,8 @@ export const createGoalSchema = z.object({
   roleId: idValidator,
   name: z.string().min(1, 'Name is required').max(100),
   description: z.string().max(500).optional(),
+  icon: z.string().optional(),
+  color: z.string().optional(),
 
   // Goal Configuration
   type: z.nativeEnum(GoalType).default('COMPLETION_COUNT'),
@@ -21,12 +23,17 @@ export const createGoalSchema = z.object({
   // Goal Scope
   personIds: z.array(idValidator).default([]),
   groupIds: z.array(idValidator).default([]),
+
+  // Task links
+  taskIds: z.array(idValidator).optional().default([]),
 });
 
 export const updateGoalSchema = z.object({
   id: idValidator,
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional().nullable(),
+  icon: z.string().optional().nullable(),
+  color: z.string().optional().nullable(),
 
   // Goal Configuration
   type: z.nativeEnum(GoalType).optional(),
@@ -38,6 +45,9 @@ export const updateGoalSchema = z.object({
   // Goal Scope
   personIds: z.array(idValidator).optional(),
   groupIds: z.array(idValidator).optional(),
+
+  // Task links
+  taskIds: z.array(idValidator).optional(),
 });
 
 export const deleteGoalSchema = z.object({

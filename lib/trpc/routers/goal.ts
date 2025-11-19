@@ -160,6 +160,8 @@ export const goalRouter = router({
           roleId: input.roleId,
           name: input.name,
           description: input.description,
+          icon: input.icon,
+          color: input.color,
           type: input.type || GoalType.COMPLETION_COUNT,
           target: input.target,
           unit: input.unit,
@@ -169,6 +171,17 @@ export const goalRouter = router({
           groupIds: input.groupIds
         }
       });
+
+      // Handle task links if provided
+      if (input.taskIds && input.taskIds.length > 0) {
+        await ctx.prisma.goalTaskLink.createMany({
+          data: input.taskIds.map((taskId) => ({
+            goalId: goal.id,
+            taskId,
+            weight: 1.0
+          }))
+        });
+      }
 
       return goal;
     }),
@@ -192,12 +205,31 @@ export const goalRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
-      const { id, ...updateData } = input;
+      const { id, taskIds, ...updateData } = input;
 
       const updated = await ctx.prisma.goal.update({
         where: { id },
         data: updateData
       });
+
+      // Handle task links if provided
+      if (taskIds !== undefined) {
+        // Delete existing task links
+        await ctx.prisma.goalTaskLink.deleteMany({
+          where: { goalId: id }
+        });
+
+        // Create new task links
+        if (taskIds.length > 0) {
+          await ctx.prisma.goalTaskLink.createMany({
+            data: taskIds.map((taskId) => ({
+              goalId: id,
+              taskId,
+              weight: 1.0
+            }))
+          });
+        }
+      }
 
       return updated;
     }),

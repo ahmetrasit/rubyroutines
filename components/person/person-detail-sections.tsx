@@ -418,9 +418,14 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
                         </div>
                       </div>
 
-                      {/* Row 3: Period */}
-                      <div className="mb-2 text-xs text-gray-600">
-                        {goal.period?.toLowerCase() || 'Custom'}
+                      {/* Row 3: Period and Linked Tasks */}
+                      <div className="mb-2 text-xs text-gray-600 flex items-center justify-between">
+                        <span>{goal.period?.toLowerCase() || 'Custom'}</span>
+                        {goal.taskLinks && goal.taskLinks.length > 0 && (
+                          <span className="text-gray-500">
+                            {goal.taskLinks.length} {goal.taskLinks.length === 1 ? 'task' : 'tasks'}
+                          </span>
+                        )}
                       </div>
 
                       {/* Row 4: Action buttons */}
