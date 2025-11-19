@@ -28,7 +28,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
   const [period, setPeriod] = useState<ResetPeriod>(ResetPeriod.WEEKLY);
   const [resetDay, setResetDay] = useState<number | undefined>();
   const [icon, setIcon] = useState<string>('🎯');
-  const [color, setColor] = useState<string>(AVATAR_COLORS[0]);
+  const [color, setColor] = useState<string>(AVATAR_COLORS.DEFAULT);
 
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -204,7 +204,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                 <div className="mt-2 space-y-2">
                   <HexColorPicker color={color} onChange={setColor} />
                   <div className="flex gap-1 flex-wrap">
-                    {AVATAR_COLORS.map((c) => (
+                    {AVATAR_COLORS.PALETTE.slice(0, 12).map((c) => (
                       <button
                         key={c}
                         type="button"
