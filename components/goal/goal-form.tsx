@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Loader2 } from 'lucide-react';
 import { ResetPeriod, GoalType } from '@/lib/types/prisma-enums';
+import { IconEmojiPicker, RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 import { HexColorPicker } from 'react-colorful';
 import { AVATAR_COLORS } from '@/lib/constants/theme';
 
@@ -29,9 +30,28 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
   const [resetDay, setResetDay] = useState<number | undefined>();
   const [icon, setIcon] = useState<string>('🎯');
   const [color, setColor] = useState<string>(AVATAR_COLORS.DEFAULT);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Close pickers when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
+        setShowColorPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (goal) {
@@ -184,50 +204,40 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
-            {/* Icon/Emoji and Color Picker */}
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-              <div className="flex-1">
-                <Label htmlFor="icon">Icon/Emoji *</Label>
-                <Input
-                  id="icon"
-                  value={icon}
-                  onChange={(e) => setIcon(e.target.value)}
-                  placeholder="🎯"
-                  maxLength={2}
+            {/* Icon and Name - Same row like Routine Form */}
+            <div className="grid grid-cols-12 gap-3">
+              <div className="col-span-2 relative">
+                <Label htmlFor="emoji">Icon</Label>
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center text-2xl hover:bg-gray-50 transition-colors"
                   disabled={isPending}
-                  className="mt-2 text-2xl text-center"
-                />
-                <p className="text-xs text-gray-500 mt-1">Enter an emoji</p>
-              </div>
-              <div className="flex-1">
-                <Label>Color *</Label>
-                <div className="mt-2 space-y-2">
-                  <HexColorPicker color={color} onChange={setColor} />
-                  <div className="flex gap-1 flex-wrap">
-                    {AVATAR_COLORS.PALETTE.slice(0, 12).map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        className="w-6 h-6 rounded-full border-2 border-gray-300 hover:scale-110 transition-transform"
-                        style={{ backgroundColor: c }}
-                        onClick={() => setColor(c)}
-                        disabled={isPending}
-                      />
-                    ))}
+                >
+                  <RenderIconEmoji value={icon || '🎯'} className="h-6 w-6" />
+                </button>
+                {showEmojiPicker && (
+                  <div ref={emojiPickerRef} className="absolute z-50 top-full mt-2 left-0">
+                    <IconEmojiPicker
+                      selectedValue={icon || '🎯'}
+                      onSelect={setIcon}
+                      onClose={() => setShowEmojiPicker(false)}
+                    />
                   </div>
-                </div>
+                )}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Goal Name *</Label>
-              <Input
-                id="name"
-                placeholder="e.g., Complete 50 tasks this week"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isPending}
-              />
+              <div className="col-span-10">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  maxLength={100}
+                  placeholder="Complete 50 tasks this week"
+                  disabled={isPending}
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -239,6 +249,50 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isPending}
               />
+            </div>
+
+            {/* Color Picker - Same style as Routine Form */}
+            <div className="relative">
+              <Label>Border Color</Label>
+              <button
+                type="button"
+                onClick={() => setShowColorPicker(!showColorPicker)}
+                className="mt-2 w-full h-10 rounded-md border border-gray-300 flex items-center gap-3 px-3 hover:bg-gray-50 transition-colors"
+                disabled={isPending}
+              >
+                <div
+                  className="w-6 h-6 rounded-full border-2 border-gray-300"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="text-sm text-gray-700">{color}</span>
+              </button>
+              {showColorPicker && (
+                <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border max-h-[500px] overflow-y-auto">
+                  <HexColorPicker color={color} onChange={setColor} />
+                  <div className="mt-3 pt-3 border-t space-y-1">
+                    {AVATAR_COLORS.GROUPS.map((group) => (
+                      <div key={group.label} className="grid grid-cols-9 gap-0.5">
+                        {group.colors.map((presetColor) => (
+                          <button
+                            key={presetColor}
+                            type="button"
+                            onClick={() => {
+                              setColor(presetColor);
+                              setShowColorPicker(false);
+                            }}
+                            className="w-7 h-7 rounded-md border-2 hover:scale-110 transition-transform"
+                            style={{
+                              backgroundColor: presetColor,
+                              borderColor: color === presetColor ? '#000' : '#e5e7eb'
+                            }}
+                            title={presetColor}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
