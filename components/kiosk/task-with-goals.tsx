@@ -23,7 +23,9 @@ export function TaskWithGoals({ taskId, children }: TaskWithGoalsProps) {
   return (
     <div>
       {children}
-      {goals && goals.length > 0 && <GoalProgressIndicator goals={goals} />}
+      {goals && goals.length > 0 && (
+        <GoalProgressIndicator goals={goals} compact={true} />
+      )}
     </div>
   );
 }

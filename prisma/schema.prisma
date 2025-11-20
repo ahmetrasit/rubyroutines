@@ -368,6 +368,11 @@ model Goal {
   period                  ResetPeriod  @default(WEEKLY)
   resetDay                Int?
 
+  // Simple Goal Configuration
+  simpleCondition         String?      // 'complete' or 'not_complete' for SIMPLE tasks
+  comparisonOperator      String?      // 'gte' or 'lte' for comparison
+  comparisonValue         Float?       // Value to compare against for MULTI/PROGRESS tasks
+
   // Goal Scope (Phase 1 - Simple)
   personIds               String[]     @default([])
   groupIds                String[]     @default([])

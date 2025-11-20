@@ -26,6 +26,11 @@ export const createGoalSchema = z.object({
 
   // Task links
   taskIds: z.array(idValidator).optional().default([]),
+
+  // Simple Goal Configuration
+  simpleCondition: z.enum(['complete', 'not_complete']).optional(),
+  comparisonOperator: z.enum(['gte', 'lte']).optional(),
+  comparisonValue: z.number().positive().optional(),
 });
 
 export const updateGoalSchema = z.object({
@@ -48,6 +53,11 @@ export const updateGoalSchema = z.object({
 
   // Task links
   taskIds: z.array(idValidator).optional(),
+
+  // Simple Goal Configuration
+  simpleCondition: z.enum(['complete', 'not_complete']).optional(),
+  comparisonOperator: z.enum(['gte', 'lte']).optional(),
+  comparisonValue: z.number().positive().optional(),
 });
 
 export const deleteGoalSchema = z.object({

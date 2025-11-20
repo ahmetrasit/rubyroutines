@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../init';
 import { ResetPeriod, EntityStatus, GoalType } from '@/lib/types/prisma-enums';
 import { calculateGoalProgress, calculateGoalProgressBatch } from '@/lib/services/goal-progress';
+import { calculateGoalProgressEnhanced, calculateGoalProgressBatchEnhanced } from '@/lib/services/goal-progress-enhanced';
 import { checkTierLimit, mapDatabaseLimitsToComponentFormat } from '@/lib/services/tier-limits';
 import { TRPCError } from '@trpc/server';
 import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
@@ -73,8 +74,9 @@ export const goalRouter = router({
       });
 
       // Calculate progress for all goals in one batch (avoids N+1 query problem)
+      // Use enhanced calculation for simple goals
       const goalIds = goals.map((g) => g.id);
-      const progressMap = await calculateGoalProgressBatch(goalIds);
+      const progressMap = await calculateGoalProgressBatchEnhanced(goalIds);
 
       const goalsWithProgress = goals.map((goal) => ({
         ...goal,
@@ -122,7 +124,7 @@ export const goalRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
 
-      const progress = await calculateGoalProgress(goal.id);
+      const progress = await calculateGoalProgressEnhanced(goal.id);
 
       return {
         ...goal,
@@ -168,7 +170,10 @@ export const goalRouter = router({
           period: input.period,
           resetDay: input.resetDay,
           personIds: input.personIds,
-          groupIds: input.groupIds
+          groupIds: input.groupIds,
+          simpleCondition: input.simpleCondition,
+          comparisonOperator: input.comparisonOperator,
+          comparisonValue: input.comparisonValue
         }
       });
 
@@ -547,8 +552,9 @@ export const goalRouter = router({
         .map((link: any) => link.goal);
 
       // Calculate progress for all goals in one batch (avoids N+1 query problem)
+      // Use enhanced calculation for simple goals
       const goalIds = goals.map((g: any) => g.id);
-      const progressMap = await calculateGoalProgressBatch(goalIds);
+      const progressMap = await calculateGoalProgressBatchEnhanced(goalIds);
 
       const goalsWithProgress = goals.map((goal: any) => ({
         ...goal,
@@ -584,8 +590,9 @@ export const goalRouter = router({
         .map((link: any) => link.goal);
 
       // Calculate progress for all goals in one batch (avoids N+1 query problem)
+      // Use enhanced calculation for simple goals
       const goalIds = goals.map((g: any) => g.id);
-      const progressMap = await calculateGoalProgressBatch(goalIds);
+      const progressMap = await calculateGoalProgressBatchEnhanced(goalIds);
 
       const goalsWithProgress = goals.map((goal: any) => ({
         ...goal,
