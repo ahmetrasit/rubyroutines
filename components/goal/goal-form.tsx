@@ -264,13 +264,15 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
 
       if (selectedTask && selectedTask.type === 'SIMPLE') {
         // For SIMPLE tasks with simple condition
-        // Set type based on condition:
-        // - "is complete" means we want completion (COMPLETION_COUNT with target 1)
-        // - "is not complete" means we want non-completion (can use VALUE_BASED with target 0)
+        // IMPORTANT: Target must always be positive (backend validation requirement)
+        // The simpleCondition field determines the actual logic:
+        // - "complete": Goal is met when task IS completed
+        // - "not_complete": Goal is met when task IS NOT completed
+        // The target value is just a placeholder to pass validation
         data.type = GoalType.COMPLETION_COUNT;
-        data.target = simpleCondition === 'complete' ? 1 : 0;
+        data.target = 1; // Always use positive value to pass backend validation
         data.period = ResetPeriod.DAILY; // Default period for simple tasks
-        data.simpleCondition = simpleCondition; // Store the condition for reference
+        data.simpleCondition = simpleCondition; // Backend uses this to determine the actual logic
       } else {
         // For MULTIPLE_CHECKIN or PROGRESS tasks
         // The goal is binary (met or not met) based on comparison
