@@ -247,6 +247,11 @@ export function TeacherBulkCheckin({
       // Refetch to sync with server state
       await refetchStudentTasks();
 
+      // Invalidate goal queries for real-time progress updates
+      utils.goal.list.invalidate();
+      utils.goal.getGoalsForTask.invalidate();
+      utils.goal.getGoalsForRoutine.invalidate();
+
       toast({
         title: 'Success',
         description: 'Task completed!',
@@ -327,6 +332,11 @@ export function TeacherBulkCheckin({
     onSuccess: async () => {
       // Refetch to sync with server state
       await refetchStudentTasks();
+
+      // Invalidate goal queries for real-time progress updates
+      utils.goal.list.invalidate();
+      utils.goal.getGoalsForTask.invalidate();
+      utils.goal.getGoalsForRoutine.invalidate();
 
       toast({
         title: 'Success',

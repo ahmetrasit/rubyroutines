@@ -96,6 +96,8 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
       await utils.person.getById.refetch({ id: personId });
       // Invalidate goal queries to update progress bars in real-time
       await utils.goal.list.invalidate();
+      await utils.goal.getGoalsForTask.invalidate();
+      await utils.goal.getGoalsForRoutine.invalidate();
       toast({
         title: 'Success',
         description: 'Task completed!',
@@ -116,6 +118,8 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
       await utils.person.getById.refetch({ id: personId });
       // Invalidate goal queries to update progress bars in real-time
       await utils.goal.list.invalidate();
+      await utils.goal.getGoalsForTask.invalidate();
+      await utils.goal.getGoalsForRoutine.invalidate();
       toast({
         title: 'Success',
         description: 'Task undone',

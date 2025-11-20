@@ -98,6 +98,10 @@ export default function KioskTasksPage() {
   const completeMutation = trpc.kiosk.completeTask.useMutation({
     onSuccess: () => {
       utils.kiosk.getPersonTasks.invalidate();
+      // Invalidate goal queries for real-time progress updates
+      utils.goal.list.invalidate();
+      utils.goal.getGoalsForTask.invalidate();
+      utils.goal.getGoalsForRoutine.invalidate();
       setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
     },
     onError: (error) => {
@@ -117,6 +121,10 @@ export default function KioskTasksPage() {
         variant: 'success',
       });
       utils.kiosk.getPersonTasks.invalidate();
+      // Invalidate goal queries for real-time progress updates
+      utils.goal.list.invalidate();
+      utils.goal.getGoalsForTask.invalidate();
+      utils.goal.getGoalsForRoutine.invalidate();
       setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
     },
     onError: (error) => {
