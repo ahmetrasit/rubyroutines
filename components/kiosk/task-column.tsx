@@ -6,6 +6,7 @@ import { Check, Plus, Undo2 } from 'lucide-react';
 import { TaskType } from '@/lib/types/prisma-enums';
 import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
 import { useState, useEffect } from 'react';
+import { TaskWithGoals } from './task-with-goals';
 
 interface Task {
   id: string;
@@ -237,15 +238,17 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             key={task.id}
             className="bg-white rounded-xl shadow-md p-3 hover:shadow-lg transition-shadow"
           >
-            {task.type === TaskType.PROGRESS && (
-              <div className="mb-2">
-                <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
-                {task.description && (
-                  <p className="text-xs text-gray-600 mt-1">{task.description}</p>
-                )}
-              </div>
-            )}
-            {renderTaskButton(task)}
+            <TaskWithGoals taskId={task.id}>
+              {task.type === TaskType.PROGRESS && (
+                <div className="mb-2">
+                  <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
+                  {task.description && (
+                    <p className="text-xs text-gray-600 mt-1">{task.description}</p>
+                  )}
+                </div>
+              )}
+              {renderTaskButton(task)}
+            </TaskWithGoals>
           </div>
         ))}
 
@@ -260,15 +263,17 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                 key={task.id}
                 className="bg-white rounded-xl shadow-md p-3 transition-shadow"
               >
-                {task.type === TaskType.PROGRESS && (
-                  <div className="mb-2">
-                    <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
-                    {task.description && (
-                      <p className="text-xs text-gray-600 mt-1">{task.description}</p>
-                    )}
-                  </div>
-                )}
-                {renderTaskButton(task)}
+                <TaskWithGoals taskId={task.id}>
+                  {task.type === TaskType.PROGRESS && (
+                    <div className="mb-2">
+                      <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
+                      {task.description && (
+                        <p className="text-xs text-gray-600 mt-1">{task.description}</p>
+                      )}
+                    </div>
+                  )}
+                  {renderTaskButton(task)}
+                </TaskWithGoals>
               </div>
             ))}
           </>
