@@ -47,6 +47,22 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+
+  // Fetch routines to get tasks for linking
+  const { data: routines } = trpc.routine.list.useQuery(
+    { roleId, personId },
+    { enabled: !!roleId }
+  );
+
+  // Extract all tasks from routines
+  const availableTasks = routines?.flatMap(routine =>
+    routine.tasks?.map((task: any) => ({
+      ...task,
+      routineName: routine.name
+    })) || []
+  ) || [];
+
   // Close pickers when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -72,11 +88,36 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
       setResetDay(goal.resetDay);
       if (goal.icon) setIcon(goal.icon);
       if (goal.color) setColor(goal.color);
-      if (goal.taskLinks) {
-        setSelectedTaskIds(goal.taskLinks.map((link: any) => link.taskId));
+
+      // Handle simple goal configuration
+      if (goal.simpleCondition !== undefined) {
+        setGoalType('simple');
+        setSimpleCondition(goal.simpleCondition);
+      }
+      if (goal.comparisonOperator !== undefined) {
+        setComparisonOperator(goal.comparisonOperator);
+      }
+
+      // Handle task links
+      if (goal.taskLinks && goal.taskLinks.length > 0) {
+        if (goal.taskLinks.length === 1 && (goal.simpleCondition !== undefined || goal.comparisonOperator !== undefined)) {
+          // Simple goal with single task
+          setGoalType('simple');
+          setSelectedTaskId(goal.taskLinks[0].taskId);
+
+          // For non-SIMPLE tasks, restore the comparison value (not the goal target)
+          const task = availableTasks.find((t: any) => t.id === goal.taskLinks[0].taskId);
+          if (task && task.type !== 'SIMPLE' && goal.comparisonValue !== undefined) {
+            setTargetValue(goal.comparisonValue.toString());
+          }
+        } else {
+          // Complex goal with multiple tasks
+          setGoalType('complex');
+          setSelectedTaskIds(goal.taskLinks.map((link: any) => link.taskId));
+        }
       }
     }
-  }, [goal]);
+  }, [goal, availableTasks]);
 
   const createMutation = trpc.goal.create.useMutation({
     onSuccess: () => {
@@ -122,22 +163,6 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
     { enabled: !!roleId }
   );
 
-  // Fetch routines to get tasks for linking
-  const { data: routines } = trpc.routine.list.useQuery(
-    { roleId, personId },
-    { enabled: !!roleId }
-  );
-
-  // Extract all tasks from routines
-  const availableTasks = routines?.flatMap(routine =>
-    routine.tasks?.map((task: any) => ({
-      ...task,
-      routineName: routine.name
-    })) || []
-  ) || [];
-
-  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -163,13 +188,53 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
       return;
     }
 
-    if (!target || parseFloat(target) <= 0) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid target value',
-        variant: 'destructive',
-      });
-      return;
+    // For simple goals
+    if (goalType === 'simple') {
+      // Must have a task selected
+      if (!selectedTaskId) {
+        toast({
+          title: 'Error',
+          description: 'Please select a task for this goal',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Find the selected task to check its type
+      const selectedTask = availableTasks.find((t: any) => t.id === selectedTaskId);
+
+      // For SIMPLE tasks, we don't need a comparison value
+      // For MULTIPLE_CHECKIN or PROGRESS tasks, we need a comparison value (not a target for the goal)
+      if (selectedTask && selectedTask.type !== 'SIMPLE') {
+        if (!targetValue || parseFloat(targetValue) <= 0) {
+          toast({
+            title: 'Error',
+            description: 'Please enter a valid comparison value',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+    } else {
+      // For complex goals, always need a target value
+      if (!target || parseFloat(target) <= 0) {
+        toast({
+          title: 'Error',
+          description: 'Please enter a valid target value',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Complex goals need at least one task
+      if (selectedTaskIds.length === 0) {
+        toast({
+          title: 'Error',
+          description: 'Please select at least one task for this goal',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     if (!roleId) {
@@ -181,28 +246,49 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
       return;
     }
 
-    if (selectedTaskIds.length === 0) {
-      toast({
-        title: 'Error',
-        description: 'Please select at least one task for this goal',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const data = {
+    // Build the data object based on goal type
+    let data: any = {
       name: name.trim(),
       roleId,
       description: description.trim() || undefined,
-      type,
-      target: parseFloat(target),
-      period,
-      resetDay,
       icon,
       color,
       personIds: personId ? [personId] : [],
-      taskIds: selectedTaskIds,
     };
+
+    if (goalType === 'simple') {
+      const selectedTask = availableTasks.find((t: any) => t.id === selectedTaskId);
+
+      // For simple goals, we use different data structure
+      data.taskIds = [selectedTaskId];
+
+      if (selectedTask && selectedTask.type === 'SIMPLE') {
+        // For SIMPLE tasks with simple condition
+        // Set type based on condition:
+        // - "is complete" means we want completion (COMPLETION_COUNT with target 1)
+        // - "is not complete" means we want non-completion (can use VALUE_BASED with target 0)
+        data.type = GoalType.COMPLETION_COUNT;
+        data.target = simpleCondition === 'complete' ? 1 : 0;
+        data.period = ResetPeriod.DAILY; // Default period for simple tasks
+        data.simpleCondition = simpleCondition; // Store the condition for reference
+      } else {
+        // For MULTIPLE_CHECKIN or PROGRESS tasks
+        // The goal is binary (met or not met) based on comparison
+        // Store the comparison value as metadata, not as the goal's target
+        data.type = GoalType.VALUE_BASED;
+        data.target = 1; // Goal is binary: 1 when condition is met, 0 when not
+        data.period = ResetPeriod.WEEKLY; // Default period
+        data.comparisonOperator = comparisonOperator; // Store the comparison operator (gte/lte)
+        data.comparisonValue = parseFloat(targetValue); // Store the value to compare against
+      }
+    } else {
+      // Complex goal data
+      data.type = type;
+      data.target = parseFloat(target);
+      data.period = period;
+      data.resetDay = resetDay;
+      data.taskIds = selectedTaskIds;
+    }
 
     if (goal) {
       updateMutation.mutate({ id: goal.id, ...data });
@@ -357,7 +443,15 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                           <Label htmlFor="task">Select Task *</Label>
                           <Select
                             value={selectedTaskId}
-                            onValueChange={setSelectedTaskId}
+                            onValueChange={(value) => {
+                              setSelectedTaskId(value);
+                              // Clear target value when switching tasks
+                              // This ensures we don't carry over values between different task types
+                              const newTask = availableTasks.find((t: any) => t.id === value);
+                              if (newTask && newTask.type === 'SIMPLE') {
+                                setTargetValue(''); // Clear target value for SIMPLE tasks
+                              }
+                            }}
                           >
                             <SelectTrigger disabled={isPending}>
                               {selectedTask ? (
@@ -454,7 +548,15 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                           <Label htmlFor="task">Select Task *</Label>
                           <Select
                             value={selectedTaskId}
-                            onValueChange={setSelectedTaskId}
+                            onValueChange={(value) => {
+                              setSelectedTaskId(value);
+                              // Clear target value when switching tasks
+                              // This ensures we don't carry over values between different task types
+                              const newTask = availableTasks.find((t: any) => t.id === value);
+                              if (newTask && newTask.type === 'SIMPLE') {
+                                setTargetValue(''); // Clear target value for SIMPLE tasks
+                              }
+                            }}
                           >
                             <SelectTrigger disabled={isPending}>
                               {selectedTask ? (
@@ -565,7 +667,15 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                     <Label htmlFor="task">Select Task *</Label>
                     <Select
                       value={selectedTaskId}
-                      onValueChange={setSelectedTaskId}
+                      onValueChange={(value) => {
+                        setSelectedTaskId(value);
+                        // Clear target value when switching tasks
+                        // This ensures we don't carry over values between different task types
+                        const newTask = availableTasks.find((t: any) => t.id === value);
+                        if (newTask && newTask.type === 'SIMPLE') {
+                          setTargetValue(''); // Clear target value for SIMPLE tasks
+                        }
+                      }}
                     >
                       <SelectTrigger disabled={isPending}>
                         <SelectValue placeholder="Choose a task" />
