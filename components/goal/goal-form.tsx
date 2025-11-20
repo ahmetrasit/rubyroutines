@@ -434,10 +434,9 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                             onValueChange={(value: 'complete' | 'not_complete') => setSimpleCondition(value)}
                           >
                             <SelectTrigger disabled={isPending}>
-                              <SelectValue>
-                                {simpleCondition === 'complete' ? 'is complete' :
-                                 simpleCondition === 'not_complete' ? 'is not complete' : ''}
-                              </SelectValue>
+                              {simpleCondition === 'complete' ? 'is complete' :
+                               simpleCondition === 'not_complete' ? 'is not complete' :
+                               <SelectValue placeholder="Select condition" />}
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="complete">is complete</SelectItem>
@@ -532,10 +531,9 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                             onValueChange={(value: 'lte' | 'gte') => setComparisonOperator(value)}
                           >
                             <SelectTrigger disabled={isPending}>
-                              <SelectValue>
-                                {comparisonOperator === 'gte' ? '≥' :
-                                 comparisonOperator === 'lte' ? '≤' : ''}
-                              </SelectValue>
+                              {comparisonOperator === 'gte' ? '≥' :
+                               comparisonOperator === 'lte' ? '≤' :
+                               <SelectValue placeholder="Select operator" />}
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="gte">≥</SelectItem>
