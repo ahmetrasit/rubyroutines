@@ -221,16 +221,26 @@ export const PersonCard = memo(function PersonCard({
             </div>
           </div>
 
-          {/* Second row: Goal completion progress bar */}
+          {/* Second row: Goal completion progress bar with segments */}
           <div className="h-6 bg-gray-200 rounded-full overflow-hidden relative">
             {goalCount > 0 ? (
               <>
-                <div
-                  className="h-full bg-blue-500 transition-all"
-                  style={{ width: `${goalProgress}%` }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-medium text-gray-700">
+                {/* Segmented progress bar */}
+                <div className="h-full flex gap-0.5">
+                  {activeGoals.map((goal, index) => (
+                    <div
+                      key={goal.id}
+                      className="flex-1 transition-all"
+                      style={{
+                        backgroundColor: goal.progress?.achieved
+                          ? (goal.color || '#3B82F6') // Use goal's color or default blue
+                          : 'transparent'
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <span className="text-xs font-medium text-gray-700 bg-white/70 px-2 rounded">
                     Goals: {goalsAccomplished}/{goalCount}
                   </span>
                 </div>
