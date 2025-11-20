@@ -36,7 +36,7 @@ export default function ParentDashboard() {
       setInviteCodeFromUrl(inviteCode);
       setShowClaimShareModal(true);
       // Clean up URL by removing the query parameter
-      router.replace('/parent', { scroll: false });
+      router.replace('/parent');
     }
   }, [searchParams, session, router]);
 

@@ -36,7 +36,7 @@ export default function TeacherDashboard() {
       setInviteCodeFromUrl(inviteCode);
       setShowClaimShareModal(true);
       // Clean up URL by removing the query parameter
-      router.replace('/teacher', { scroll: false });
+      router.replace('/teacher');
     }
   }, [searchParams, session, router]);
 
