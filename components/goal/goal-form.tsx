@@ -213,7 +213,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
-            {/* Icon and Name - Same row like Routine Form */}
+            {/* Icon, Color, and Name - First row */}
             <div className="grid grid-cols-12 gap-3">
               <div className="col-span-2 relative">
                 <Label htmlFor="emoji">Icon</Label>
@@ -235,7 +235,48 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                   </div>
                 )}
               </div>
-              <div className="col-span-10">
+              <div className="col-span-2 relative">
+                <Label>Color</Label>
+                <button
+                  type="button"
+                  onClick={() => setShowColorPicker(!showColorPicker)}
+                  className="w-full h-10 rounded-md border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  disabled={isPending}
+                >
+                  <div
+                    className="w-6 h-6 rounded-full border-2 border-gray-300"
+                    style={{ backgroundColor: color }}
+                  />
+                </button>
+                {showColorPicker && (
+                  <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border max-h-[500px] overflow-y-auto">
+                    <HexColorPicker color={color} onChange={setColor} />
+                    <div className="mt-3 pt-3 border-t space-y-1">
+                      {AVATAR_COLORS.GROUPS.map((group) => (
+                        <div key={group.label} className="grid grid-cols-9 gap-0.5">
+                          {group.colors.map((presetColor) => (
+                            <button
+                              key={presetColor}
+                              type="button"
+                              onClick={() => {
+                                setColor(presetColor);
+                                setShowColorPicker(false);
+                              }}
+                              className="w-7 h-7 rounded-md border-2 hover:scale-110 transition-transform"
+                              style={{
+                                backgroundColor: presetColor,
+                                borderColor: color === presetColor ? '#000' : '#e5e7eb'
+                              }}
+                              title={presetColor}
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="col-span-8">
                 <Label htmlFor="name">Name *</Label>
                 <Input
                   id="name"
@@ -258,50 +299,6 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isPending}
               />
-            </div>
-
-            {/* Color Picker - Same style as Routine Form */}
-            <div className="relative">
-              <Label>Border Color</Label>
-              <button
-                type="button"
-                onClick={() => setShowColorPicker(!showColorPicker)}
-                className="mt-2 w-full h-10 rounded-md border border-gray-300 flex items-center gap-3 px-3 hover:bg-gray-50 transition-colors"
-                disabled={isPending}
-              >
-                <div
-                  className="w-6 h-6 rounded-full border-2 border-gray-300"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="text-sm text-gray-700">{color}</span>
-              </button>
-              {showColorPicker && (
-                <div ref={colorPickerRef} className="absolute z-50 top-full mt-2 p-3 bg-white rounded-lg shadow-lg border max-h-[500px] overflow-y-auto">
-                  <HexColorPicker color={color} onChange={setColor} />
-                  <div className="mt-3 pt-3 border-t space-y-1">
-                    {AVATAR_COLORS.GROUPS.map((group) => (
-                      <div key={group.label} className="grid grid-cols-9 gap-0.5">
-                        {group.colors.map((presetColor) => (
-                          <button
-                            key={presetColor}
-                            type="button"
-                            onClick={() => {
-                              setColor(presetColor);
-                              setShowColorPicker(false);
-                            }}
-                            className="w-7 h-7 rounded-md border-2 hover:scale-110 transition-transform"
-                            style={{
-                              backgroundColor: presetColor,
-                              borderColor: color === presetColor ? '#000' : '#e5e7eb'
-                            }}
-                            title={presetColor}
-                          />
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="space-y-2">
