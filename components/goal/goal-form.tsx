@@ -271,7 +271,8 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
         // The target value is just a placeholder to pass validation
         data.type = GoalType.COMPLETION_COUNT;
         data.target = 1; // Always use positive value to pass backend validation
-        data.period = ResetPeriod.DAILY; // Default period for simple tasks
+        data.period = period; // Use user-selected period
+        data.resetDay = resetDay; // Include reset day if applicable
         data.simpleCondition = simpleCondition; // Backend uses this to determine the actual logic
       } else {
         // For MULTIPLE_CHECKIN or PROGRESS tasks
@@ -279,7 +280,8 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
         // Store the comparison value as metadata, not as the goal's target
         data.type = GoalType.VALUE_BASED;
         data.target = 1; // Goal is binary: 1 when condition is met, 0 when not
-        data.period = ResetPeriod.WEEKLY; // Default period
+        data.period = period; // Use user-selected period
+        data.resetDay = resetDay; // Include reset day if applicable
         data.comparisonOperator = comparisonOperator; // Store the comparison operator (gte/lte)
         data.comparisonValue = parseFloat(targetValue); // Store the value to compare against
       }
@@ -432,6 +434,67 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
             {/* Row 4: Simple Goal Configuration */}
             {goalType === 'simple' && (
               <div className="space-y-3 border-t pt-4">
+                {/* Period Selection for Simple Goals */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="simple-period">Period *</Label>
+                    <Select
+                      value={period}
+                      onValueChange={(value) => setPeriod(value as ResetPeriod)}
+                    >
+                      <SelectTrigger disabled={isPending}>
+                        <SelectValue placeholder="Select period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ResetPeriod.DAILY}>Daily</SelectItem>
+                        <SelectItem value={ResetPeriod.WEEKLY}>Weekly</SelectItem>
+                        <SelectItem value={ResetPeriod.MONTHLY}>Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Reset Day for Weekly Period */}
+                  {period === ResetPeriod.WEEKLY && (
+                    <div className="space-y-2">
+                      <Label htmlFor="resetDay">Reset Day</Label>
+                      <Select
+                        value={resetDay?.toString() || '0'}
+                        onValueChange={(value) => setResetDay(parseInt(value))}
+                      >
+                        <SelectTrigger disabled={isPending}>
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Sunday</SelectItem>
+                          <SelectItem value="1">Monday</SelectItem>
+                          <SelectItem value="2">Tuesday</SelectItem>
+                          <SelectItem value="3">Wednesday</SelectItem>
+                          <SelectItem value="4">Thursday</SelectItem>
+                          <SelectItem value="5">Friday</SelectItem>
+                          <SelectItem value="6">Saturday</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Reset Day for Monthly Period */}
+                  {period === ResetPeriod.MONTHLY && (
+                    <div className="space-y-2">
+                      <Label htmlFor="resetDay">Reset Day of Month</Label>
+                      <Input
+                        id="resetDay"
+                        type="number"
+                        min="1"
+                        max="31"
+                        placeholder="1-31"
+                        value={resetDay?.toString() || '1'}
+                        onChange={(e) => setResetDay(parseInt(e.target.value))}
+                        disabled={isPending}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Task Selection and Condition/Operator/Value - All on same row */}
                 {selectedTaskId && (() => {
                   const selectedTask = availableTasks.find((t: any) => t.id === selectedTaskId);
@@ -450,8 +513,15 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                               // Clear target value when switching tasks
                               // This ensures we don't carry over values between different task types
                               const newTask = availableTasks.find((t: any) => t.id === value);
-                              if (newTask && newTask.type === 'SIMPLE') {
-                                setTargetValue(''); // Clear target value for SIMPLE tasks
+                              if (newTask) {
+                                if (newTask.type === 'SIMPLE') {
+                                  setTargetValue(''); // Clear target value for SIMPLE tasks
+                                  // Set intelligent default period for SIMPLE tasks
+                                  if (!goal) setPeriod(ResetPeriod.DAILY);
+                                } else {
+                                  // Set intelligent default period for MULTI/PROGRESS tasks
+                                  if (!goal) setPeriod(ResetPeriod.WEEKLY);
+                                }
                               }
                             }}
                           >
@@ -561,8 +631,15 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                               // Clear target value when switching tasks
                               // This ensures we don't carry over values between different task types
                               const newTask = availableTasks.find((t: any) => t.id === value);
-                              if (newTask && newTask.type === 'SIMPLE') {
-                                setTargetValue(''); // Clear target value for SIMPLE tasks
+                              if (newTask) {
+                                if (newTask.type === 'SIMPLE') {
+                                  setTargetValue(''); // Clear target value for SIMPLE tasks
+                                  // Set intelligent default period for SIMPLE tasks
+                                  if (!goal) setPeriod(ResetPeriod.DAILY);
+                                } else {
+                                  // Set intelligent default period for MULTI/PROGRESS tasks
+                                  if (!goal) setPeriod(ResetPeriod.WEEKLY);
+                                }
                               }
                             }}
                           >
@@ -686,8 +763,15 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                         // Clear target value when switching tasks
                         // This ensures we don't carry over values between different task types
                         const newTask = availableTasks.find((t: any) => t.id === value);
-                        if (newTask && newTask.type === 'SIMPLE') {
-                          setTargetValue(''); // Clear target value for SIMPLE tasks
+                        if (newTask) {
+                          if (newTask.type === 'SIMPLE') {
+                            setTargetValue(''); // Clear target value for SIMPLE tasks
+                            // Set intelligent default period for SIMPLE tasks
+                            if (!goal) setPeriod(ResetPeriod.DAILY);
+                          } else {
+                            // Set intelligent default period for MULTI/PROGRESS tasks
+                            if (!goal) setPeriod(ResetPeriod.WEEKLY);
+                          }
                         }
                       }}
                     >
