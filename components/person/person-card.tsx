@@ -225,19 +225,26 @@ export const PersonCard = memo(function PersonCard({
           <div className="h-6 bg-gray-200 rounded-full overflow-hidden relative">
             {goalCount > 0 ? (
               <>
-                {/* Segmented progress bar */}
+                {/* Segmented progress bar - completed goals first (from left) */}
                 <div className="h-full flex gap-0.5">
-                  {activeGoals.map((goal, index) => (
-                    <div
-                      key={goal.id}
-                      className="flex-1 transition-all"
-                      style={{
-                        backgroundColor: goal.progress?.achieved
-                          ? (goal.color || '#3B82F6') // Use goal's color or default blue
-                          : 'transparent'
-                      }}
-                    />
-                  ))}
+                  {[...activeGoals]
+                    .sort((a, b) => {
+                      // Sort completed goals first
+                      const aCompleted = a.progress?.achieved ? 1 : 0;
+                      const bCompleted = b.progress?.achieved ? 1 : 0;
+                      return bCompleted - aCompleted;
+                    })
+                    .map((goal, index) => (
+                      <div
+                        key={goal.id}
+                        className="flex-1 transition-all"
+                        style={{
+                          backgroundColor: goal.progress?.achieved
+                            ? color // Use person's card color
+                            : 'transparent'
+                        }}
+                      />
+                    ))}
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <span className="text-xs font-medium text-gray-700 bg-white/70 px-2 rounded">
