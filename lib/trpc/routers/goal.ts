@@ -539,7 +539,30 @@ export const goalRouter = router({
         include: {
           goal: {
             include: {
-              role: true
+              role: true,
+              // Include all the data needed for progress calculation
+              taskLinks: {
+                include: {
+                  task: {
+                    include: {
+                      completions: true,
+                      routine: true
+                    }
+                  }
+                }
+              },
+              routineLinks: {
+                include: {
+                  routine: {
+                    include: {
+                      tasks: {
+                        where: { status: 'ACTIVE' },
+                        include: { completions: true }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -580,7 +603,30 @@ export const goalRouter = router({
         include: {
           goal: {
             include: {
-              role: true
+              role: true,
+              // Include all the data needed for progress calculation
+              taskLinks: {
+                include: {
+                  task: {
+                    include: {
+                      completions: true,
+                      routine: true
+                    }
+                  }
+                }
+              },
+              routineLinks: {
+                include: {
+                  routine: {
+                    include: {
+                      tasks: {
+                        where: { status: 'ACTIVE' },
+                        include: { completions: true }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }

@@ -147,13 +147,13 @@ function calculateSimpleGoalProgress(goal: GoalWithSimpleConfig): GoalProgress {
         achieved = taskValue <= goal.comparisonValue;
       }
 
-      current = achieved ? 1 : 0;
+      current = taskValue; // Use actual task value, not binary
     }
   }
 
   return {
     current,
-    target: 1, // Simple goals are binary
+    target: goal.comparisonValue || 1, // Use comparisonValue as target for MULTI/PROGRESS goals
     percentage,
     achieved
   };
