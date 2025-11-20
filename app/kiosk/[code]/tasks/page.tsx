@@ -67,6 +67,9 @@ export default function KioskTasksPage() {
     {
       enabled: !!sessionData && !!personId,
       refetchInterval: false, // Disable auto refetch, using optimized polling instead
+      staleTime: 30 * 1000, // 30 seconds - kiosk data needs more frequent updates
+      cacheTime: 2 * 60 * 1000, // 2 minutes cache for kiosk
+      refetchOnWindowFocus: false, // Already handled by polling
     }
   );
 

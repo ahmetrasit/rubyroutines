@@ -45,13 +45,21 @@ export function TeacherBulkCheckin({
   // Get classroom members
   const { data: classroom, isLoading: classroomLoading } = trpc.group.getById.useQuery(
     { id: classroomId },
-    { enabled: isOpen && !!classroomId }
+    {
+      enabled: isOpen && !!classroomId,
+      staleTime: 5 * 60 * 1000, // 5 minutes - classroom data rarely changes
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    }
   );
 
   // Get all persons for this role
   const { data: persons, isLoading: personsLoading } = trpc.person.list.useQuery(
     { roleId },
-    { enabled: isOpen && !!roleId }
+    {
+      enabled: isOpen && !!roleId,
+      staleTime: 5 * 60 * 1000, // 5 minutes - person data rarely changes
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    }
   );
 
   const isLoading = classroomLoading || personsLoading;
