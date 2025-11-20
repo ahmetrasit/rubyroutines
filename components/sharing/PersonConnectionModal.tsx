@@ -167,11 +167,6 @@ function ShareTab({
       payload.recipientEmail = recipientEmail.trim();
     }
 
-    console.log('Generating invite with payload:', payload);
-    console.log('roleId value:', roleId);
-    console.log('person.id value:', person.id);
-    console.log('selectedRoutines:', selectedRoutines);
-
     // Validate roleId
     if (!roleId) {
       console.error('roleId is missing!');

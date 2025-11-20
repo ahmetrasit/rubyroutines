@@ -103,10 +103,6 @@ export function validateEnv(): void {
   // Additional validations
   validateTwoFactorKey();
   validateUrls();
-
-  if (process.env.NODE_ENV !== 'test') {
-    console.log('✅ Environment variables validated successfully');
-  }
 }
 
 /**
