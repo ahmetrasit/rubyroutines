@@ -538,7 +538,6 @@ export const goalRouter = router({
         where: { taskId: input.taskId },
         include: {
           goal: {
-            where: { status: 'ACTIVE' },
             include: {
               role: true
             }
@@ -546,9 +545,13 @@ export const goalRouter = router({
         }
       });
 
-      // Filter out null goals and verify user access
+      // Filter out null goals, check for ACTIVE status, and verify user access
       const goals = goalLinks
-        .filter((link: any) => link.goal && link.goal.role.userId === ctx.user.id)
+        .filter((link: any) =>
+          link.goal &&
+          link.goal.status === 'ACTIVE' &&
+          link.goal.role.userId === ctx.user.id
+        )
         .map((link: any) => link.goal);
 
       // Calculate progress for all goals in one batch (avoids N+1 query problem)
@@ -576,7 +579,6 @@ export const goalRouter = router({
         where: { routineId: input.routineId },
         include: {
           goal: {
-            where: { status: 'ACTIVE' },
             include: {
               role: true
             }
@@ -584,9 +586,13 @@ export const goalRouter = router({
         }
       });
 
-      // Filter out null goals and verify user access
+      // Filter out null goals, check for ACTIVE status, and verify user access
       const goals = goalLinks
-        .filter((link: any) => link.goal && link.goal.role.userId === ctx.user.id)
+        .filter((link: any) =>
+          link.goal &&
+          link.goal.status === 'ACTIVE' &&
+          link.goal.role.userId === ctx.user.id
+        )
         .map((link: any) => link.goal);
 
       // Calculate progress for all goals in one batch (avoids N+1 query problem)
