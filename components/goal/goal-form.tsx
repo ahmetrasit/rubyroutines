@@ -172,6 +172,15 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
       return;
     }
 
+    if (selectedTaskIds.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Please select at least one task for this goal',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const data = {
       name: name.trim(),
       roleId,
@@ -404,9 +413,9 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
             {/* Linked Tasks */}
             {availableTasks.length > 0 && (
               <div className="space-y-2 border-t pt-4">
-                <Label>Link Tasks (Optional)</Label>
+                <Label>Link Tasks *</Label>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Select tasks that contribute to this goal
+                  Select at least one task that contributes to this goal
                 </p>
                 <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-2">
                   {availableTasks.map((task: any) => (
@@ -427,12 +436,31 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                         disabled={isPending}
                         className="rounded"
                       />
-                      <span className="flex-1 text-sm">
-                        {task.name}
-                        <span className="text-xs text-gray-500 ml-1">
+                      <div className="flex-1 flex items-center gap-2">
+                        <span className="text-sm">
+                          {task.name}
+                        </span>
+                        <span
+                          className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                          style={{
+                            backgroundColor:
+                              task.type === 'SIMPLE' ? '#E0F2FE' :
+                              task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                              '#FEF3C7',
+                            color:
+                              task.type === 'SIMPLE' ? '#0369A1' :
+                              task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                              '#B45309'
+                          }}
+                        >
+                          {task.type === 'SIMPLE' ? 'Simple' :
+                           task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                           'Progress'}
+                        </span>
+                        <span className="text-xs text-gray-500">
                           ({task.routineName})
                         </span>
-                      </span>
+                      </div>
                     </label>
                   ))}
                 </div>
