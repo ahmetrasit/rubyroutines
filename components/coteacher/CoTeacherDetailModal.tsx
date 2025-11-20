@@ -121,7 +121,6 @@ export function CoTeacherDetailModal({
                     person={person}
                     onClick={() => {
                       // Read-only view - could navigate to person detail in read-only mode
-                      console.log('View shared student details:', person);
                     }}
                   />
                 ))}

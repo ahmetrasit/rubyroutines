@@ -37,30 +37,58 @@ export function GoalAnalyticsChart({ roleId, personId, groupId }: GoalAnalyticsC
   const [chartType, setChartType] = useState<'completion' | 'distribution' | 'streak' | 'timeline'>('completion');
 
   // Fetch analytics data
-  const { data: analyticsData, isLoading } = trpc.analytics.goalAchievementRate.useQuery({
-    roleId,
-    personId,
-    groupId,
-    period,
-  });
+  const { data: analyticsData, isLoading } = trpc.analytics.goalAchievementRate.useQuery(
+    {
+      roleId,
+      personId,
+      groupId,
+      period,
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes - analytics data can be slightly stale
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      refetchOnWindowFocus: false,
+    }
+  );
 
-  const { data: distributionData } = trpc.analytics.goalTypeDistribution.useQuery({
-    roleId,
-    personId,
-    groupId,
-  });
+  const { data: distributionData } = trpc.analytics.goalTypeDistribution.useQuery(
+    {
+      roleId,
+      personId,
+      groupId,
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      refetchOnWindowFocus: false,
+    }
+  );
 
-  const { data: streakData } = trpc.analytics.streakLeaderboard.useQuery({
-    roleId,
-    limit: 10,
-  });
+  const { data: streakData } = trpc.analytics.streakLeaderboard.useQuery(
+    {
+      roleId,
+      limit: 10,
+    },
+    {
+      staleTime: 3 * 60 * 1000, // 3 minutes - streaks update more frequently
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      refetchOnWindowFocus: false,
+    }
+  );
 
-  const { data: trendsData } = trpc.analytics.goalTrends.useQuery({
-    roleId,
-    personId,
-    groupId,
-    period,
-  });
+  const { data: trendsData } = trpc.analytics.goalTrends.useQuery(
+    {
+      roleId,
+      personId,
+      groupId,
+      period,
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      refetchOnWindowFocus: false,
+    }
+  );
 
   if (isLoading) {
     return (

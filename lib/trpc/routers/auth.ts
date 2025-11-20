@@ -81,25 +81,53 @@ export const authRouter = router({
         });
       }
 
-      // Create user with default roles, persons, and routines
+      // Create user with default roles, persons, and routines in a transaction
       try {
-        await ctx.prisma.user.create({
-          data: {
-            id: data.user.id,
-            email: input.email,
+        await ctx.prisma.$transaction(async (tx) => {
+          // Create the user
+          await tx.user.create({
+            data: {
+              id: data.user.id,
+              email: input.email,
+              name: input.name,
+            },
+          });
+
+          // Create default roles, persons, and routines
+          await createDefaultRoles({
+            userId: data.user.id,
             name: input.name,
-          },
+            prisma: tx, // Pass transaction context
+          });
         });
 
-        await createDefaultRoles({
+        logger.info('Successfully created user with default data', {
           userId: data.user.id,
-          name: input.name,
-          prisma: ctx.prisma,
+          email: input.email
         });
       } catch (dbError) {
         // User might already exist - ensure they have roles
-        logger.debug('User already exists, ensuring roles', { userId: data.user.id, error: dbError });
-        await ensureUserHasRoles(data.user.id, ctx.prisma);
+        logger.debug('User creation failed, checking if user exists', {
+          userId: data.user.id,
+          error: dbError
+        });
+
+        // Check if user exists
+        const existingUser = await ctx.prisma.user.findUnique({
+          where: { id: data.user.id }
+        });
+
+        if (existingUser) {
+          // User exists, ensure they have roles
+          await ensureUserHasRoles(data.user.id, ctx.prisma);
+        } else {
+          // Something went wrong, re-throw the error
+          logger.error('Failed to create user and default data', {
+            userId: data.user.id,
+            error: dbError
+          });
+          throw dbError;
+        }
       }
 
       // Log successful signup

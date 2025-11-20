@@ -59,7 +59,11 @@ export function useAuthGuard(
   } = options;
 
   const router = useRouter();
-  const { data: session, isLoading } = trpc.auth.getSession.useQuery();
+  const { data: session, isLoading } = trpc.auth.getSession.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000, // 5 minutes - auth session rarely changes
+    cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    refetchOnWindowFocus: false, // Don't refetch auth on every focus
+  });
 
   const isAuthenticated = !!session?.user;
   const user = session?.user || null;

@@ -18,13 +18,21 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
+            // Cache configuration
+            staleTime: 60 * 1000, // 1 minute default - data considered fresh for this period
+            cacheTime: 5 * 60 * 1000, // 5 minutes - keep in cache after unmount
+            refetchOnWindowFocus: false, // Don't refetch on every tab focus
+            refetchOnReconnect: 'always', // Always refetch on reconnect
+            refetchInterval: false, // No automatic polling by default
+
+            // Retry configuration
             retry: (failureCount, error: any) => {
               // Don't retry on client errors (4xx)
               if (error?.data?.httpStatus >= 400 && error?.data?.httpStatus < 500) {
                 return false;
               }
-              // Retry up to 3 times for server errors (5xx) and network errors
-              return failureCount < 3;
+              // Retry only once for most queries (reduced from 3)
+              return failureCount < 1;
             },
             retryDelay: (attemptIndex) => {
               // Exponential backoff: 1s, 2s, 4s

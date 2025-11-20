@@ -45,13 +45,21 @@ export function TeacherBulkCheckin({
   // Get classroom members
   const { data: classroom, isLoading: classroomLoading } = trpc.group.getById.useQuery(
     { id: classroomId },
-    { enabled: isOpen && !!classroomId }
+    {
+      enabled: isOpen && !!classroomId,
+      staleTime: 5 * 60 * 1000, // 5 minutes - classroom data rarely changes
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    }
   );
 
   // Get all persons for this role
   const { data: persons, isLoading: personsLoading } = trpc.person.list.useQuery(
     { roleId },
-    { enabled: isOpen && !!roleId }
+    {
+      enabled: isOpen && !!roleId,
+      staleTime: 5 * 60 * 1000, // 5 minutes - person data rarely changes
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    }
   );
 
   const isLoading = classroomLoading || personsLoading;
@@ -247,6 +255,11 @@ export function TeacherBulkCheckin({
       // Refetch to sync with server state
       await refetchStudentTasks();
 
+      // Invalidate goal queries for real-time progress updates
+      utils.goal.list.invalidate();
+      utils.goal.getGoalsForTask.invalidate();
+      utils.goal.getGoalsForRoutine.invalidate();
+
       toast({
         title: 'Success',
         description: 'Task completed!',
@@ -327,6 +340,11 @@ export function TeacherBulkCheckin({
     onSuccess: async () => {
       // Refetch to sync with server state
       await refetchStudentTasks();
+
+      // Invalidate goal queries for real-time progress updates
+      utils.goal.list.invalidate();
+      utils.goal.getGoalsForTask.invalidate();
+      utils.goal.getGoalsForRoutine.invalidate();
 
       toast({
         title: 'Success',

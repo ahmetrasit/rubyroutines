@@ -139,12 +139,22 @@ export const personRouter = router({
                   tasks: {
                     where: { status: EntityStatus.ACTIVE },
                     include: {
+                      // Only include count for efficiency
+                      _count: {
+                        select: { completions: true }
+                      },
+                      // Get only the most recent completion for this person (for undo feature)
                       completions: {
                         where: {
                           personId: input.id,
                         },
                         orderBy: { completedAt: 'desc' },
-                        take: 10, // Last 10 completions
+                        take: 1, // Only the most recent completion
+                        select: {
+                          id: true,
+                          completedAt: true,
+                          value: true,
+                        },
                       },
                     },
                     orderBy: { order: 'asc' },
@@ -166,15 +176,65 @@ export const personRouter = router({
   getBatch: authorizedProcedure
     .input(getBatchPersonsSchema)
     .query(async ({ ctx, input }) => {
-      // Verify ownership for all persons
+      // Batch verify ownership for all persons at once
       const persons = await ctx.prisma.person.findMany({
         where: { id: { in: input.ids } },
-        select: { id: true, roleId: true },
+        include: {
+          role: {
+            select: { userId: true, id: true },
+          },
+        },
       });
+
+      // Get all roleIds and personIds for batch checking
+      const roleIds = persons.map(p => p.roleId);
+      const personIds = persons.map(p => p.id);
+
+      // Batch fetch all co-parent relationships
+      const coParentRelationships = await ctx.prisma.coParentRelationship.findMany({
+        where: {
+          primaryRoleId: { in: roleIds },
+          coParentRole: {
+            userId: ctx.user.id,
+          },
+          status: EntityStatus.ACTIVE,
+        },
+        select: {
+          primaryRoleId: true,
+        },
+      });
+
+      // Create a Set of roleIds with co-parent access
+      const coParentRoleIds = new Set(coParentRelationships.map(r => r.primaryRoleId));
+
+      // Batch fetch all teacher connections
+      const teacherConnections = await ctx.prisma.teacherConnection.findMany({
+        where: {
+          personId: { in: personIds },
+          parentRole: {
+            userId: ctx.user.id,
+          },
+          status: EntityStatus.ACTIVE,
+        },
+        select: {
+          personId: true,
+        },
+      });
+
+      // Create a Set of personIds with teacher connection access
+      const teacherConnectedPersonIds = new Set(teacherConnections.map(c => c.personId));
 
       // Check that user has access to all requested persons
       for (const person of persons) {
-        await verifyPersonOwnership(ctx.user.id, person.id, ctx.prisma);
+        if (!person || person.role.userId !== ctx.user.id) {
+          // Check for co-parent or teacher connection access using pre-fetched data
+          const hasCoParentAccess = coParentRoleIds.has(person.roleId);
+          const hasTeacherAccess = teacherConnectedPersonIds.has(person.id);
+
+          if (!hasCoParentAccess && !hasTeacherAccess) {
+            throw new TRPCError({ code: 'FORBIDDEN' });
+          }
+        }
       }
 
       // Get requesting user's role to determine if they should see teacher-only routines
@@ -208,12 +268,9 @@ export const personRouter = router({
                   tasks: {
                     where: { status: EntityStatus.ACTIVE },
                     include: {
-                      completions: {
-                        where: {
-                          personId: { in: input.ids }, // Get completions for any of the batch persons
-                        },
-                        orderBy: { completedAt: 'desc' },
-                        take: 10, // Last 10 completions per task
+                      // Only include count for efficiency
+                      _count: {
+                        select: { completions: true }
                       },
                     },
                     orderBy: { order: 'asc' },
@@ -225,7 +282,42 @@ export const personRouter = router({
         },
       });
 
-      // Map completions back to the correct person
+      // If needed, fetch only the most recent completion per person per task
+      // This is much more efficient than fetching all completions
+      const taskIds = batchPersons.flatMap(p =>
+        p.assignments.flatMap(a =>
+          a.routine.tasks.map(t => t.id)
+        )
+      );
+
+      const recentCompletions = await ctx.prisma.taskCompletion.findMany({
+        where: {
+          taskId: { in: taskIds },
+          personId: { in: input.ids },
+        },
+        select: {
+          id: true,
+          taskId: true,
+          personId: true,
+          completedAt: true,
+          value: true,
+        },
+        orderBy: { completedAt: 'desc' },
+        // Limit to reasonable number of most recent completions
+        take: taskIds.length * input.ids.length,
+      });
+
+      // Group completions by personId and taskId for efficient lookup
+      const completionMap = new Map<string, typeof recentCompletions[0]>();
+      recentCompletions.forEach(completion => {
+        const key = `${completion.personId}-${completion.taskId}`;
+        // Only keep the most recent completion per person per task
+        if (!completionMap.has(key)) {
+          completionMap.set(key, completion);
+        }
+      });
+
+      // Map completions back to the correct person and task
       const personsWithCorrectCompletions = batchPersons.map(person => ({
         ...person,
         assignments: person.assignments.map(assignment => ({
@@ -234,7 +326,10 @@ export const personRouter = router({
             ...assignment.routine,
             tasks: assignment.routine.tasks.map(task => ({
               ...task,
-              completions: task.completions.filter(c => c.personId === person.id),
+              // Add the most recent completion if it exists
+              completions: completionMap.has(`${person.id}-${task.id}`)
+                ? [completionMap.get(`${person.id}-${task.id}`)]
+                : [],
             })),
           },
         })),

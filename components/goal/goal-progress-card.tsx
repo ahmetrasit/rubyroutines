@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -27,8 +27,12 @@ interface GoalProgressCardProps {
   onComplete?: () => void;
 }
 
-export function GoalProgressCard({ goal, onEdit, onDelete, onComplete }: GoalProgressCardProps) {
+export const GoalProgressCard = memo(function GoalProgressCard({ goal, onEdit, onDelete, onComplete }: GoalProgressCardProps) {
   const [showDetails, setShowDetails] = useState(false);
+
+  // Event handlers with useCallback
+  const handleOpenDetails = useCallback(() => setShowDetails(true), []);
+  const handleCloseDetails = useCallback(() => setShowDetails(false), []);
 
   // Get goal color (use first color from AVATAR_COLORS if not set)
   const goalColor = goal.color || AVATAR_COLORS[0];
@@ -87,7 +91,7 @@ export function GoalProgressCard({ goal, onEdit, onDelete, onComplete }: GoalPro
           borderTopWidth: '4px',
           borderTopColor: goalColor
         }}
-        onClick={() => setShowDetails(true)}
+        onClick={handleOpenDetails}
       >
         <CardContent className="p-4">
           {/* Header */}
@@ -119,7 +123,7 @@ export function GoalProgressCard({ goal, onEdit, onDelete, onComplete }: GoalPro
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={(e) => {
                   e.stopPropagation();
-                  setShowDetails(true);
+                  handleOpenDetails();
                 }}>
                   <Eye className="h-4 w-4 mr-2" />
                   View Details
@@ -233,10 +237,10 @@ export function GoalProgressCard({ goal, onEdit, onDelete, onComplete }: GoalPro
       {showDetails && (
         <GoalDetailModal
           goal={goal}
-          onClose={() => setShowDetails(false)}
+          onClose={handleCloseDetails}
           onEdit={onEdit}
         />
       )}
     </>
   );
-}
+});

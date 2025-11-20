@@ -63,6 +63,10 @@ export const TaskItem = memo(function TaskItem({ task, personId }: TaskItemProps
   const completeMutation = trpc.task.complete.useMutation({
     onSuccess: () => {
       utils.task.list.invalidate();
+      // Invalidate goal queries for real-time progress updates
+      utils.goal.list.invalidate();
+      utils.goal.getGoalsForTask.invalidate();
+      utils.goal.getGoalsForRoutine.invalidate();
       setProgressValue('');
     },
     onError: (error) => {
@@ -82,6 +86,10 @@ export const TaskItem = memo(function TaskItem({ task, personId }: TaskItemProps
         variant: 'success',
       });
       utils.task.list.invalidate();
+      // Invalidate goal queries for real-time progress updates
+      utils.goal.list.invalidate();
+      utils.goal.getGoalsForTask.invalidate();
+      utils.goal.getGoalsForRoutine.invalidate();
     },
     onError: (error) => {
       toast({

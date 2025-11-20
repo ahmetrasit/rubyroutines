@@ -11,6 +11,8 @@ import { TaskForm } from './task-form';
 import { TaskDeletionWarning } from './task-deletion-warning';
 import { Card, CardHeader } from '@/components/ui/card';
 import { RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
+import { trpc } from '@/lib/trpc/client';
+import { GoalProgressIndicator } from '@/components/goal/goal-progress-indicator';
 
 type TaskWithAggregation = Task & {
   isComplete: boolean;
@@ -31,6 +33,18 @@ export const TaskCard = memo(function TaskCard({
 }: TaskCardProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+
+  // Fetch goals for this task
+  const { data: goals } = trpc.goal.getGoalsForTask.useQuery(
+    { taskId: task.id },
+    {
+      // Only fetch if in authenticated context
+      retry: false,
+      refetchOnWindowFocus: false,
+      staleTime: 2 * 60 * 1000, // 2 minutes - goals update moderately
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    }
+  );
 
   const handleDelete = () => {
     setShowDeleteWarning(true);
@@ -63,6 +77,13 @@ export const TaskCard = memo(function TaskCard({
         {/* Row 2: Description */}
         {task.description && (
           <p className="text-xs text-gray-600 mb-2 line-clamp-2">{task.description}</p>
+        )}
+
+        {/* Goal Progress Bars */}
+        {goals && goals.length > 0 && (
+          <div className="mb-2">
+            <GoalProgressIndicator goals={goals} compact={true} />
+          </div>
         )}
 
         {/* Row 3: Task Type Badge + Edit & Delete Buttons */}

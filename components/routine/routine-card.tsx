@@ -26,7 +26,7 @@ type RoutineWithRelations = {
   visibleDays: number[];
   startDate?: Date | null;
   endDate?: Date | null;
-  tasks: any[];
+  tasks?: any[];  // Made optional since list query doesn't include it
   assignments: Array<{ person: any }>;
   _count: { tasks: number };
 };
@@ -74,7 +74,7 @@ export const RoutineCard = memo(function RoutineCard({ routine, onSelect }: Rout
   };
 
   const visible = isRoutineVisible(routine);
-  const taskCount = routine._count?.tasks || routine.tasks.length;
+  const taskCount = routine._count?.tasks || routine.tasks?.length || 0;
 
   return (
     <>

@@ -6,7 +6,7 @@ import { SharedPersonCard } from './SharedPersonCard';
 import { CoParentCard } from '@/components/coparent/CoParentCard';
 import { Button } from '@/components/ui/button';
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { PersonForm } from './person-form';
 import { SharePersonModal } from '@/components/sharing/SharePersonModal';
 import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
@@ -23,7 +23,7 @@ interface PersonListProps {
   roleType?: 'PARENT' | 'TEACHER';
 }
 
-export function PersonList({
+export const PersonList = memo(function PersonList({
   roleId,
   userName,
   effectiveLimits = null,
@@ -36,9 +36,22 @@ export function PersonList({
   const [kioskCollapsed, setKioskCollapsed] = useState(true); // Collapsed by default
   const [selectedCoParent, setSelectedCoParent] = useState<any>(null);
 
+  // Event handlers with useCallback
+  const handleOpenForm = useCallback(() => setShowForm(true), []);
+  const handleCloseForm = useCallback(() => setShowForm(false), []);
+  const handleOpenShareModal = useCallback(() => setShowShareModal(true), []);
+  const handleCloseShareModal = useCallback(() => setShowShareModal(false), []);
+  const handleToggleKiosk = useCallback(() => setKioskCollapsed(prev => !prev), []);
+  const handleSelectCoParent = useCallback((coParent: any) => setSelectedCoParent(coParent), []);
+  const handleCloseCoParentModal = useCallback(() => setSelectedCoParent(null), []);
+
   const { data: persons, isLoading } = trpc.person.list.useQuery(
     { roleId },
-    { enabled: !!roleId }
+    {
+      enabled: !!roleId,
+      staleTime: 5 * 60 * 1000, // 5 minutes - person data rarely changes
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    }
   );
 
   const { data: coParents } = trpc.coParent.list.useQuery(
@@ -74,27 +87,29 @@ export function PersonList({
     );
   }
 
-  // Debug logging
-  console.log('PersonList - accessiblePersons:', accessiblePersons);
-  console.log('PersonList - persons:', persons);
 
-  // Combine owned and shared persons
-  const allAccessiblePersons = [
+  // Combine owned and shared persons with useMemo
+  const allAccessiblePersons = useMemo(() => [
     ...(accessiblePersons?.ownedPersons || []),
     ...(accessiblePersons?.sharedPersons || [])
-  ];
+  ], [accessiblePersons]);
 
-  // Separate adults (Me) from children - for owned persons only
-  const adults = accessiblePersons?.ownedPersons?.filter((person) => person.isAccountOwner) || [];
-  const ownedChildren = accessiblePersons?.ownedPersons?.filter((person) => !person.isAccountOwner) || [];
+  // Separate adults (Me) from children with useMemo
+  const adults = useMemo(() =>
+    accessiblePersons?.ownedPersons?.filter((person) => person.isAccountOwner) || [],
+    [accessiblePersons]
+  );
 
-  console.log('PersonList - adults:', adults);
-  console.log('PersonList - ownedChildren:', ownedChildren);
+  const ownedChildren = useMemo(() =>
+    accessiblePersons?.ownedPersons?.filter((person) => !person.isAccountOwner) || [],
+    [accessiblePersons]
+  );
 
-  // Get shared children separately
-  const sharedChildren = accessiblePersons?.sharedPersons?.filter(
-    (person) => !person.isAccountOwner
-  ) || [];
+  // Get shared children separately with useMemo
+  const sharedChildren = useMemo(() =>
+    accessiblePersons?.sharedPersons?.filter((person) => !person.isAccountOwner) || [],
+    [accessiblePersons]
+  );
 
   // Check tier limits using effective limits from database
   const childLimit = getTierLimit(effectiveLimits, 'children_per_family');
@@ -110,7 +125,7 @@ export function PersonList({
       {/* Row 1: Family Group Kiosk Code - Collapsible */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <button
-          onClick={() => setKioskCollapsed(!kioskCollapsed)}
+          onClick={handleToggleKiosk}
           className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center gap-3">
@@ -157,13 +172,13 @@ export function PersonList({
               key={coParent.id}
               coParent={coParent}
               roleId={roleId}
-              onSelect={() => setSelectedCoParent(coParent)}
+              onSelect={() => handleSelectCoParent(coParent)}
             />
           ))}
 
           {/* Add Co-Parent placeholder card */}
           <button
-            onClick={canAddCoParent ? () => setShowShareModal(true) : undefined}
+            onClick={canAddCoParent ? handleOpenShareModal : undefined}
             className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${
               canAddCoParent
                 ? 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50 cursor-pointer'
@@ -218,7 +233,7 @@ export function PersonList({
 
           {/* Add Member placeholder card */}
           <button
-            onClick={canAddChild ? () => setShowForm(true) : undefined}
+            onClick={canAddChild ? handleOpenForm : undefined}
             className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${
               canAddChild
                 ? 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50 cursor-pointer'
@@ -247,12 +262,12 @@ export function PersonList({
         </div>
       </div>
 
-      {showForm && <PersonForm roleId={roleId} onClose={() => setShowForm(false)} />}
+      {showForm && <PersonForm roleId={roleId} onClose={handleCloseForm} />}
 
       {showShareModal && (
         <SharePersonModal
           isOpen={showShareModal}
-          onClose={() => setShowShareModal(false)}
+          onClose={handleCloseShareModal}
           roleId={roleId}
           roleType="PARENT"
           persons={ownedChildren}
@@ -262,11 +277,11 @@ export function PersonList({
       {selectedCoParent && (
         <CoParentDetailModal
           isOpen={!!selectedCoParent}
-          onClose={() => setSelectedCoParent(null)}
+          onClose={handleCloseCoParentModal}
           coParent={selectedCoParent}
           roleId={roleId}
         />
       )}
     </div>
   );
-}
+});

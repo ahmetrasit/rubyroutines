@@ -53,10 +53,7 @@ export const routineRouter = router({
             person: true,
           },
         },
-        tasks: {
-          where: { status: EntityStatus.ACTIVE },
-          orderBy: { order: 'asc' },
-        },
+        // Remove full task fetching - just use count for list view
         _count: {
           select: {
             tasks: {
@@ -113,17 +110,27 @@ export const routineRouter = router({
     const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
 
     // Check tier limit for routines per person (only counting ACTIVE routines)
-    // For each person, count how many routines they currently have
-    for (const personId of personIds) {
-      const personRoutineCount = await ctx.prisma.routine.count({
-        where: {
+    // Use a single batch query instead of N+1 pattern
+    const routineCounts = await ctx.prisma.routineAssignment.groupBy({
+      by: ['personId'],
+      where: {
+        personId: { in: personIds },
+        routine: {
           status: EntityStatus.ACTIVE,
-          assignments: {
-            some: { personId },
-          },
         },
-      });
+      },
+      _count: true,
+    });
 
+    // Create a map of personId to routine count
+    const routineCountMap = new Map<string, number>();
+    routineCounts.forEach((rc) => {
+      routineCountMap.set(rc.personId, rc._count);
+    });
+
+    // Check tier limit for each person
+    for (const personId of personIds) {
+      const personRoutineCount = routineCountMap.get(personId) || 0;
       checkTierLimit(effectiveLimits, 'routines_per_person', personRoutineCount);
     }
 
@@ -248,64 +255,95 @@ export const routineRouter = router({
     // Check if this is a Daily Routine (should be merged instead of duplicated)
     const isDailyRoutine = source.name.includes('Daily Routine');
 
-    // Check tier limits for each target person before copying
-    for (const personId of input.targetPersonIds) {
-      // If Daily Routine and person already has one, merging won't create a new routine
-      if (isDailyRoutine) {
-        const existingDailyRoutine = await ctx.prisma.routine.findFirst({
-          where: {
-            roleId: source.roleId,
-            name: { contains: 'Daily Routine' },
-            status: EntityStatus.ACTIVE,
-            assignments: {
-              some: { personId },
-            },
-          },
-        });
+    // Batch query to get routine counts for all target persons
+    const routineCounts = await ctx.prisma.routineAssignment.groupBy({
+      by: ['personId'],
+      where: {
+        personId: { in: input.targetPersonIds },
+        routine: {
+          status: EntityStatus.ACTIVE,
+        },
+      },
+      _count: true,
+    });
 
-        // Skip limit check if merging into existing Daily Routine
-        if (existingDailyRoutine) continue;
-      }
+    // Create a map of personId to routine count
+    const routineCountMap = new Map<string, number>();
+    routineCounts.forEach((rc) => {
+      routineCountMap.set(rc.personId, rc._count);
+    });
 
-      // Check routine limit for this person
-      const personRoutineCount = await ctx.prisma.routine.count({
+    // If Daily Routine, batch query to find existing Daily Routines for all persons
+    let existingDailyRoutinesMap = new Map<string, any>();
+    if (isDailyRoutine) {
+      const existingDailyRoutines = await ctx.prisma.routine.findMany({
         where: {
+          roleId: source.roleId,
+          name: { contains: 'Daily Routine' },
           status: EntityStatus.ACTIVE,
           assignments: {
-            some: { personId },
+            some: {
+              personId: { in: input.targetPersonIds },
+            },
+          },
+        },
+        include: {
+          assignments: {
+            where: {
+              personId: { in: input.targetPersonIds },
+            },
           },
         },
       });
 
+      // Map each existing Daily Routine to its person
+      existingDailyRoutines.forEach((routine) => {
+        routine.assignments.forEach((assignment: any) => {
+          existingDailyRoutinesMap.set(assignment.personId, routine);
+        });
+      });
+    }
+
+    // Check tier limits for each target person before copying
+    for (const personId of input.targetPersonIds) {
+      // If Daily Routine and person already has one, merging won't create a new routine
+      if (isDailyRoutine && existingDailyRoutinesMap.has(personId)) {
+        continue; // Skip limit check if merging into existing Daily Routine
+      }
+
+      // Check routine limit for this person using the pre-fetched count
+      const personRoutineCount = routineCountMap.get(personId) || 0;
       checkTierLimit(effectiveLimits, 'routines_per_person', personRoutineCount);
+    }
+
+    // Fetch last task order for existing Daily Routines that need merging
+    let lastTaskOrderMap = new Map<string, number>();
+    if (isDailyRoutine && existingDailyRoutinesMap.size > 0) {
+      const routineIds = Array.from(existingDailyRoutinesMap.values()).map((r) => r.id);
+      const lastTasks = await ctx.prisma.task.findMany({
+        where: {
+          routineId: { in: routineIds },
+          status: EntityStatus.ACTIVE,
+        },
+        orderBy: { order: 'desc' },
+        distinct: ['routineId'],
+      });
+
+      lastTasks.forEach(task => {
+        lastTaskOrderMap.set(task.routineId, task.order);
+      });
     }
 
     // Create copies or merge for each target person
     const results = await Promise.all(
       input.targetPersonIds.map(async (personId) => {
-        // If Daily Routine, try to find existing Daily Routine for this person
+        // If Daily Routine, check if we already have the existing routine from our batch query
         if (isDailyRoutine) {
-          const existingDailyRoutine = await ctx.prisma.routine.findFirst({
-            where: {
-              roleId: source.roleId,
-              name: { contains: 'Daily Routine' },
-              status: EntityStatus.ACTIVE,
-              assignments: {
-                some: { personId },
-              },
-            },
-            include: {
-              tasks: {
-                where: { status: EntityStatus.ACTIVE },
-                orderBy: { order: 'desc' },
-                take: 1,
-              },
-            },
-          });
+          const existingDailyRoutine = existingDailyRoutinesMap.get(personId);
 
           if (existingDailyRoutine) {
             // Merge: Add tasks to existing Daily Routine
-            const lastTaskOrder = existingDailyRoutine.tasks[0]?.order || 0;
+            const lastTaskOrder = lastTaskOrderMap.get(existingDailyRoutine.id) || 0;
 
             await Promise.all(
               source.tasks.map((task: any, index: number) =>

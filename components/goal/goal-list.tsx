@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -26,13 +26,24 @@ interface GoalListProps {
   effectiveLimits?: ComponentTierLimits | null;
 }
 
-export function GoalList({ roleId, personId, groupId, effectiveLimits = null }: GoalListProps) {
+export const GoalList = memo(function GoalList({ roleId, personId, groupId, effectiveLimits = null }: GoalListProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('active');
   const [typeFilter, setTypeFilter] = useState<GoalType | 'all'>('all');
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Event handlers with useCallback
+  const handleOpenForm = useCallback(() => setShowForm(true), []);
+  const handleCloseForm = useCallback(() => {
+    setShowForm(false);
+    setEditingGoal(null);
+  }, []);
+  const handleEditGoal = useCallback((goal: any) => {
+    setEditingGoal(goal);
+    setShowForm(true);
+  }, []);
 
   // Fetch goals with progress
   const { data: goals, isLoading } = trpc.goal.list.useQuery(
@@ -42,7 +53,11 @@ export function GoalList({ roleId, personId, groupId, effectiveLimits = null }: 
       groupId,
       includeInactive: statusFilter === 'all' || statusFilter === 'archived'
     },
-    { enabled: !!roleId }
+    {
+      enabled: !!roleId,
+      staleTime: 2 * 60 * 1000, // 2 minutes - goals update moderately
+      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    }
   );
 
   // Filter goals based on status and type
@@ -108,11 +123,6 @@ export function GoalList({ roleId, personId, groupId, effectiveLimits = null }: 
   const handleEdit = (goal: any) => {
     setEditingGoal(goal);
     setShowForm(true);
-  };
-
-  const handleCloseForm = () => {
-    setShowForm(false);
-    setEditingGoal(null);
   };
 
   const activeGoals = filteredGoals.filter((g) => g.status === EntityStatus.ACTIVE);
@@ -289,4 +299,4 @@ export function GoalList({ roleId, personId, groupId, effectiveLimits = null }: 
       )}
     </div>
   );
-}
+});
