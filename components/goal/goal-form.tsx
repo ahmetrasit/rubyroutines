@@ -362,11 +362,31 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                             <SelectTrigger disabled={isPending}>
                               <SelectValue placeholder="Choose a task">
                                 {selectedTask && (
-                                  <div className="flex items-center gap-2">
-                                    {selectedTask.icon && <RenderIconEmoji value={selectedTask.icon} className="h-4 w-4" />}
-                                    <div className="flex flex-col items-start">
+                                  <div className="flex flex-col items-start">
+                                    <div className="flex items-center gap-2">
+                                      {selectedTask.icon && <RenderIconEmoji value={selectedTask.icon} className="h-4 w-4" />}
                                       <span className="text-sm">{selectedTask.name}</span>
-                                      <span className="text-xs text-gray-500">{selectedTask.routineName}</span>
+                                      <span
+                                        className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                        style={{
+                                          backgroundColor:
+                                            selectedTask.type === 'SIMPLE' ? '#E0F2FE' :
+                                            selectedTask.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                            '#FEF3C7',
+                                          color:
+                                            selectedTask.type === 'SIMPLE' ? '#0369A1' :
+                                            selectedTask.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                            '#B45309'
+                                        }}
+                                      >
+                                        {selectedTask.type === 'SIMPLE' ? 'Simple' :
+                                         selectedTask.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                         'Progress'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 ml-6">
+                                      <span>📋</span>
+                                      <span>{selectedTask.routineName}</span>
                                     </div>
                                   </div>
                                 )}
@@ -375,28 +395,33 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                             <SelectContent>
                               {availableTasks.map((task: any) => (
                                 <SelectItem key={task.id} value={task.id}>
-                                  <div className="flex items-center gap-2">
-                                    {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
-                                    <span>{task.name}</span>
-                                    <span
-                                      className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
-                                      style={{
-                                        backgroundColor:
-                                          task.type === 'SIMPLE' ? '#E0F2FE' :
-                                          task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
-                                          '#FEF3C7',
-                                        color:
-                                          task.type === 'SIMPLE' ? '#0369A1' :
-                                          task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
-                                          '#B45309'
-                                      }}
-                                    >
-                                      {task.type === 'SIMPLE' ? 'Simple' :
-                                       task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
-                                       'Progress'}
-                                    </span>
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                      {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
+                                      <span>{task.name}</span>
+                                      <span
+                                        className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                        style={{
+                                          backgroundColor:
+                                            task.type === 'SIMPLE' ? '#E0F2FE' :
+                                            task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                            '#FEF3C7',
+                                          color:
+                                            task.type === 'SIMPLE' ? '#0369A1' :
+                                            task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                            '#B45309'
+                                        }}
+                                      >
+                                        {task.type === 'SIMPLE' ? 'Simple' :
+                                         task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                         'Progress'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 ml-6">
+                                      <span>📋</span>
+                                      <span>{task.routineName}</span>
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500">{task.routineName}</div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -409,7 +434,10 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                             onValueChange={(value: 'complete' | 'not_complete') => setSimpleCondition(value)}
                           >
                             <SelectTrigger disabled={isPending}>
-                              <SelectValue />
+                              <SelectValue>
+                                {simpleCondition === 'complete' ? 'is complete' :
+                                 simpleCondition === 'not_complete' ? 'is not complete' : ''}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="complete">is complete</SelectItem>
@@ -432,11 +460,31 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                             <SelectTrigger disabled={isPending}>
                               <SelectValue placeholder="Choose a task">
                                 {selectedTask && (
-                                  <div className="flex items-center gap-2">
-                                    {selectedTask.icon && <RenderIconEmoji value={selectedTask.icon} className="h-4 w-4" />}
-                                    <div className="flex flex-col items-start">
+                                  <div className="flex flex-col items-start">
+                                    <div className="flex items-center gap-2">
+                                      {selectedTask.icon && <RenderIconEmoji value={selectedTask.icon} className="h-4 w-4" />}
                                       <span className="text-sm">{selectedTask.name}</span>
-                                      <span className="text-xs text-gray-500">{selectedTask.routineName}</span>
+                                      <span
+                                        className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                        style={{
+                                          backgroundColor:
+                                            selectedTask.type === 'SIMPLE' ? '#E0F2FE' :
+                                            selectedTask.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                            '#FEF3C7',
+                                          color:
+                                            selectedTask.type === 'SIMPLE' ? '#0369A1' :
+                                            selectedTask.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                            '#B45309'
+                                        }}
+                                      >
+                                        {selectedTask.type === 'SIMPLE' ? 'Simple' :
+                                         selectedTask.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                         'Progress'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 ml-6">
+                                      <span>📋</span>
+                                      <span>{selectedTask.routineName}</span>
                                     </div>
                                   </div>
                                 )}
@@ -445,28 +493,33 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                             <SelectContent>
                               {availableTasks.map((task: any) => (
                                 <SelectItem key={task.id} value={task.id}>
-                                  <div className="flex items-center gap-2">
-                                    {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
-                                    <span>{task.name}</span>
-                                    <span
-                                      className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
-                                      style={{
-                                        backgroundColor:
-                                          task.type === 'SIMPLE' ? '#E0F2FE' :
-                                          task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
-                                          '#FEF3C7',
-                                        color:
-                                          task.type === 'SIMPLE' ? '#0369A1' :
-                                          task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
-                                          '#B45309'
-                                      }}
-                                    >
-                                      {task.type === 'SIMPLE' ? 'Simple' :
-                                       task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
-                                       'Progress'}
-                                    </span>
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center gap-2">
+                                      {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
+                                      <span>{task.name}</span>
+                                      <span
+                                        className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                        style={{
+                                          backgroundColor:
+                                            task.type === 'SIMPLE' ? '#E0F2FE' :
+                                            task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                            '#FEF3C7',
+                                          color:
+                                            task.type === 'SIMPLE' ? '#0369A1' :
+                                            task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                            '#B45309'
+                                        }}
+                                      >
+                                        {task.type === 'SIMPLE' ? 'Simple' :
+                                         task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                         'Progress'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 ml-6">
+                                      <span>📋</span>
+                                      <span>{task.routineName}</span>
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500">{task.routineName}</div>
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -479,7 +532,10 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                             onValueChange={(value: 'lte' | 'gte') => setComparisonOperator(value)}
                           >
                             <SelectTrigger disabled={isPending}>
-                              <SelectValue />
+                              <SelectValue>
+                                {comparisonOperator === 'gte' ? '≥' :
+                                 comparisonOperator === 'lte' ? '≤' : ''}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="gte">≥</SelectItem>
@@ -514,33 +570,71 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                       onValueChange={setSelectedTaskId}
                     >
                       <SelectTrigger disabled={isPending}>
-                        <SelectValue placeholder="Choose a task" />
+                        <SelectValue placeholder="Choose a task">
+                          {selectedTaskId && (() => {
+                            const task = availableTasks.find((t: any) => t.id === selectedTaskId);
+                            return task ? (
+                              <div className="flex flex-col items-start">
+                                <div className="flex items-center gap-2">
+                                  {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
+                                  <span className="text-sm">{task.name}</span>
+                                  <span
+                                    className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                    style={{
+                                      backgroundColor:
+                                        task.type === 'SIMPLE' ? '#E0F2FE' :
+                                        task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                        '#FEF3C7',
+                                      color:
+                                        task.type === 'SIMPLE' ? '#0369A1' :
+                                        task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                        '#B45309'
+                                    }}
+                                  >
+                                    {task.type === 'SIMPLE' ? 'Simple' :
+                                     task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                     'Progress'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-gray-500 ml-6">
+                                  <span>📋</span>
+                                  <span>{task.routineName}</span>
+                                </div>
+                              </div>
+                            ) : null;
+                          })()}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {availableTasks.map((task: any) => (
                           <SelectItem key={task.id} value={task.id}>
-                            <div className="flex items-center gap-2">
-                              {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
-                              <span>{task.name}</span>
-                              <span
-                                className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
-                                style={{
-                                  backgroundColor:
-                                    task.type === 'SIMPLE' ? '#E0F2FE' :
-                                    task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
-                                    '#FEF3C7',
-                                  color:
-                                    task.type === 'SIMPLE' ? '#0369A1' :
-                                    task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
-                                    '#B45309'
-                                }}
-                              >
-                                {task.type === 'SIMPLE' ? 'Simple' :
-                                 task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
-                                 'Progress'}
-                              </span>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
+                                <span>{task.name}</span>
+                                <span
+                                  className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                  style={{
+                                    backgroundColor:
+                                      task.type === 'SIMPLE' ? '#E0F2FE' :
+                                      task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                      '#FEF3C7',
+                                    color:
+                                      task.type === 'SIMPLE' ? '#0369A1' :
+                                      task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                      '#B45309'
+                                  }}
+                                >
+                                  {task.type === 'SIMPLE' ? 'Simple' :
+                                   task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                   'Progress'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-gray-500 ml-6">
+                                <span>📋</span>
+                                <span>{task.routineName}</span>
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-500">{task.routineName}</div>
                           </SelectItem>
                         ))}
                       </SelectContent>
