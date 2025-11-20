@@ -540,13 +540,16 @@ export const goalRouter = router({
           goal: {
             include: {
               role: true,
-              // Include all the data needed for progress calculation
+              // Include minimal data - progress calculation will fetch what it needs
               taskLinks: {
                 include: {
                   task: {
                     include: {
-                      completions: true,
-                      routine: true
+                      routine: true,
+                      // Only include count for efficiency
+                      _count: {
+                        select: { completions: true }
+                      }
                     }
                   }
                 }
@@ -557,7 +560,12 @@ export const goalRouter = router({
                     include: {
                       tasks: {
                         where: { status: 'ACTIVE' },
-                        include: { completions: true }
+                        include: {
+                          // Only include count for efficiency
+                          _count: {
+                            select: { completions: true }
+                          }
+                        }
                       }
                     }
                   }
@@ -604,13 +612,16 @@ export const goalRouter = router({
           goal: {
             include: {
               role: true,
-              // Include all the data needed for progress calculation
+              // Include minimal data - progress calculation will fetch what it needs
               taskLinks: {
                 include: {
                   task: {
                     include: {
-                      completions: true,
-                      routine: true
+                      routine: true,
+                      // Only include count for efficiency
+                      _count: {
+                        select: { completions: true }
+                      }
                     }
                   }
                 }
@@ -621,7 +632,12 @@ export const goalRouter = router({
                     include: {
                       tasks: {
                         where: { status: 'ACTIVE' },
-                        include: { completions: true }
+                        include: {
+                          // Only include count for efficiency
+                          _count: {
+                            select: { completions: true }
+                          }
+                        }
                       }
                     }
                   }

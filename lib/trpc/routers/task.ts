@@ -41,31 +41,66 @@ export const taskRouter = router({
         where: whereClause,
         orderBy: { order: 'asc' },
         include: {
-          completions: {
-            orderBy: { completedAt: 'desc' },
-            take: 50, // Limit to recent completions
-          },
           routine: {
             select: {
               resetPeriod: true,
               resetDay: true,
             },
           },
+          // Only get count of completions for efficiency
+          _count: {
+            select: {
+              completions: true
+            }
+          },
         },
       });
 
+      // Get reset date once for all tasks (assuming same routine)
+      const resetDate = tasks.length > 0
+        ? getResetPeriodStart(
+            tasks[0].routine.resetPeriod,
+            tasks[0].routine.resetDay
+          )
+        : new Date();
+
+      // Fetch only necessary completions for aggregation in a single query
+      // Get completions only after reset date to calculate current period stats
+      const taskIds = tasks.map(t => t.id);
+      const relevantCompletions = await ctx.prisma.taskCompletion.findMany({
+        where: {
+          taskId: { in: taskIds },
+          completedAt: { gte: resetDate },
+        },
+        select: {
+          taskId: true,
+          completedAt: true,
+          value: true,
+          personId: true,
+          id: true,
+        },
+        orderBy: { completedAt: 'desc' },
+      });
+
+      // Group completions by task for efficient lookup
+      const completionsByTask = relevantCompletions.reduce((acc, completion) => {
+        if (!acc[completion.taskId]) {
+          acc[completion.taskId] = [];
+        }
+        acc[completion.taskId].push(completion);
+        return acc;
+      }, {} as Record<string, typeof relevantCompletions>);
+
       // Add aggregation data for each task
       return tasks.map((task: any) => {
-        const resetDate = getResetPeriodStart(
-          task.routine.resetPeriod,
-          task.routine.resetDay
-        );
-
-        const aggregation = getTaskAggregation(task, task.completions, resetDate);
+        const taskCompletions = completionsByTask[task.id] || [];
+        const aggregation = getTaskAggregation(task, taskCompletions, resetDate);
 
         return {
           ...task,
           ...aggregation,
+          // Include only the most recent completion for undo functionality
+          completions: taskCompletions.slice(0, 1),
         };
       });
     }),
