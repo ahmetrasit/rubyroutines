@@ -59,6 +59,12 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     select: (roles) => roles.find((r) => r.userId === session?.user?.id),
   });
 
+  // Get goals for this person to show real progress
+  const { data: goals } = trpc.goal.list.useQuery(
+    { roleId: currentRole?.id!, personId },
+    { enabled: isOpen && !!currentRole?.id && !!personId }
+  );
+
   const isTeacher = currentRole?.type === 'TEACHER';
 
   // Flatten all tasks from all routines assigned to this person
@@ -169,6 +175,12 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   const teacherSimpleCompleted = teacherSimpleTasks.filter((t) => t.isComplete).length;
   const teacherSimpleTotal = teacherSimpleTasks.length;
 
+  // Goal statistics
+  const activeGoals = goals?.filter(g => g.status === 'ACTIVE') || [];
+  const goalCount = activeGoals.length;
+  const goalsAccomplished = activeGoals.filter(g => g.progress?.achieved).length;
+  const goalProgress = goalCount > 0 ? (goalsAccomplished / goalCount) * 100 : 0;
+
   // State for collapsible sections
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [simpleOpen, setSimpleOpen] = useState(false);
@@ -210,11 +222,19 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <h3 className="text-lg font-bold text-gray-900">🎯 Goals</h3>
-                          <span className="text-sm text-gray-500">(Coming soon)</span>
+                          {goalCount > 0 && (
+                            <span className="text-sm text-gray-500">({goalCount})</span>
+                          )}
                         </div>
                         <div className="mt-2">
-                          <Progress value={0} max={100} className="h-2" />
-                          <p className="text-xs text-gray-500 mt-1">0% Complete</p>
+                          <Progress value={goalProgress} max={100} className="h-2" />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {goalCount > 0 ? (
+                              `${goalsAccomplished} of ${goalCount} achieved (${Math.round(goalProgress)}%)`
+                            ) : (
+                              'No goals set'
+                            )}
+                          </p>
                         </div>
                       </div>
                       {goalsOpen ? (
@@ -226,9 +246,36 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="p-4 pt-0 border-t">
-                      <p className="text-sm text-gray-500 text-center py-8">
-                        Goal tracking coming soon...
-                      </p>
+                      {goalCount > 0 ? (
+                        <div className="space-y-2">
+                          {activeGoals.map((goal) => (
+                            <div key={goal.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">{goal.name}</span>
+                                {goal.progress?.achieved && (
+                                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                                    Achieved!
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Progress
+                                  value={goal.progress?.percentage || 0}
+                                  max={100}
+                                  className="h-1.5 w-16"
+                                />
+                                <span className="text-xs text-gray-500">
+                                  {Math.round(goal.progress?.percentage || 0)}%
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 text-center py-8">
+                          No goals have been set yet
+                        </p>
+                      )}
                     </div>
                   </CollapsibleContent>
                 </div>

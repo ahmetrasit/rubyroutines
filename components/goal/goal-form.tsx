@@ -78,6 +78,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // First useEffect: Set basic goal data immediately when goal changes
   useEffect(() => {
     if (goal) {
       setName(goal.name || '');
@@ -98,18 +99,17 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
         setComparisonOperator(goal.comparisonOperator);
       }
 
+      // Set comparison value immediately if available (don't wait for tasks to load)
+      if (goal.comparisonValue !== undefined) {
+        setTargetValue(goal.comparisonValue.toString());
+      }
+
       // Handle task links
       if (goal.taskLinks && goal.taskLinks.length > 0) {
         if (goal.taskLinks.length === 1 && (goal.simpleCondition !== undefined || goal.comparisonOperator !== undefined)) {
           // Simple goal with single task
           setGoalType('simple');
           setSelectedTaskId(goal.taskLinks[0].taskId);
-
-          // For non-SIMPLE tasks, restore the comparison value (not the goal target)
-          const task = availableTasks.find((t: any) => t.id === goal.taskLinks[0].taskId);
-          if (task && task.type !== 'SIMPLE' && goal.comparisonValue !== undefined) {
-            setTargetValue(goal.comparisonValue.toString());
-          }
         } else {
           // Complex goal with multiple tasks
           setGoalType('complex');
@@ -117,7 +117,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
         }
       }
     }
-  }, [goal, availableTasks]);
+  }, [goal]);
 
   const createMutation = trpc.goal.create.useMutation({
     onSuccess: () => {
