@@ -2,7 +2,7 @@
 
 import { trpc } from '@/lib/trpc/client';
 import { TaskCard } from './task-card';
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { TaskForm } from './task-form';
 import { useToast } from '@/components/ui/toast';
 import { Plus } from 'lucide-react';
@@ -14,18 +14,29 @@ interface TaskListProps {
   effectiveLimits?: ComponentTierLimits | null;
 }
 
-export function TaskList({ routineId, personId = '', effectiveLimits = null }: TaskListProps) {
+export const TaskList = memo(function TaskList({ routineId, personId = '', effectiveLimits = null }: TaskListProps) {
   const [showForm, setShowForm] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
-  const { data: tasks, isLoading } = trpc.task.list.useQuery({
-    routineId,
-  });
+  const { data: tasks, isLoading } = trpc.task.list.useQuery(
+    {
+      routineId,
+    },
+    {
+      staleTime: 1 * 60 * 1000, // 1 minute - task completions update frequently
+      cacheTime: 5 * 60 * 1000, // 5 minutes cache
+    }
+  );
 
-  const { data: routine } = trpc.routine.getById.useQuery({
-    id: routineId,
-  });
+  const { data: routine } = trpc.routine.getById.useQuery(
+    {
+      id: routineId,
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes - routine info rarely changes
+    }
+  );
 
   const reorderMutation = trpc.task.reorder.useMutation({
     onSuccess: () => {
@@ -40,7 +51,7 @@ export function TaskList({ routineId, personId = '', effectiveLimits = null }: T
     },
   });
 
-  const moveTask = (index: number, direction: 'up' | 'down') => {
+  const moveTask = useCallback((index: number, direction: 'up' | 'down') => {
     if (!tasks) return;
 
     const newTasks = [...tasks];
@@ -54,7 +65,9 @@ export function TaskList({ routineId, personId = '', effectiveLimits = null }: T
     // Update order
     const taskIds = newTasks.map((t) => t.id);
     reorderMutation.mutate({ routineId, taskIds });
-  };
+  }, [tasks, routineId, reorderMutation]);
+
+  const handleAddTask = useCallback(() => setShowForm(true), []);
 
   if (isLoading) {
     return (
@@ -85,7 +98,7 @@ export function TaskList({ routineId, personId = '', effectiveLimits = null }: T
 
         {/* Add Task Card - Always visible with 4 row height */}
         <div
-          onClick={canAddTask ? () => setShowForm(true) : undefined}
+          onClick={canAddTask ? handleAddTask : undefined}
           className={`bg-white rounded-lg border-2 border-dashed p-3 flex items-center justify-center h-[160px] opacity-60 ${
             canAddTask
               ? 'cursor-pointer transition-all hover:shadow-md hover:opacity-80'
@@ -123,4 +136,4 @@ export function TaskList({ routineId, personId = '', effectiveLimits = null }: T
       )}
     </div>
   );
-}
+});

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, Plus, Undo2, LogOut } from 'lucide-react';
@@ -34,60 +34,43 @@ interface TaskListProps {
   onExit: () => void;
 }
 
-export function TaskList({ tasks, personId, personName, onComplete, onUndo, onExit }: TaskListProps) {
-  const [progressValues, setProgressValues] = useState<Record<string, string>>({});
-  const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
+// Memoized component for individual task items to prevent unnecessary re-renders
+interface TaskItemProps {
+  task: Task;
+  personId: string;
+  undoTime?: number;
+  progressValue: string;
+  onComplete: (task: Task) => void;
+  onUndo: (task: Task) => void;
+  onProgressChange: (taskId: string, value: string) => void;
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newTimers: Record<string, number> = {};
+const TaskItem = memo(({
+  task,
+  personId,
+  undoTime,
+  progressValue,
+  onComplete,
+  onUndo,
+  onProgressChange
+}: TaskItemProps) => {
+  const canUndo = task.type === TaskType.SIMPLE && task.isComplete && undoTime !== undefined && undoTime > 0;
 
-      tasks.forEach((task) => {
-        if (task.type === TaskType.SIMPLE && task.completions && task.completions.length > 0) {
-          const recentCompletion = task.completions.find((c) => c.personId === personId);
-          if (recentCompletion && canUndoCompletion(recentCompletion.completedAt, task.type)) {
-            newTimers[task.id] = getRemainingUndoTime(recentCompletion.completedAt);
-          }
-        }
-      });
+  // Memoize timer display formatting
+  const timerDisplay = useMemo(() => {
+    if (!canUndo || !undoTime) return '';
+    const minutes = Math.floor(undoTime / 60);
+    const seconds = undoTime % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }, [canUndo, undoTime]);
 
-      setUndoTimers(newTimers);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [tasks, personId]);
-
-  const handleComplete = (task: Task) => {
-    if (task.type === TaskType.PROGRESS) {
-      const value = progressValues[task.id];
-      if (!value || parseFloat(value) <= 0) {
-        alert('Please enter a value');
-        return;
-      }
-      onComplete(task.id, value);
-      setProgressValues({ ...progressValues, [task.id]: '' });
-    } else {
-      onComplete(task.id);
-    }
-  };
-
-  const handleUndo = (task: Task) => {
-    const recentCompletion = task.completions?.find((c) => c.personId === personId);
-    if (recentCompletion) {
-      onUndo(recentCompletion.id);
-    }
-  };
-
-  const renderTaskButton = (task: Task) => {
-    const undoTime = undoTimers[task.id];
-    const canUndo = task.type === TaskType.SIMPLE && task.isComplete && undoTime !== undefined && undoTime > 0;
-
+  const renderTaskButton = () => {
     switch (task.type) {
       case TaskType.SIMPLE:
         return (
           <div className="flex items-center justify-between">
             <button
-              onClick={() => task.isComplete && canUndo ? handleUndo(task) : handleComplete(task)}
+              onClick={() => task.isComplete && canUndo ? onUndo(task) : onComplete(task)}
               disabled={task.isComplete && !canUndo}
               aria-label={task.isComplete ? `Mark ${task.name} as not completed` : `Mark ${task.name} as completed`}
               aria-pressed={task.isComplete}
@@ -114,12 +97,12 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleUndo(task)}
+                onClick={() => onUndo(task)}
                 aria-label={`Undo completion of ${task.name}`}
                 className="ml-4"
               >
                 <Undo2 className="h-4 w-4 mr-2" aria-hidden="true" />
-                Undo ({Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')})
+                Undo ({timerDisplay})
               </Button>
             )}
           </div>
@@ -129,7 +112,7 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
         return (
           <Button
             size="lg"
-            onClick={() => handleComplete(task)}
+            onClick={() => onComplete(task)}
             aria-label={`Check in for ${task.name}. Current count: ${task.completionCount || 0}`}
             className="w-full h-16 text-lg"
           >
@@ -146,10 +129,8 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
                 type="number"
                 step="0.01"
                 min="0"
-                value={progressValues[task.id] || ''}
-                onChange={(e) =>
-                  setProgressValues({ ...progressValues, [task.id]: e.target.value })
-                }
+                value={progressValue}
+                onChange={(e) => onProgressChange(task.id, e.target.value)}
                 placeholder="0"
                 aria-label={`Enter value for ${task.name}`}
                 aria-describedby={`progress-${task.id}`}
@@ -157,7 +138,7 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
               />
               <Button
                 size="lg"
-                onClick={() => handleComplete(task)}
+                onClick={() => onComplete(task)}
                 aria-label={`Add ${task.unit} to ${task.name}`}
                 className="h-16 px-8 text-lg"
               >
@@ -192,6 +173,133 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
   };
 
   return (
+    <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+      <div className="mb-4">
+        <div className="flex items-baseline gap-3 mb-2">
+          <h3 className="text-2xl font-bold text-gray-900">{task.name}</h3>
+          {task.type === TaskType.MULTIPLE_CHECKIN && (
+            <span className="text-lg font-semibold text-blue-600">
+              ({task.completionCount || 0}x)
+            </span>
+          )}
+          {task.type === TaskType.PROGRESS && (
+            <span className="text-lg font-semibold text-green-600">
+              {task.totalValue || 0} {task.unit}
+            </span>
+          )}
+        </div>
+        {task.description && (
+          <p className="text-gray-600">{task.description}</p>
+        )}
+      </div>
+      {renderTaskButton()}
+    </div>
+  );
+});
+
+TaskItem.displayName = 'TaskItem';
+
+export function TaskList({ tasks, personId, personName, onComplete, onUndo, onExit }: TaskListProps) {
+  const [progressValues, setProgressValues] = useState<Record<string, string>>({});
+  const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    // First, identify tasks that actually need undo timers
+    const tasksWithUndoTimers = tasks.filter((task) => {
+      if (task.type !== TaskType.SIMPLE || !task.completions?.length) {
+        return false;
+      }
+      const recentCompletion = task.completions.find((c) => c.personId === personId);
+      return recentCompletion && canUndoCompletion(recentCompletion.completedAt, task.type);
+    });
+
+    // If no tasks need undo timers, clear any existing timers and exit
+    if (tasksWithUndoTimers.length === 0) {
+      setUndoTimers({});
+      return;
+    }
+
+    // Calculate initial timer values for tasks that need them
+    const initialTimers: Record<string, number> = {};
+    tasksWithUndoTimers.forEach((task) => {
+      const recentCompletion = task.completions!.find((c) => c.personId === personId);
+      if (recentCompletion) {
+        const remainingTime = getRemainingUndoTime(recentCompletion.completedAt);
+        if (remainingTime > 0) {
+          initialTimers[task.id] = remainingTime;
+        }
+      }
+    });
+
+    // Set initial timers
+    setUndoTimers(initialTimers);
+
+    // Only create interval if there are active timers
+    if (Object.keys(initialTimers).length === 0) {
+      return;
+    }
+
+    // Update only active timers every second
+    const interval = setInterval(() => {
+      setUndoTimers((prevTimers) => {
+        const newTimers: Record<string, number> = {};
+        let hasActiveTimers = false;
+
+        // Only update tasks that previously had timers
+        Object.keys(prevTimers).forEach((taskId) => {
+          const task = tasksWithUndoTimers.find((t) => t.id === taskId);
+          if (task) {
+            const recentCompletion = task.completions!.find((c) => c.personId === personId);
+            if (recentCompletion) {
+              const remainingTime = getRemainingUndoTime(recentCompletion.completedAt);
+              if (remainingTime > 0) {
+                newTimers[taskId] = remainingTime;
+                hasActiveTimers = true;
+              }
+            }
+          }
+        });
+
+        // Clear interval if no more active timers
+        if (!hasActiveTimers) {
+          clearInterval(interval);
+          return {};
+        }
+
+        return newTimers;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [tasks, personId]);
+
+  // Memoized handlers to prevent re-renders
+  const handleComplete = useCallback((task: Task) => {
+    if (task.type === TaskType.PROGRESS) {
+      const value = progressValues[task.id];
+      if (!value || parseFloat(value) <= 0) {
+        alert('Please enter a value');
+        return;
+      }
+      onComplete(task.id, value);
+      setProgressValues((prev) => ({ ...prev, [task.id]: '' }));
+    } else {
+      onComplete(task.id);
+    }
+  }, [progressValues, onComplete]);
+
+  const handleUndo = useCallback((task: Task) => {
+    const recentCompletion = task.completions?.find((c) => c.personId === personId);
+    if (recentCompletion) {
+      onUndo(recentCompletion.id);
+    }
+  }, [personId, onUndo]);
+
+  const handleProgressChange = useCallback((taskId: string, value: string) => {
+    setProgressValues((prev) => ({ ...prev, [taskId]: value }));
+  }, []);
+
+  return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
@@ -214,30 +322,16 @@ export function TaskList({ tasks, personId, personName, onComplete, onUndo, onEx
         ) : (
           <div className="space-y-4">
             {tasks.map((task) => (
-              <div
+              <TaskItem
                 key={task.id}
-                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow"
-              >
-                <div className="mb-4">
-                  <div className="flex items-baseline gap-3 mb-2">
-                    <h3 className="text-2xl font-bold text-gray-900">{task.name}</h3>
-                    {task.type === TaskType.MULTIPLE_CHECKIN && (
-                      <span className="text-lg font-semibold text-blue-600">
-                        ({task.completionCount || 0}x)
-                      </span>
-                    )}
-                    {task.type === TaskType.PROGRESS && (
-                      <span className="text-lg font-semibold text-green-600">
-                        {task.totalValue || 0} {task.unit}
-                      </span>
-                    )}
-                  </div>
-                  {task.description && (
-                    <p className="text-gray-600">{task.description}</p>
-                  )}
-                </div>
-                {renderTaskButton(task)}
-              </div>
+                task={task}
+                personId={personId}
+                undoTime={undoTimers[task.id]}
+                progressValue={progressValues[task.id] || ''}
+                onComplete={handleComplete}
+                onUndo={handleUndo}
+                onProgressChange={handleProgressChange}
+              />
             ))}
           </div>
         )}
