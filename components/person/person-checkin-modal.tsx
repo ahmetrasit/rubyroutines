@@ -94,6 +94,8 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   const completeMutation = trpc.task.complete.useMutation({
     onSuccess: async () => {
       await utils.person.getById.refetch({ id: personId });
+      // Invalidate goal queries to update progress bars in real-time
+      await utils.goal.list.invalidate();
       toast({
         title: 'Success',
         description: 'Task completed!',
@@ -112,6 +114,8 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   const undoMutation = trpc.task.undoCompletion.useMutation({
     onSuccess: async () => {
       await utils.person.getById.refetch({ id: personId });
+      // Invalidate goal queries to update progress bars in real-time
+      await utils.goal.list.invalidate();
       toast({
         title: 'Success',
         description: 'Task undone',
