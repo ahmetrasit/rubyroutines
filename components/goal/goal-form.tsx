@@ -33,6 +33,15 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
+  // Goal type selection
+  const [goalType, setGoalType] = useState<'simple' | 'complex'>('simple');
+
+  // Simple goal fields
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+  const [simpleCondition, setSimpleCondition] = useState<'complete' | 'not_complete'>('complete');
+  const [comparisonOperator, setComparisonOperator] = useState<'lte' | 'gte'>('gte');
+  const [targetValue, setTargetValue] = useState<string>('');
+
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -301,172 +310,417 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
               />
             </div>
 
+            {/* Row 3: Goal Type Selection */}
             <div className="space-y-2">
-              <Label htmlFor="type">Goal Type *</Label>
-              <Select
-                value={type}
-                onValueChange={(value) => setType(value as GoalType)}
-              >
-                <SelectTrigger disabled={isPending}>
-                  <SelectValue placeholder="Select goal type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={GoalType.COMPLETION_COUNT}>Completion Count</SelectItem>
-                  <SelectItem value={GoalType.STREAK}>Streak</SelectItem>
-                  <SelectItem value={GoalType.TIME_BASED}>Time-based</SelectItem>
-                  <SelectItem value={GoalType.VALUE_BASED}>Value-based</SelectItem>
-                  <SelectItem value={GoalType.PERCENTAGE}>Percentage</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="target">
-                  Target Value *
-                </Label>
-                <Input
-                  id="target"
-                  type="number"
-                  min="1"
-                  step={type === GoalType.PERCENTAGE ? "0.1" : "1"}
-                  placeholder={
-                    type === GoalType.COMPLETION_COUNT ? "e.g., 50 completions" :
-                    type === GoalType.PERCENTAGE ? "e.g., 80 for 80%" :
-                    type === GoalType.TIME_BASED ? "e.g., 120 for 2 hours" :
-                    type === GoalType.STREAK ? "e.g., 7 days" :
-                    "e.g., 100"
-                  }
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
+              <Label>Goal Configuration *</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGoalType('simple')}
+                  className={`flex-1 py-2 px-4 rounded-md border-2 font-medium transition-colors ${
+                    goalType === 'simple'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                  }`}
                   disabled={isPending}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {type === GoalType.COMPLETION_COUNT && "Number of times to complete"}
-                  {type === GoalType.PERCENTAGE && "Target percentage to achieve (0-100)"}
-                  {type === GoalType.TIME_BASED && "Minutes to spend"}
-                  {type === GoalType.STREAK && "Consecutive days to maintain"}
-                  {type === GoalType.VALUE_BASED && "Target value to reach"}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="period">Period *</Label>
-                <Select
-                  value={period}
-                  onValueChange={(value) => setPeriod(value as ResetPeriod)}
                 >
-                  <SelectTrigger disabled={isPending}>
-                    <SelectValue placeholder="Select period" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ResetPeriod.DAILY}>Daily</SelectItem>
-                    <SelectItem value={ResetPeriod.WEEKLY}>Weekly</SelectItem>
-                    <SelectItem value={ResetPeriod.MONTHLY}>Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
+                  Simple Goal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGoalType('complex')}
+                  className={`flex-1 py-2 px-4 rounded-md border-2 font-medium transition-colors ${
+                    goalType === 'complex'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                  }`}
+                  disabled={isPending}
+                >
+                  Complex Goal
+                </button>
               </div>
             </div>
 
-            {period === ResetPeriod.WEEKLY && (
-              <div className="space-y-2">
-                <Label htmlFor="resetDay">Reset Day</Label>
-                <Select
-                  value={resetDay?.toString() || '0'}
-                  onValueChange={(value) => setResetDay(parseInt(value))}
-                >
-                  <SelectTrigger disabled={isPending}>
-                    <SelectValue placeholder="Select day" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Sunday</SelectItem>
-                    <SelectItem value="1">Monday</SelectItem>
-                    <SelectItem value="2">Tuesday</SelectItem>
-                    <SelectItem value="3">Wednesday</SelectItem>
-                    <SelectItem value="4">Thursday</SelectItem>
-                    <SelectItem value="5">Friday</SelectItem>
-                    <SelectItem value="6">Saturday</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Row 4: Simple Goal Configuration */}
+            {goalType === 'simple' && (
+              <div className="space-y-3 border-t pt-4">
+                {/* Task Selection and Condition/Operator/Value - All on same row */}
+                {selectedTaskId && (() => {
+                  const selectedTask = availableTasks.find((t: any) => t.id === selectedTaskId);
+                  if (!selectedTask) return null;
 
-            {period === ResetPeriod.MONTHLY && (
-              <div className="space-y-2">
-                <Label htmlFor="resetDay">Reset Day of Month</Label>
-                <Input
-                  id="resetDay"
-                  type="number"
-                  min="1"
-                  max="31"
-                  placeholder="1-31"
-                  value={resetDay?.toString() || '1'}
-                  onChange={(e) => setResetDay(parseInt(e.target.value))}
-                  disabled={isPending}
-                />
-              </div>
-            )}
-
-            {/* Linked Tasks */}
-            {availableTasks.length > 0 && (
-              <div className="space-y-2 border-t pt-4">
-                <Label>Link Tasks *</Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Select at least one task that contributes to this goal
-                </p>
-                <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-2">
-                  {availableTasks.map((task: any) => (
-                    <label
-                      key={task.id}
-                      className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedTaskIds.includes(task.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedTaskIds([...selectedTaskIds, task.id]);
-                          } else {
-                            setSelectedTaskIds(selectedTaskIds.filter(id => id !== task.id));
-                          }
-                        }}
-                        disabled={isPending}
-                        className="rounded"
-                      />
-                      <div className="flex-1 flex items-center gap-2">
-                        <span className="text-sm">
-                          {task.name}
-                        </span>
-                        <span
-                          className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
-                          style={{
-                            backgroundColor:
-                              task.type === 'SIMPLE' ? '#E0F2FE' :
-                              task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
-                              '#FEF3C7',
-                            color:
-                              task.type === 'SIMPLE' ? '#0369A1' :
-                              task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
-                              '#B45309'
-                          }}
-                        >
-                          {task.type === 'SIMPLE' ? 'Simple' :
-                           task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
-                           'Progress'}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          ({task.routineName})
-                        </span>
+                  if (selectedTask.type === 'SIMPLE') {
+                    // SIMPLE task: Task selection | Condition (2 columns)
+                    return (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="task">Select Task *</Label>
+                          <Select
+                            value={selectedTaskId}
+                            onValueChange={setSelectedTaskId}
+                          >
+                            <SelectTrigger disabled={isPending}>
+                              <SelectValue placeholder="Choose a task">
+                                {selectedTask && (
+                                  <div className="flex items-center gap-2">
+                                    {selectedTask.icon && <RenderIconEmoji value={selectedTask.icon} className="h-4 w-4" />}
+                                    <div className="flex flex-col items-start">
+                                      <span className="text-sm">{selectedTask.name}</span>
+                                      <span className="text-xs text-gray-500">{selectedTask.routineName}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableTasks.map((task: any) => (
+                                <SelectItem key={task.id} value={task.id}>
+                                  <div className="flex items-center gap-2">
+                                    {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
+                                    <span>{task.name}</span>
+                                    <span
+                                      className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                      style={{
+                                        backgroundColor:
+                                          task.type === 'SIMPLE' ? '#E0F2FE' :
+                                          task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                          '#FEF3C7',
+                                        color:
+                                          task.type === 'SIMPLE' ? '#0369A1' :
+                                          task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                          '#B45309'
+                                      }}
+                                    >
+                                      {task.type === 'SIMPLE' ? 'Simple' :
+                                       task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                       'Progress'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500">{task.routineName}</div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="condition">Condition *</Label>
+                          <Select
+                            value={simpleCondition}
+                            onValueChange={(value: 'complete' | 'not_complete') => setSimpleCondition(value)}
+                          >
+                            <SelectTrigger disabled={isPending}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="complete">is complete</SelectItem>
+                              <SelectItem value="not_complete">is not complete</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    </label>
-                  ))}
-                </div>
-                {selectedTaskIds.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {selectedTaskIds.length} task{selectedTaskIds.length > 1 ? 's' : ''} selected
-                  </p>
+                    );
+                  } else {
+                    // MULTIPLE_CHECKIN or PROGRESS: Task selection | Operator | Value (3 columns)
+                    return (
+                      <div className="grid grid-cols-12 gap-3">
+                        <div className="col-span-6 space-y-2">
+                          <Label htmlFor="task">Select Task *</Label>
+                          <Select
+                            value={selectedTaskId}
+                            onValueChange={setSelectedTaskId}
+                          >
+                            <SelectTrigger disabled={isPending}>
+                              <SelectValue placeholder="Choose a task">
+                                {selectedTask && (
+                                  <div className="flex items-center gap-2">
+                                    {selectedTask.icon && <RenderIconEmoji value={selectedTask.icon} className="h-4 w-4" />}
+                                    <div className="flex flex-col items-start">
+                                      <span className="text-sm">{selectedTask.name}</span>
+                                      <span className="text-xs text-gray-500">{selectedTask.routineName}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableTasks.map((task: any) => (
+                                <SelectItem key={task.id} value={task.id}>
+                                  <div className="flex items-center gap-2">
+                                    {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
+                                    <span>{task.name}</span>
+                                    <span
+                                      className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                      style={{
+                                        backgroundColor:
+                                          task.type === 'SIMPLE' ? '#E0F2FE' :
+                                          task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                          '#FEF3C7',
+                                        color:
+                                          task.type === 'SIMPLE' ? '#0369A1' :
+                                          task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                          '#B45309'
+                                      }}
+                                    >
+                                      {task.type === 'SIMPLE' ? 'Simple' :
+                                       task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                       'Progress'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500">{task.routineName}</div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-3 space-y-2">
+                          <Label htmlFor="operator">Operator *</Label>
+                          <Select
+                            value={comparisonOperator}
+                            onValueChange={(value: 'lte' | 'gte') => setComparisonOperator(value)}
+                          >
+                            <SelectTrigger disabled={isPending}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="gte">≥</SelectItem>
+                              <SelectItem value="lte">≤</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-3 space-y-2">
+                          <Label htmlFor="value">Value *</Label>
+                          <Input
+                            id="value"
+                            type="number"
+                            min="0"
+                            max="99"
+                            value={targetValue}
+                            onChange={(e) => setTargetValue(e.target.value)}
+                            placeholder="0-99"
+                            disabled={isPending}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
+
+                {/* Initial task selection when no task is selected */}
+                {!selectedTaskId && (
+                  <div className="space-y-2">
+                    <Label htmlFor="task">Select Task *</Label>
+                    <Select
+                      value={selectedTaskId}
+                      onValueChange={setSelectedTaskId}
+                    >
+                      <SelectTrigger disabled={isPending}>
+                        <SelectValue placeholder="Choose a task" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTasks.map((task: any) => (
+                          <SelectItem key={task.id} value={task.id}>
+                            <div className="flex items-center gap-2">
+                              {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
+                              <span>{task.name}</span>
+                              <span
+                                className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                style={{
+                                  backgroundColor:
+                                    task.type === 'SIMPLE' ? '#E0F2FE' :
+                                    task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                    '#FEF3C7',
+                                  color:
+                                    task.type === 'SIMPLE' ? '#0369A1' :
+                                    task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                    '#B45309'
+                                }}
+                              >
+                                {task.type === 'SIMPLE' ? 'Simple' :
+                                 task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                 'Progress'}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500">{task.routineName}</div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
               </div>
+            )}
+
+            {/* Complex Goal Configuration */}
+            {goalType === 'complex' && (
+              <>
+                <div className="space-y-2 border-t pt-4">
+                  <Label htmlFor="type">Goal Type *</Label>
+                  <Select
+                    value={type}
+                    onValueChange={(value) => setType(value as GoalType)}
+                  >
+                    <SelectTrigger disabled={isPending}>
+                      <SelectValue placeholder="Select goal type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={GoalType.COMPLETION_COUNT}>Completion Count</SelectItem>
+                      <SelectItem value={GoalType.STREAK}>Streak</SelectItem>
+                      <SelectItem value={GoalType.TIME_BASED}>Time-based</SelectItem>
+                      <SelectItem value={GoalType.VALUE_BASED}>Value-based</SelectItem>
+                      <SelectItem value={GoalType.PERCENTAGE}>Percentage</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="target">
+                      Target Value *
+                    </Label>
+                    <Input
+                      id="target"
+                      type="number"
+                      min="1"
+                      step={type === GoalType.PERCENTAGE ? "0.1" : "1"}
+                      placeholder={
+                        type === GoalType.COMPLETION_COUNT ? "e.g., 50 completions" :
+                        type === GoalType.PERCENTAGE ? "e.g., 80 for 80%" :
+                        type === GoalType.TIME_BASED ? "e.g., 120 for 2 hours" :
+                        type === GoalType.STREAK ? "e.g., 7 days" :
+                        "e.g., 100"
+                      }
+                      value={target}
+                      onChange={(e) => setTarget(e.target.value)}
+                      disabled={isPending}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {type === GoalType.COMPLETION_COUNT && "Number of times to complete"}
+                      {type === GoalType.PERCENTAGE && "Target percentage to achieve (0-100)"}
+                      {type === GoalType.TIME_BASED && "Minutes to spend"}
+                      {type === GoalType.STREAK && "Consecutive days to maintain"}
+                      {type === GoalType.VALUE_BASED && "Target value to reach"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="period">Period *</Label>
+                    <Select
+                      value={period}
+                      onValueChange={(value) => setPeriod(value as ResetPeriod)}
+                    >
+                      <SelectTrigger disabled={isPending}>
+                        <SelectValue placeholder="Select period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ResetPeriod.DAILY}>Daily</SelectItem>
+                        <SelectItem value={ResetPeriod.WEEKLY}>Weekly</SelectItem>
+                        <SelectItem value={ResetPeriod.MONTHLY}>Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {period === ResetPeriod.WEEKLY && (
+                  <div className="space-y-2">
+                    <Label htmlFor="resetDay">Reset Day</Label>
+                    <Select
+                      value={resetDay?.toString() || '0'}
+                      onValueChange={(value) => setResetDay(parseInt(value))}
+                    >
+                      <SelectTrigger disabled={isPending}>
+                        <SelectValue placeholder="Select day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Sunday</SelectItem>
+                        <SelectItem value="1">Monday</SelectItem>
+                        <SelectItem value="2">Tuesday</SelectItem>
+                        <SelectItem value="3">Wednesday</SelectItem>
+                        <SelectItem value="4">Thursday</SelectItem>
+                        <SelectItem value="5">Friday</SelectItem>
+                        <SelectItem value="6">Saturday</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {period === ResetPeriod.MONTHLY && (
+                  <div className="space-y-2">
+                    <Label htmlFor="resetDay">Reset Day of Month</Label>
+                    <Input
+                      id="resetDay"
+                      type="number"
+                      min="1"
+                      max="31"
+                      placeholder="1-31"
+                      value={resetDay?.toString() || '1'}
+                      onChange={(e) => setResetDay(parseInt(e.target.value))}
+                      disabled={isPending}
+                    />
+                  </div>
+                )}
+
+                {/* Linked Tasks */}
+                {availableTasks.length > 0 && (
+                  <div className="space-y-2 border-t pt-4">
+                    <Label>Link Tasks *</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Select at least one task that contributes to this goal
+                    </p>
+                    <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-2">
+                      {availableTasks.map((task: any) => (
+                        <label
+                          key={task.id}
+                          className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedTaskIds.includes(task.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTaskIds([...selectedTaskIds, task.id]);
+                              } else {
+                                setSelectedTaskIds(selectedTaskIds.filter(id => id !== task.id));
+                              }
+                            }}
+                            disabled={isPending}
+                            className="rounded"
+                          />
+                          <div className="flex-1 flex items-center gap-2">
+                            <span className="text-sm">
+                              {task.name}
+                            </span>
+                            <span
+                              className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                              style={{
+                                backgroundColor:
+                                  task.type === 'SIMPLE' ? '#E0F2FE' :
+                                  task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                  '#FEF3C7',
+                                color:
+                                  task.type === 'SIMPLE' ? '#0369A1' :
+                                  task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                  '#B45309'
+                              }}
+                            >
+                              {task.type === 'SIMPLE' ? 'Simple' :
+                               task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                               'Progress'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ({task.routineName})
+                            </span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedTaskIds.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {selectedTaskIds.length} task{selectedTaskIds.length > 1 ? 's' : ''} selected
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
