@@ -54,30 +54,32 @@ export const PersonList = memo(function PersonList({
     }
   );
 
-  const { data: coParents } = trpc.coParent.list.useQuery(
+  const { data: coParents, error: coParentsError } = trpc.coParent.list.useQuery(
     { roleId },
     {
       enabled: !!roleId,
       retry: false,
-      onError: (error) => {
-        // Silently handle co-parent errors if the feature is not set up yet
-        console.warn('Co-parent feature not available:', error.message);
-      }
     }
   );
 
+  // Log co-parent errors if they occur (but don't break the UI)
+  if (coParentsError) {
+    console.warn('Co-parent feature not available:', coParentsError.message);
+  }
+
   // Get shared persons using the personSharing API
-  const { data: accessiblePersons, isLoading: isLoadingAccessible } = trpc.personSharing.getAccessiblePersons.useQuery(
+  const { data: accessiblePersons, isLoading: isLoadingAccessible, error: accessiblePersonsError } = trpc.personSharing.getAccessiblePersons.useQuery(
     { roleId },
     {
       enabled: !!roleId,
       retry: false,
-      onError: (error) => {
-        // Silently handle person sharing errors if the feature is not set up yet
-        console.warn('Person sharing feature not available:', error.message);
-      }
     }
   );
+
+  // Log person sharing errors if they occur (but don't break the UI)
+  if (accessiblePersonsError) {
+    console.warn('Person sharing feature not available:', accessiblePersonsError.message);
+  }
 
   // IMPORTANT: All useMemo hooks MUST be called before any conditional returns
   // to maintain consistent hook order between renders
