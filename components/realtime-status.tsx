@@ -18,18 +18,35 @@ export function RealtimeStatus() {
     // Create a test channel to monitor connection status
     const channel = supabase.channel('status_check');
 
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        setStatus('connected');
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        setStatus('disconnected');
-      } else {
-        setStatus('connecting');
-      }
-    });
+    // Handle subscription with error catching
+    try {
+      channel
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            setStatus('connected');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            setStatus('disconnected');
+          } else {
+            setStatus('connecting');
+          }
+        })
+        .on('error', (error) => {
+          console.log('Realtime connection error (expected if realtime is not configured):', error.message);
+          setStatus('disconnected');
+        });
+    } catch (error) {
+      // Silently handle connection errors - realtime might not be configured
+      console.log('Realtime not available:', error);
+      setStatus('disconnected');
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      try {
+        supabase.removeChannel(channel);
+      } catch (error) {
+        // Silently handle cleanup errors
+        console.log('Error cleaning up realtime channel:', error);
+      }
     };
   }, []);
 

@@ -31,13 +31,13 @@ export default function BillingPage() {
       });
       router.replace('/billing');
     }
-  }, [searchParams, toast, router]);
+  }, [searchParams, toast]); // router removed - it's stable and doesn't need to be a dependency
 
   useEffect(() => {
     if (!sessionLoading && !session?.user) {
       router.push('/login');
     }
-  }, [sessionLoading, session, router]);
+  }, [sessionLoading, session]); // router removed - it's stable and doesn't need to be a dependency
 
   if (sessionLoading) {
     return (

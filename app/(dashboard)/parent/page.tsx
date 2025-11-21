@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { PersonList } from '@/components/person/person-list';
@@ -22,23 +22,25 @@ export default function ParentDashboard() {
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [showBulkVisibility, setShowBulkVisibility] = useState(false);
   const [inviteCodeFromUrl, setInviteCodeFromUrl] = useState<string | null>(null);
+  const hasProcessedInviteCode = useRef(false);
 
   useEffect(() => {
     if (!isLoading && !session?.user) {
       router.push('/login');
     }
-  }, [isLoading, session, router]);
+  }, [isLoading, session]); // router removed - it's stable and doesn't need to be a dependency
 
   // Auto-open claim share modal if inviteCode is in URL
   useEffect(() => {
     const inviteCode = searchParams.get('inviteCode');
-    if (inviteCode && session?.user) {
+    if (inviteCode && session?.user && !hasProcessedInviteCode.current) {
+      hasProcessedInviteCode.current = true;
       setInviteCodeFromUrl(inviteCode);
       setShowClaimShareModal(true);
       // Clean up URL by removing the query parameter
-      router.replace('/parent', { scroll: false });
+      router.replace('/parent');
     }
-  }, [searchParams, session, router]);
+  }, [searchParams, session]); // router removed - it's stable and doesn't need to be a dependency
 
   if (isLoading) {
     return (
