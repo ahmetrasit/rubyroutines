@@ -79,14 +79,8 @@ export const PersonList = memo(function PersonList({
     }
   );
 
-  if (isLoading || isLoadingAccessible) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Loading...</p>
-      </div>
-    );
-  }
-
+  // IMPORTANT: All useMemo hooks MUST be called before any conditional returns
+  // to maintain consistent hook order between renders
 
   // Combine owned and shared persons with useMemo
   const allAccessiblePersons = useMemo(() => [
@@ -110,6 +104,15 @@ export const PersonList = memo(function PersonList({
     accessiblePersons?.sharedPersons?.filter((person) => !person.isAccountOwner) || [],
     [accessiblePersons]
   );
+
+  // Early return for loading state - AFTER all hooks
+  if (isLoading || isLoadingAccessible) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    );
+  }
 
   // Check tier limits using effective limits from database
   const childLimit = getTierLimit(effectiveLimits, 'children_per_family');
