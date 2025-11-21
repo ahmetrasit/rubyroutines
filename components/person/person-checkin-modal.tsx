@@ -53,11 +53,8 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     { enabled: isOpen && !!personId }
   );
 
-  // Get current user's role to check if they're a teacher
-  const { data: currentRole } = trpc.role.list.useQuery(undefined, {
-    enabled: isOpen && !!session?.user?.id,
-    select: (roles) => roles.find((r) => r.userId === session?.user?.id),
-  });
+  // Get current user's role from session to check if they're a teacher
+  const currentRole = session?.user?.roles?.[0]; // Get the first role from the session
 
   // Get goals for this person to show real progress
   const { data: goals } = trpc.goal.list.useQuery(

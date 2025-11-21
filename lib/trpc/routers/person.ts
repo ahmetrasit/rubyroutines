@@ -143,17 +143,19 @@ export const personRouter = router({
                       _count: {
                         select: { completions: true }
                       },
-                      // Get only the most recent completion for this person (for undo feature)
+                      // Get all completions for this person to filter by reset period on the frontend
                       completions: {
                         where: {
                           personId: input.id,
                         },
                         orderBy: { completedAt: 'desc' },
-                        take: 1, // Only the most recent completion
                         select: {
                           id: true,
                           completedAt: true,
                           value: true,
+                          summedValue: true,
+                          entryNumber: true,
+                          personId: true,
                         },
                       },
                     },

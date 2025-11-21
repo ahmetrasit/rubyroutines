@@ -180,7 +180,6 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                   <div className="text-sm text-gray-500 mt-1">{task.description}</div>
                 )}
               </div>
-              <span className="text-sm text-gray-500 flex-shrink-0">({(task.entryNumber || task.completionCount || 0)}/9)</span>
             </div>
           </button>
         );
@@ -208,16 +207,12 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                 <div className="flex items-center">
                   <Plus className="h-5 w-5 mr-2" />
                   Add {task.unit}
-                  <span className="ml-2 text-sm">({(task.entryNumber || task.completionCount || 0)}/20)</span>
                 </div>
               </button>
             </div>
             <div className="text-center">
               <div className="text-lg font-semibold text-gray-900">
                 Total: {task.summedValue || task.totalValue || 0} {task.unit}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                Entry #{task.entryNumber || task.completionCount || 0}
               </div>
             </div>
           </div>
