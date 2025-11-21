@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosk A - Gentle Cards</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 1024px; margin: 0 auto; }
+        .header { background: white; border-radius: 24px; padding: 36px; margin-bottom: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+        h1 { font-size: 42px; font-weight: 700; color: #1F2937; }
+        .completed { color: #558B2F; font-size: 24px; font-weight: 600; margin-top: 8px; }
+        .subtitle { color: #6B7280; font-size: 20px; margin-top: 8px; }
+        .main { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        .section { background: white; border-radius: 24px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+        .section-title { font-size: 18px; font-weight: 700; color: #374151; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .task-card {
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .task-card:not(.complete) { background: #ECEFF1; }
+        .task-card.complete { background: #F1F8E9; }
+        .task-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .task-indicator {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            flex-shrink: 0;
+        }
+        .task-card:not(.complete) .task-indicator {
+            border: 4px solid #B0BEC5;
+            color: #B0BEC5;
+        }
+        .task-card.complete .task-indicator {
+            border: 4px solid #81C784;
+            background: #81C784;
+            color: white;
+        }
+        .task-content { flex: 1; }
+        .task-name { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+        .task-card:not(.complete) .task-name { color: #90A4AE; }
+        .task-card.complete .task-name { color: #558B2F; }
+        .task-desc { font-size: 18px; }
+        .task-card:not(.complete) .task-desc { color: #B0BEC5; }
+        .task-card.complete .task-desc { color: #81C784; }
+        .progress-card {
+            background: #E3F2FD;
+            border-radius: 20px;
+            padding: 28px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            min-height: 100px;
+        }
+        .progress-card .emoji { font-size: 36px; flex-shrink: 0; }
+        .progress-card .name { flex: 1; font-weight: 700; color: #1565C0; font-size: 24px; }
+        .progress-card button {
+            background: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-weight: 700;
+            color: #1976D2;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+        .progress-card button:hover { transform: scale(1.05); }
+        .progress-card .value { font-weight: 700; color: #42A5F5; font-size: 20px; min-width: 100px; text-align: right; }
+        .footer { background: white; border-radius: 24px; padding: 28px; margin-top: 32px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+        .footer-text { color: #558B2F; font-weight: 700; font-size: 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Alex's Check-in</h1>
+            <div class="completed">✨ 2 tasks completed today</div>
+            <div class="subtitle">Wonderful progress at your own pace</div>
+        </div>
+        <div class="main">
+            <div class="section">
+                <div class="section-title">CHECKLIST (2/4)</div>
+                <div class="task-card" onclick="this.classList.toggle('complete')">
+                    <div class="task-indicator">○</div>
+                    <div class="task-content">
+                        <div class="task-name">Brush Teeth</div>
+                        <div class="task-desc">Brush for 2 minutes</div>
+                    </div>
+                </div>
+                <div class="task-card complete">
+                    <div class="task-indicator">●</div>
+                    <div class="task-content">
+                        <div class="task-name">Make Bed</div>
+                        <div class="task-desc">Keep room tidy</div>
+                    </div>
+                </div>
+                <div class="task-card" onclick="this.classList.toggle('complete')">
+                    <div class="task-indicator">○</div>
+                    <div class="task-content">
+                        <div class="task-name">Homework</div>
+                        <div class="task-desc">Complete assignments</div>
+                    </div>
+                </div>
+                <div class="task-card complete">
+                    <div class="task-indicator">●</div>
+                    <div class="task-content">
+                        <div class="task-name">Pack Backpack</div>
+                        <div class="task-desc">Ready for tomorrow</div>
+                    </div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">RECORD PROGRESS (0/2)</div>
+                <div class="progress-card">
+                    <span class="emoji">💧</span>
+                    <span class="name">Water</span>
+                    <button>+ Add</button>
+                    <span class="value">3/9 Great! 💙</span>
+                </div>
+                <div class="progress-card">
+                    <span class="emoji">📚</span>
+                    <span class="name">Read Pages</span>
+                    <button>+ Add</button>
+                    <span class="value">0 pages 📖</span>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="footer-text">🎯 Keep going when you're ready</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard A3 - Rounded Tags</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container { max-width: 420px; width: 100%; background: white; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+        .header { padding: 24px; border-bottom: 1px solid #ECEFF1; }
+        h1 { font-size: 26px; font-weight: 700; color: #1F2937; }
+        .completed { color: #558B2F; font-size: 15px; font-weight: 600; margin-top: 4px; }
+        .subtitle { color: #6B7280; font-size: 14px; margin-top: 4px; }
+        .content { padding: 24px; }
+        .section-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 16px; text-transform: uppercase; }
+        .tag { border-radius: 16px; padding: 16px 18px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
+        .tag:not(.complete) { background: #ECEFF1; }
+        .tag.complete { background: #F1F8E9; }
+        .tag-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .tag:not(.complete) .tag-name { color: #90A4AE; }
+        .tag.complete .tag-name { color: #558B2F; }
+        .tag-desc { font-size: 13px; }
+        .tag:not(.complete) .tag-desc { color: #B0BEC5; }
+        .tag.complete .tag-desc { color: #81C784; }
+        .divider { height: 1px; background: #ECEFF1; margin: 24px 0; }
+        .progress-card { background: #E3F2FD; border-radius: 16px; padding: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
+        .progress-card button { background: white; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 600; color: #1976D2; cursor: pointer; }
+        .footer { padding: 20px; background: #FAFAFA; text-align: center; color: #558B2F; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Alex's Check-in</h1>
+            <div class="completed">✨ 2 tasks done today</div>
+            <div class="subtitle">Beautiful work!</div>
+        </div>
+        <div class="content">
+            <div class="section-title">CHECKLIST (2/4)</div>
+            <div class="tag" onclick="this.classList.toggle('complete')">
+                <div class="tag-name">Brush Teeth</div>
+                <div class="tag-desc">Brush for 2 min</div>
+            </div>
+            <div class="tag complete">
+                <div class="tag-name">Make Bed</div>
+                <div class="tag-desc">Keep room tidy</div>
+            </div>
+            <div class="tag" onclick="this.classList.toggle('complete')">
+                <div class="tag-name">Homework</div>
+                <div class="tag-desc">Complete work</div>
+            </div>
+            <div class="tag complete">
+                <div class="tag-name">Pack Backpack</div>
+                <div class="tag-desc">Ready for school</div>
+            </div>
+            <div class="divider"></div>
+            <div class="section-title">RECORD PROGRESS (0/2)</div>
+            <div class="progress-card">
+                <span style="font-size:22px;">💧</span>
+                <span style="flex:1; font-weight:600; color:#1565C0;">Water</span>
+                <button>+ Add</button>
+                <span style="color:#42A5F5; font-weight:600;">3/9 Great! 💙</span>
+            </div>
+            <div class="progress-card">
+                <span style="font-size:22px;">📚</span>
+                <span style="flex:1; font-weight:600; color:#1565C0;">Read</span>
+                <button>+ Add</button>
+                <span style="color:#42A5F5; font-weight:600;">0 pgs 📖</span>
+            </div>
+        </div>
+        <div class="footer">🎯 Great progress</div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard A1 - Soft Checkboxes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .header {
+            padding: 24px;
+            border-bottom: 1px solid #ECEFF1;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1F2937;
+        }
+
+        .completed {
+            color: #66BB6A;
+            font-size: 15px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .subtitle {
+            color: #6B7280;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 0;
+            cursor: pointer;
+        }
+
+        .checkbox {
+            width: 28px;
+            height: 28px;
+            border: 3px solid #90A4AE;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .task-item.complete .checkbox {
+            background: #66BB6A;
+            border-color: #66BB6A;
+        }
+
+        .checkbox.complete::after {
+            content: '✓';
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .task-text {
+            flex: 1;
+        }
+
+        .task-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .task-item:not(.complete) .task-name {
+            color: #90A4AE;
+        }
+
+        .task-item.complete .task-name {
+            color: #66BB6A;
+        }
+
+        .task-desc {
+            font-size: 13px;
+        }
+
+        .task-item:not(.complete) .task-desc {
+            color: #B0BEC5;
+        }
+
+        .task-item.complete .task-desc {
+            color: #A5D6A7;
+        }
+
+        .divider {
+            height: 1px;
+            background: #ECEFF1;
+            margin: 24px 0;
+        }
+
+        .progress-card {
+            background: #E3F2FD;
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 12px;
+        }
+
+        .progress-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .progress-name {
+            flex: 1;
+            font-weight: 600;
+            color: #1565C0;
+            font-size: 15px;
+        }
+
+        .add-button {
+            background: white;
+            border: 2px solid #64B5F6;
+            color: #1976D2;
+            border-radius: 10px;
+            padding: 6px 18px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .add-button:hover {
+            background: #64B5F6;
+            color: white;
+        }
+
+        .encouragement {
+            color: #42A5F5;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .footer {
+            padding: 20px;
+            background: #F9FAFB;
+            text-align: center;
+            color: #66BB6A;
+            font-weight: 600;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Alex</h1>
+            <div class="completed">✨ 2 done today</div>
+            <div class="subtitle">Going at a nice pace</div>
+        </div>
+
+        <div class="content">
+            <div class="section-title">CHECKLIST (2/4)</div>
+
+            <div class="task-item" onclick="toggleComplete(this)">
+                <div class="checkbox"></div>
+                <div class="task-text">
+                    <div class="task-name">Brush Teeth</div>
+                    <div class="task-desc">Brush for 2 min</div>
+                </div>
+            </div>
+
+            <div class="task-item complete">
+                <div class="checkbox complete"></div>
+                <div class="task-text">
+                    <div class="task-name">Make Bed</div>
+                    <div class="task-desc">Keep room tidy</div>
+                </div>
+            </div>
+
+            <div class="task-item" onclick="toggleComplete(this)">
+                <div class="checkbox"></div>
+                <div class="task-text">
+                    <div class="task-name">Homework</div>
+                    <div class="task-desc">Complete assignments</div>
+                </div>
+            </div>
+
+            <div class="task-item complete">
+                <div class="checkbox complete"></div>
+                <div class="task-text">
+                    <div class="task-name">Pack Backpack</div>
+                    <div class="task-desc">Ready for school</div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">RECORD PROGRESS (0/2)</div>
+
+            <div class="progress-card">
+                <div class="progress-top">
+                    <span style="font-size: 22px;">💧</span>
+                    <span class="progress-name">Water</span>
+                    <button class="add-button">+ Add</button>
+                    <span style="color: #42A5F5; font-weight: 600;">3/9</span>
+                </div>
+                <div class="encouragement">Excellent! 💙</div>
+            </div>
+
+            <div class="progress-card">
+                <div class="progress-top">
+                    <span style="font-size: 22px;">📚</span>
+                    <span class="progress-name">Read</span>
+                    <button class="add-button">+ Add</button>
+                    <span style="color: #42A5F5; font-weight: 600;">0 pgs</span>
+                </div>
+                <div class="encouragement">No pressure 📖</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            🎯 Looking good
+        </div>
+    </div>
+
+    <script>
+        function toggleComplete(el) {
+            el.classList.toggle('complete');
+        }
+    </script>
+</body>
+</html>
