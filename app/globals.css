@@ -326,3 +326,279 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+/* ========================================
+   WARM EARTH DASHBOARD MODE STYLES
+   (Mobile/Smartphone - A3 Cards + C4 Squares)
+   ======================================== */
+
+/* Dashboard Modal */
+.warm-earth-modal.dashboard-mode .warm-earth-header-dashboard {
+  padding: 24px;
+  border-bottom: 1px solid #ECEFF1;
+  background: linear-gradient(135deg, rgba(77, 182, 172, 0.05), rgba(38, 166, 154, 0.05));
+}
+
+.dashboard-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1F2937;
+  line-height: 1.2;
+}
+
+.dashboard-completed {
+  color: var(--warm-complete-secondary);
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.dashboard-subtitle {
+  color: #6B7280;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.dashboard-content {
+  padding: 20px;
+  background: white;
+  overflow-y: auto;
+  max-height: calc(90vh - 120px);
+}
+
+.dashboard-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Dashboard Task Cards (A3 Pattern) */
+.dashboard-task-card {
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(120, 144, 156, 0.08);
+}
+
+.dashboard-task-card.complete {
+  background: #E0F2F1;
+}
+
+.dashboard-task-card:active {
+  transform: scale(0.98);
+}
+
+/* C4 Rotating Squares */
+.dashboard-square {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  margin-top: 4px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2.5px solid var(--warm-incomplete-primary);
+  background: transparent;
+}
+
+.dashboard-task-card.complete .dashboard-square {
+  background: var(--warm-complete-primary);
+  border: 2.5px solid var(--warm-complete-primary);
+  transform: rotate(45deg);
+}
+
+/* Task Content */
+.dashboard-task-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-task-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  line-height: 1.3;
+  color: var(--warm-incomplete-secondary);
+}
+
+.dashboard-task-card.complete .dashboard-task-name {
+  color: var(--warm-complete-secondary);
+}
+
+.dashboard-task-desc {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--warm-incomplete-primary);
+}
+
+.dashboard-task-card.complete .dashboard-task-desc {
+  color: var(--warm-complete-primary);
+}
+
+/* Inline Goal Progress */
+.dashboard-goal-progress {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-goal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--warm-progress-bg);
+  color: var(--warm-progress-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.dashboard-goal-bar-container {
+  flex: 1;
+  height: 4px;
+  background: rgba(144, 202, 249, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.dashboard-goal-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%);
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.dashboard-goal-percent {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--warm-progress-primary);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Dashboard Progress Cards (for Multi/Progress Tasks) */
+.dashboard-progress-card {
+  background: var(--warm-progress-bg);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-progress-emoji {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.dashboard-progress-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-progress-name {
+  font-weight: 600;
+  color: var(--warm-progress-secondary);
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.dashboard-progress-desc {
+  font-size: 13px;
+  color: var(--warm-progress-primary);
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.dashboard-progress-input {
+  width: 70px;
+  padding: 6px 10px;
+  border: 1px solid var(--warm-progress-primary);
+  border-radius: 8px;
+  font-weight: 600;
+  color: var(--warm-progress-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.dashboard-progress-input:focus {
+  outline: none;
+  border-color: var(--warm-progress-secondary);
+}
+
+.dashboard-progress-button {
+  background: white;
+  border: 1px solid var(--warm-progress-primary);
+  padding: 6px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  color: var(--warm-progress-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.dashboard-progress-button:active {
+  transform: scale(0.95);
+}
+
+.dashboard-progress-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dashboard-progress-value {
+  color: var(--warm-progress-primary);
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 70px;
+  text-align: right;
+}
+
+/* ========================================
+   WARM EARTH KIOSK MODE STYLES
+   (Tablet - Larger Fonts + Inline Controls)
+   ======================================== */
+
+.warm-earth-modal.kiosk-mode .warm-earth-header-kiosk {
+  padding: 32px;
+  background: linear-gradient(135deg, rgba(144, 164, 174, 0.1), rgba(77, 182, 172, 0.1));
+  border-bottom: 2px solid var(--warm-border-light);
+}
+
+.kiosk-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--warm-text-primary);
+}
+
+.kiosk-content {
+  padding: 32px;
+  overflow-y: auto;
+  max-height: calc(90vh - 140px);
+}
+
+/* Kiosk font sizes are 2x dashboard */
+@media (min-width: 768px) {
+  .kiosk-task-name {
+    font-size: 28px;
+  }
+  
+  .kiosk-task-desc {
+    font-size: 26px;
+  }
+  
+  .kiosk-section-title {
+    font-size: 32px;
+  }
+}
