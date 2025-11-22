@@ -41,8 +41,8 @@ function ModerationLogsContent() {
   const offset = (currentPage - 1) * pageSize;
 
   const { data: logsData, isLoading, isFetching } = trpc.adminModerationLogs.getLogs.useQuery({
-    action: actionFilter || undefined,
-    entityType: entityTypeFilter || undefined,
+    action: (actionFilter || undefined) as any,
+    entityType: (entityTypeFilter || undefined) as any,
     entityId: entityIdSearch || undefined,
     limit: pageSize,
     offset: offset,
@@ -77,8 +77,8 @@ function ModerationLogsContent() {
 
   const handleExport = () => {
     exportMutation.mutate({
-      action: actionFilter || undefined,
-      entityType: entityTypeFilter || undefined,
+      action: (actionFilter || undefined) as any,
+      entityType: (entityTypeFilter || undefined) as any,
     });
   };
 
@@ -223,7 +223,7 @@ function ModerationLogsContent() {
             ) : logsData && logsData.logs.length > 0 ? (
               <>
                 <div className="space-y-3">
-                  {logsData.logs.map((log) => (
+                  {logsData.logs.map((log: any) => (
                     <div
                       key={log.id}
                       className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
@@ -369,7 +369,7 @@ function ModerationLogsContent() {
                 <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No moderation logs found</p>
                 {(actionFilter || entityTypeFilter || entityIdSearch) && (
-                  <Button variant="link" onClick={handleClearFilters} className="mt-2">
+                  <Button variant="ghost" onClick={handleClearFilters} className="mt-2">
                     Clear filters to see all logs
                   </Button>
                 )}

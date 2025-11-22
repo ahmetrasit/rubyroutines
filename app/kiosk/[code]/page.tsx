@@ -255,7 +255,7 @@ export default function KioskModePage() {
   // Auto-select person for individual codes
   useEffect(() => {
     if (isIndividualCode && activePersons.length === 1 && !selectedPersonId) {
-      setSelectedPersonId(activePersons[0].id);
+      setSelectedPersonId(activePersons[0]!.id);
     }
   }, [isIndividualCode, activePersons, selectedPersonId]);
 

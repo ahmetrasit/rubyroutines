@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CompletionChart } from '@/components/analytics/CompletionChart';
 import { GoalProgressChart } from '@/components/analytics/GoalProgressChart';
 import { TaskHeatmap } from '@/components/analytics/TaskHeatmap';
@@ -134,14 +134,19 @@ function AnalyticsPageContent({
               </label>
               <Select
                 value={selectedPersonId || ''}
-                onChange={(e) => setSelectedPersonId(e.target.value || null)}
+                onValueChange={(value) => setSelectedPersonId(value || null)}
               >
-                <option value="">All People</option>
-                {persons?.map((person: any) => (
-                  <option key={person.id} value={person.id}>
-                    {person.name}
-                  </option>
-                ))}
+                <SelectTrigger>
+                  <SelectValue placeholder="All People" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All People</SelectItem>
+                  {persons?.map((person: any) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
             <ExportButton

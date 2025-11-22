@@ -20,7 +20,7 @@ export default function ParentGoalsPage() {
   const parentRole = session?.user?.roles?.find((role: any) => role.type === 'PARENT');
 
   // Get tier limits for the parent role
-  const { data: effectiveLimits } = trpc.role.getEffectiveLimits.useQuery(
+  const { data: effectiveLimits } = trpc.billing.getEffectiveLimits.useQuery(
     { roleId: parentRole?.id },
     { enabled: !!parentRole?.id }
   );
@@ -68,9 +68,9 @@ export default function ParentGoalsPage() {
   }
 
   // Calculate statistics
-  const activeGoals = allGoals?.filter(g => g.status === 'ACTIVE') || [];
-  const completedGoals = activeGoals.filter(g => g.progress?.achieved);
-  const streakGoals = activeGoals.filter(g => g.type === 'STREAK' && g.currentStreak > 0);
+  const activeGoals = allGoals?.filter((g: any) => g.status === 'ACTIVE') || [];
+  const completedGoals = activeGoals.filter((g: any) => g.progress?.achieved);
+  const streakGoals = activeGoals.filter((g: any) => g.type === 'STREAK' && g.currentStreak > 0);
 
   // Get role color
   const roleColor = parentRole.color || '#9333ea';
@@ -199,7 +199,7 @@ export default function ParentGoalsPage() {
           </TabsContent>
 
           <TabsContent value="byperson" className="space-y-6">
-            {persons?.map((person) => (
+            {persons?.map((person: any) => (
               <Card key={person.id}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -219,7 +219,7 @@ export default function ParentGoalsPage() {
           </TabsContent>
 
           <TabsContent value="bygroup" className="space-y-6">
-            {groups?.map((group) => (
+            {groups?.map((group: any) => (
               <Card key={group.id}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

@@ -8,12 +8,14 @@ import { GoalFormWithTemplates } from '@/components/goal/goal-form-with-template
 import { ClassroomGoalOverview } from '@/components/goal/classroom-goal-overview';
 import { AssignGoalToClass } from '@/components/goal/assign-goal-to-class';
 import { GoalAnalyticsChart } from '@/components/goal/goal-analytics-chart';
-import { useRole } from '@/lib/hooks/use-role';
+import { useActiveRole } from '@/lib/hooks';
 import { trpc } from '@/lib/trpc/client';
+import { RoleType } from '@/lib/types/prisma-enums';
 import { Plus, Users, Target, TrendingUp, Award } from 'lucide-react';
 
 export default function TeacherGoalsPage() {
-  const { roleId } = useRole();
+  const activeRole = useActiveRole(RoleType.TEACHER);
+  const roleId = activeRole?.id;
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [selectedTab, setSelectedTab] = useState('overview');
@@ -33,9 +35,9 @@ export default function TeacherGoalsPage() {
   // Calculate statistics
   const stats = {
     totalGoals: goals?.length || 0,
-    activeStudents: persons?.filter(p => p.status === 'ACTIVE').length || 0,
-    groupGoals: goals?.filter(g => g.scope === 'GROUP').length || 0,
-    individualGoals: goals?.filter(g => g.scope === 'INDIVIDUAL').length || 0,
+    activeStudents: persons?.filter((p: any) => p.status === 'ACTIVE').length || 0,
+    groupGoals: goals?.filter((g: any) => g.scope === 'GROUP').length || 0,
+    individualGoals: goals?.filter((g: any) => g.scope === 'INDIVIDUAL').length || 0,
   };
 
   if (!roleId) {
@@ -162,7 +164,7 @@ export default function TeacherGoalsPage() {
       {showGoalForm && (
         <GoalFormWithTemplates
           roleId={roleId}
-          roleType="TEACHER"
+          roleType={RoleType.TEACHER}
           onClose={() => setShowGoalForm(false)}
         />
       )}

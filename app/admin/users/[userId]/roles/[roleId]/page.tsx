@@ -75,7 +75,7 @@ function ManageRoleTierContent() {
   });
 
   // Find the specific role
-  const role = userDetails?.roles.find((r) => r.id === roleId);
+  const role = userDetails?.roles.find((r: any) => r.id === roleId);
 
   // Set initial tier when role is loaded
   useEffect(() => {
@@ -90,7 +90,7 @@ function ManageRoleTierContent() {
   };
 
   const handleSave = () => {
-    if (!selectedTier || selectedTier === '') {
+    if (!selectedTier) {
       toast({
         title: 'Error',
         description: 'Please select a tier',

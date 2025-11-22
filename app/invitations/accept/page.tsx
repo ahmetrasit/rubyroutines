@@ -170,7 +170,7 @@ export default function AcceptInvitationPage() {
         FULL_EDIT: { label: 'Full Edit', className: 'bg-green-100 text-green-800' },
       };
       const variant = variants[permission] || variants.READ_ONLY;
-      return <Badge className={variant.className}>{variant.label}</Badge>;
+      return <Badge className={variant!.className}>{variant!.label}</Badge>;
     } else if (type === 'CO_TEACHER') {
       const variants: Record<string, { label: string; className: string }> = {
         VIEW: { label: 'View Only', className: 'bg-gray-100 text-gray-800' },
@@ -178,7 +178,7 @@ export default function AcceptInvitationPage() {
         FULL_EDIT: { label: 'Full Edit', className: 'bg-green-100 text-green-800' },
       };
       const variant = variants[permission] || variants.VIEW;
-      return <Badge className={variant.className}>{variant.label}</Badge>;
+      return <Badge className={variant!.className}>{variant!.label}</Badge>;
     }
     return <Badge>{permission}</Badge>;
   };

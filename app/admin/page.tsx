@@ -233,7 +233,7 @@ function DashboardContent() {
               </div>
             ) : recentActivity && recentActivity.length > 0 ? (
               <div className="space-y-3">
-                {recentActivity.map((log) => (
+                {recentActivity.map((log: any) => (
                   <div
                     key={log.id}
                     className="border-l-4 border-primary/20 pl-4 py-2 hover:bg-muted/50 transition-colors"

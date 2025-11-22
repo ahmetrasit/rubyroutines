@@ -45,6 +45,19 @@ interface PersonCheckinModalProps {
 export function PersonCheckinModal({ personId, personName, isOpen, onClose }: PersonCheckinModalProps) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Determine if we're in kiosk mode (tablet) or dashboard mode (smartphone)
+  const [isKioskMode, setIsKioskMode] = useState(false);
+
+  useEffect(() => {
+    const checkMode = () => {
+      setIsKioskMode(window.innerWidth >= 768);
+    };
+
+    checkMode();
+    window.addEventListener('resize', checkMode);
+    return () => window.removeEventListener('resize', checkMode);
+  }, []);
   const { data: session } = trpc.auth.getSession.useQuery();
 
   // Fetch person details with routines and tasks
@@ -187,45 +200,54 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] h-[90vh] p-0 gap-0">
+      <DialogContent className={`max-w-[95vw] h-[90vh] p-0 gap-0 warm-earth-checkin ${isKioskMode ? 'kiosk-mode' : 'dashboard-mode'}`}>
         {/* Header */}
-        <div className="border-b p-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">{personName}'s Check-in</h2>
+        <div className="warm-earth-header p-4 flex items-center justify-between">
+          <div>
+            <h2 className="font-bold" style={{ color: 'var(--warm-text-primary)' }}>
+              {personName}'s Check-in
+            </h2>
+            <div className="text-sm mt-1" style={{ color: 'var(--warm-complete-secondary)' }}>
+              {simpleCompleted > 0 && `✨ ${simpleCompleted} tasks done today`}
+            </div>
+          </div>
           <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
             <X className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto p-4" style={{ backgroundColor: 'var(--warm-background)' }}>
           {tasksLoading ? (
             <div className="h-full flex items-center justify-center">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+              <Loader2 className="h-12 w-12 animate-spin" style={{ color: 'var(--warm-complete-primary)' }} />
             </div>
           ) : tasks.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="text-6xl mb-4">🎉</div>
-                <h2 className="text-2xl font-bold text-gray-900">All done!</h2>
+                <h2 className="font-bold" style={{ color: 'var(--warm-text-primary)' }}>All done!</h2>
               </div>
             </div>
           ) : (
             <div className="space-y-3">
               {/* Goals Section */}
               <Collapsible open={goalsOpen} onOpenChange={setGoalsOpen}>
-                <div className="border-2 border-gray-300 rounded-lg bg-white">
+                <div className="warm-section">
                   <CollapsibleTrigger asChild>
-                    <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <button className="w-full p-4 flex items-center justify-between hover:opacity-90 transition-opacity rounded-t-lg">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-bold text-gray-900">🎯 Goals</h3>
+                          <h3 className="font-bold" style={{ color: 'var(--warm-text-primary)' }}>🎯 Goals</h3>
                           {goalCount > 0 && (
-                            <span className="text-sm text-gray-500">({goalCount})</span>
+                            <span className="text-sm" style={{ color: 'var(--warm-text-secondary)' }}>({goalCount})</span>
                           )}
                         </div>
                         <div className="mt-2">
-                          <Progress value={goalProgress} max={100} className="h-2" />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <div className="warm-goal-bar-container">
+                            <div className="warm-goal-bar-fill" style={{ width: `${goalProgress}%` }}></div>
+                          </div>
+                          <p className="text-xs mt-1" style={{ color: 'var(--warm-text-secondary)' }}>
                             {goalCount > 0 ? (
                               `${goalsAccomplished} of ${goalCount} achieved (${Math.round(goalProgress)}%)`
                             ) : (
@@ -235,33 +257,34 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                         </div>
                       </div>
                       {goalsOpen ? (
-                        <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                        <ChevronDown className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--warm-text-secondary)' }} />
                       ) : (
-                        <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                        <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--warm-text-secondary)' }} />
                       )}
                     </button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="p-4 pt-0 border-t">
+                    <div className="p-4 pt-0 border-t" style={{ borderColor: 'var(--warm-border-light)' }}>
                       {goalCount > 0 ? (
                         <div className="space-y-2">
                           {activeGoals.map((goal) => (
-                            <div key={goal.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div key={goal.id} className="flex items-center justify-between p-2 rounded" style={{ backgroundColor: 'var(--warm-task-incomplete-bg)' }}>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium">{goal.name}</span>
+                                <span className="text-sm font-medium" style={{ color: 'var(--warm-text-primary)' }}>{goal.name}</span>
                                 {goal.progress?.achieved && (
-                                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                                  <span className="text-xs px-2 py-0.5 rounded" style={{
+                                    backgroundColor: 'var(--warm-complete-bg)',
+                                    color: 'var(--warm-complete-secondary)'
+                                  }}>
                                     Achieved!
                                   </span>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <Progress
-                                  value={goal.progress?.percentage || 0}
-                                  max={100}
-                                  className="h-1.5 w-16"
-                                />
-                                <span className="text-xs text-gray-500">
+                                <div className="warm-goal-bar-container h-1.5 w-16">
+                                  <div className="warm-goal-bar-fill" style={{ width: `${goal.progress?.percentage || 0}%` }}></div>
+                                </div>
+                                <span className="warm-goal-percent text-xs">
                                   {Math.round(goal.progress?.percentage || 0)}%
                                 </span>
                               </div>
@@ -269,7 +292,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500 text-center py-8">
+                        <p className="text-sm text-center py-8" style={{ color: 'var(--warm-text-secondary)' }}>
                           No goals have been set yet
                         </p>
                       )}
@@ -281,27 +304,31 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
               {/* Simple Tasks Section */}
               {simpleTasks.length > 0 && (
                 <Collapsible open={simpleOpen} onOpenChange={setSimpleOpen}>
-                  <div className="border-2 border-gray-300 rounded-lg bg-white">
+                  <div className="warm-section">
                     <CollapsibleTrigger asChild>
-                      <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                      <button className="w-full p-4 flex items-center justify-between hover:opacity-90 transition-opacity rounded-t-lg">
                         <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900 mb-2">✓ Simple Tasks</h3>
+                          <h3 className="font-bold mb-2" style={{ color: 'var(--warm-text-primary)' }}>
+                            ✓ Simple Tasks
+                          </h3>
                           <div>
-                            <Progress value={simpleCompleted} max={simpleTotal} className="h-2" />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <div className="warm-goal-bar-container">
+                              <div className="warm-goal-bar-fill" style={{ width: `${(simpleCompleted / simpleTotal) * 100}%` }}></div>
+                            </div>
+                            <p className="text-xs mt-1" style={{ color: 'var(--warm-text-secondary)' }}>
                               {simpleCompleted} of {simpleTotal} completed
                             </p>
                           </div>
                         </div>
                         {simpleOpen ? (
-                          <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                          <ChevronDown className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--warm-text-secondary)' }} />
                         ) : (
-                          <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                          <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--warm-text-secondary)' }} />
                         )}
                       </button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="p-4 pt-0 border-t">
+                      <div className="p-4 pt-0 border-t" style={{ borderColor: 'var(--warm-border-light)' }}>
                         <TaskColumn
                           title=""
                           tasks={simpleTasks}
@@ -319,23 +346,23 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
               {/* Multi Check-in Tasks Section */}
               {multiTasks.length > 0 && (
                 <Collapsible open={multiOpen} onOpenChange={setMultiOpen}>
-                  <div className="border-2 border-gray-300 rounded-lg bg-white">
+                  <div className="warm-section">
                     <CollapsibleTrigger asChild>
-                      <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                      <button className="w-full p-4 flex items-center justify-between hover:opacity-90 transition-opacity rounded-t-lg">
                         <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900">
+                          <h3 className="font-bold" style={{ color: 'var(--warm-text-primary)' }}>
                             ✔️ Check-ins ({multiTasks.length})
                           </h3>
                         </div>
                         {multiOpen ? (
-                          <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                          <ChevronDown className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--warm-text-secondary)' }} />
                         ) : (
-                          <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                          <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--warm-text-secondary)' }} />
                         )}
                       </button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="p-4 pt-0 border-t">
+                      <div className="p-4 pt-0 border-t" style={{ borderColor: 'var(--warm-border-light)' }}>
                         <TaskColumn
                           title=""
                           tasks={multiTasks}
@@ -353,23 +380,23 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
               {/* Progress Tasks Section */}
               {progressTasks.length > 0 && (
                 <Collapsible open={progressOpen} onOpenChange={setProgressOpen}>
-                  <div className="border-2 border-gray-300 rounded-lg bg-white">
+                  <div className="warm-section">
                     <CollapsibleTrigger asChild>
-                      <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                      <button className="w-full p-4 flex items-center justify-between hover:opacity-90 transition-opacity rounded-t-lg">
                         <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900">
+                          <h3 className="font-bold" style={{ color: 'var(--warm-text-primary)' }}>
                             📊 Progress ({progressTasks.length})
                           </h3>
                         </div>
                         {progressOpen ? (
-                          <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                          <ChevronDown className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--warm-text-secondary)' }} />
                         ) : (
-                          <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                          <ChevronRight className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--warm-text-secondary)' }} />
                         )}
                       </button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="p-4 pt-0 border-t">
+                      <div className="p-4 pt-0 border-t" style={{ borderColor: 'var(--warm-border-light)' }}>
                         <TaskColumn
                           title=""
                           tasks={progressTasks}

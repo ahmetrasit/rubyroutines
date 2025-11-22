@@ -78,3 +78,251 @@
     min-height: 64px;
   }
 }
+
+/* Warm Earth Design System */
+:root {
+  /* Warm Earth Color Palette */
+  --warm-incomplete-primary: #90A4AE;
+  --warm-incomplete-secondary: #78909C;
+  --warm-incomplete-bg: rgba(120, 144, 156, 0.08);
+
+  --warm-complete-primary: #4DB6AC;
+  --warm-complete-secondary: #26A69A;
+  --warm-complete-bg: #E0F2F1;
+
+  --warm-progress-primary: #42A5F5;
+  --warm-progress-secondary: #1976D2;
+  --warm-progress-bg: rgba(144, 202, 249, 0.08);
+
+  --warm-background: #EFEBE9;
+  --warm-card-bg: #FFFFFF;
+  --warm-text-primary: #37474F;
+  --warm-text-secondary: #607D8B;
+  --warm-border-light: #D7CCC8;
+
+  /* Kiosk-specific Darker Completed Background */
+  --warm-task-complete-bg-kiosk: #DDD5D0;
+  --warm-task-complete-hover-kiosk: #D0C8C3;
+  --warm-task-incomplete-bg: #FAF8F7;
+  --warm-task-incomplete-hover: #F5F0ED;
+}
+
+/* Warm Earth Checkin Styles */
+.warm-earth-checkin {
+  background: var(--warm-card-bg);
+}
+
+.warm-earth-header {
+  background: linear-gradient(135deg, rgba(77, 182, 172, 0.05), rgba(38, 166, 154, 0.05));
+  border-bottom: 1px solid var(--warm-border-light);
+}
+
+.warm-earth-task-simple {
+  @apply rounded-xl transition-all;
+  background: var(--warm-task-incomplete-bg);
+}
+
+.warm-earth-task-simple:hover {
+  background: var(--warm-task-incomplete-hover);
+}
+
+.warm-earth-task-simple.complete {
+  background: var(--warm-complete-bg);
+}
+
+.warm-earth-task-simple.complete:hover {
+  background: var(--warm-complete-bg);
+  opacity: 0.9;
+}
+
+/* Kiosk Mode Styles */
+@media (min-width: 768px) {
+  .kiosk-mode .warm-earth-task-simple {
+    @apply p-4;
+  }
+
+  .kiosk-mode .warm-earth-task-simple.complete {
+    background: var(--warm-task-complete-bg-kiosk);
+  }
+
+  .kiosk-mode .warm-earth-task-simple.complete:hover {
+    background: var(--warm-task-complete-hover-kiosk);
+  }
+
+  .kiosk-mode .task-name {
+    font-size: 28px;
+  }
+
+  .kiosk-mode .task-desc {
+    font-size: 26px;
+  }
+
+  .kiosk-mode h2 {
+    font-size: 36px;
+  }
+
+  .kiosk-mode h3 {
+    font-size: 32px;
+  }
+
+  .kiosk-mode .goal-badge {
+    font-size: 22px;
+  }
+
+  .kiosk-mode .goal-percent {
+    font-size: 22px;
+  }
+
+  .kiosk-mode .progress-input {
+    font-size: 28px;
+    padding: 16px;
+  }
+
+  .kiosk-mode .progress-button {
+    font-size: 28px;
+    padding: 16px 32px;
+  }
+
+  .kiosk-mode .goal-stats {
+    font-size: 24px;
+  }
+
+  /* Kiosk progress bar height */
+  .kiosk-mode .goal-bar-container {
+    height: 8px;
+  }
+
+  /* Kiosk inline controls */
+  .kiosk-mode .progress-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .kiosk-mode .progress-controls input {
+    flex: 1;
+  }
+}
+
+/* Dashboard Mode (Smartphone) Styles */
+@media (max-width: 767px) {
+  .dashboard-mode .warm-earth-task-simple {
+    @apply p-3 rounded-2xl;
+  }
+
+  .dashboard-mode .task-name {
+    font-size: 16px;
+  }
+
+  .dashboard-mode .task-desc {
+    font-size: 13px;
+  }
+
+  .dashboard-mode h2 {
+    font-size: 26px;
+  }
+
+  .dashboard-mode .goal-badge {
+    font-size: 12px;
+  }
+
+  .dashboard-mode .goal-percent {
+    font-size: 11px;
+  }
+
+  .dashboard-mode .goal-bar-container {
+    height: 4px;
+  }
+}
+
+/* Warm Earth Square Checkbox */
+.warm-square {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2.5px solid var(--warm-incomplete-primary);
+  background: transparent;
+}
+
+.warm-square.complete {
+  background: var(--warm-complete-primary);
+  border: 2.5px solid var(--warm-complete-primary);
+  transform: rotate(45deg);
+}
+
+/* Goal Progress Styles */
+.warm-goal-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: var(--warm-progress-bg);
+  color: var(--warm-progress-secondary);
+}
+
+.warm-goal-bar-container {
+  flex: 1;
+  background: rgba(144, 202, 249, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.warm-goal-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.warm-goal-percent {
+  font-weight: 700;
+  color: var(--warm-progress-primary);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Progress Task Styles */
+.warm-progress-card {
+  background: var(--warm-progress-bg);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.warm-progress-button {
+  background: var(--warm-complete-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.warm-progress-button:hover {
+  background: var(--warm-complete-secondary);
+}
+
+.warm-progress-button:active {
+  transform: scale(0.95);
+}
+
+/* Section Styles */
+.warm-section {
+  background: var(--warm-card-bg);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.warm-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--warm-text-primary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

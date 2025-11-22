@@ -7,6 +7,7 @@ import {
   getCurrentTier,
   TIER_PRICES,
 } from '@/lib/services/stripe.service';
+import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
 
 export const billingRouter = router({
   /**
@@ -104,5 +105,15 @@ export const billingRouter = router({
         subscriptionStatus: role.subscriptionStatus,
         hasActiveSubscription: !!role.stripeSubscriptionId,
       };
+    }),
+
+  /**
+   * Get effective tier limits for a role (considers overrides)
+   */
+  getEffectiveLimits: authorizedProcedure
+    .input(z.object({ roleId: z.string().uuid() })) // Role IDs are UUIDs, not CUIDs
+    .query(async ({ input }) => {
+      const limits = await getEffectiveTierLimits(input.roleId);
+      return limits;
     }),
 });

@@ -227,7 +227,7 @@ function UsersContent() {
               </div>
             ) : usersData && usersData.users.length > 0 ? (
               <div className="space-y-3">
-                {usersData.users.map((user) => (
+                {usersData.users.map((user: any) => (
                   <div
                     key={user.id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
@@ -252,7 +252,7 @@ function UsersContent() {
                       </div>
                       {user.roles.length > 0 && (
                         <div className="flex gap-2 mt-2">
-                          {user.roles.map((role) => (
+                          {user.roles.map((role: any) => (
                             <TierBadgeSelect
                               key={role.id}
                               roleId={role.id}
@@ -377,7 +377,7 @@ function UsersContent() {
                 Cancel
               </Button>
               <Button
-                variant="destructive"
+                variant="danger"
                 onClick={() => {
                   if (!selectedUser?.id) {
                     toast({

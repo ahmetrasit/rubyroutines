@@ -391,14 +391,14 @@ export function TeacherBulkCheckin({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] h-[90vh] p-0 gap-0">
+      <DialogContent className="max-w-[95vw] h-[90vh] p-0 gap-0 warm-earth-checkin kiosk-mode">
         {/* Header */}
-        <div className="border-b p-4 flex items-center justify-between bg-purple-50">
+        <div className="warm-earth-header p-4 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-purple-900">
+            <h2 className="font-bold" style={{ color: 'var(--warm-text-primary)' }}>
               📋 Classroom Bulk Check-in
             </h2>
-            <p className="text-sm text-purple-700 mt-1">
+            <p className="text-sm mt-1" style={{ color: 'var(--warm-text-secondary)' }}>
               {classroomName} • Complete teacher-only tasks for all students
             </p>
           </div>
@@ -408,36 +408,44 @@ export function TeacherBulkCheckin({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto p-4" style={{ backgroundColor: 'var(--warm-background)' }}>
           {isLoading || tasksLoading ? (
             <div className="h-full flex items-center justify-center">
-              <Loader2 className="h-12 w-12 animate-spin text-purple-600" />
+              <Loader2 className="h-12 w-12 animate-spin" style={{ color: 'var(--warm-complete-primary)' }} />
             </div>
           ) : studentTasks.length === 0 || uniqueTasks.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="text-6xl mb-4">📋</div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">No Teacher Tasks Yet</h2>
-                <p className="text-gray-600">
+                <h2 className="font-bold mb-2" style={{ color: 'var(--warm-text-primary)' }}>No Teacher Tasks Yet</h2>
+                <p style={{ color: 'var(--warm-text-secondary)' }}>
                   Create teacher-only routines to track attendance, grades, and notes for your students.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto warm-section rounded-lg p-4">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="bg-purple-100 sticky top-0 z-10">
-                    <th className="border border-purple-300 px-4 py-3 text-left font-semibold text-purple-900 min-w-[200px]">
+                  <tr className="sticky top-0 z-10" style={{ backgroundColor: 'var(--warm-complete-bg)' }}>
+                    <th className="px-4 py-3 text-left font-semibold min-w-[200px]"
+                        style={{
+                          border: `1px solid var(--warm-border-light)`,
+                          color: 'var(--warm-text-primary)'
+                        }}>
                       Student
                     </th>
                     {uniqueTasks.map(task => (
                       <th
                         key={task.id}
-                        className="border border-purple-300 px-4 py-3 text-center font-semibold text-purple-900 min-w-[150px]"
+                        className="px-4 py-3 text-center font-semibold min-w-[150px]"
+                        style={{
+                          border: `1px solid var(--warm-border-light)`,
+                          color: 'var(--warm-text-primary)'
+                        }}
                       >
                         <div className="text-sm">{task.name}</div>
-                        <div className="text-xs font-normal text-purple-700 mt-1">
+                        <div className="text-xs font-normal mt-1" style={{ color: 'var(--warm-text-secondary)' }}>
                           {task.routineName}
                         </div>
                       </th>
@@ -446,8 +454,8 @@ export function TeacherBulkCheckin({
                 </thead>
                 <tbody>
                   {studentTasks.map(student => (
-                    <tr key={student.studentId} className="hover:bg-purple-50">
-                      <td className="border border-gray-300 px-4 py-3">
+                    <tr key={student.studentId} className="hover:opacity-95 transition-opacity">
+                      <td className="px-4 py-3" style={{ border: `1px solid var(--warm-border-light)` }}>
                         <div className="flex items-center gap-3">
                           {student.studentAvatar && (
                             <div
@@ -459,7 +467,7 @@ export function TeacherBulkCheckin({
                               {JSON.parse(student.studentAvatar).emoji || '👤'}
                             </div>
                           )}
-                          <span className="font-medium text-gray-900">{student.studentName}</span>
+                          <span className="font-medium" style={{ color: 'var(--warm-text-primary)' }}>{student.studentName}</span>
                         </div>
                       </td>
                       {uniqueTasks.map(uniqueTask => {
@@ -469,7 +477,7 @@ export function TeacherBulkCheckin({
                         const isPending = pendingOperations.has(`${student.studentId}-${uniqueTask.id}`);
 
                         return (
-                          <td key={uniqueTask.id} className="border border-gray-300 px-4 py-3 text-center">
+                          <td key={uniqueTask.id} className="px-4 py-3 text-center" style={{ border: `1px solid var(--warm-border-light)` }}>
                             {studentTask ? (
                               <Button
                                 variant={isComplete ? "default" : "outline"}
@@ -482,13 +490,32 @@ export function TeacherBulkCheckin({
                                 )}
                                 disabled={isPending}
                                 className={`
-                                  ${isComplete
-                                    ? "bg-purple-600 hover:bg-purple-700 text-white"
-                                    : "border-purple-300 text-purple-700 hover:bg-purple-100"
-                                  }
                                   ${isPending ? "opacity-70" : ""}
                                   transition-all duration-150
                                 `}
+                                style={isComplete ? {
+                                  backgroundColor: 'var(--warm-complete-primary)',
+                                  color: 'white',
+                                  border: 'none',
+                                } : {
+                                  backgroundColor: 'transparent',
+                                  color: 'var(--warm-incomplete-secondary)',
+                                  border: `2px solid var(--warm-incomplete-primary)`,
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (isComplete) {
+                                    e.currentTarget.style.backgroundColor = 'var(--warm-complete-secondary)';
+                                  } else {
+                                    e.currentTarget.style.backgroundColor = 'var(--warm-incomplete-bg)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (isComplete) {
+                                    e.currentTarget.style.backgroundColor = 'var(--warm-complete-primary)';
+                                  } else {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                  }
+                                }}
                               >
                                 {isPending ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -502,7 +529,7 @@ export function TeacherBulkCheckin({
                                 )}
                               </Button>
                             ) : (
-                              <span className="text-gray-400 text-sm">—</span>
+                              <span className="text-sm" style={{ color: 'var(--warm-text-secondary)' }}>—</span>
                             )}
                           </td>
                         );
