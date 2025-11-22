@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard C - Subtle Left Bars</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container { max-width: 420px; width: 100%; background: white; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+        .header { padding: 24px; border-bottom: 1px solid #ECEFF1; }
+        h1 { font-size: 26px; font-weight: 700; color: #1F2937; }
+        .completed { color: #558B2F; font-size: 15px; font-weight: 600; margin-top: 4px; }
+        .subtitle { color: #6B7280; font-size: 14px; margin-top: 4px; }
+        .content { padding: 24px; }
+        .section-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 16px; text-transform: uppercase; }
+        .task-row {
+            display: flex;
+            align-items: center;
+            padding: 14px 0;
+            border-left: 4px solid transparent;
+            padding-left: 12px;
+            margin-left: -12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .task-row:not(.complete) { border-left-color: #B0BEC5; }
+        .task-row.complete { border-left-color: #81C784; }
+        .task-row:hover { background: #F9FAFB; }
+        .task-name { font-size: 16px; font-weight: 500; flex: 1; }
+        .task-row:not(.complete) .task-name { color: #90A4AE; }
+        .task-row.complete .task-name { color: #558B2F; }
+        .task-desc { font-size: 13px; margin-left: 8px; }
+        .task-row:not(.complete) .task-desc { color: #B0BEC5; }
+        .task-row.complete .task-desc { color: #81C784; }
+        .divider { height: 1px; background: #ECEFF1; margin: 24px 0; }
+        .progress-row {
+            display: flex;
+            align-items: center;
+            padding: 14px 12px;
+            margin: 8px -12px;
+            border-left: 4px solid #90CAF9;
+            background: #F9FAFB;
+            border-radius: 4px;
+        }
+        .progress-row span:first-child { font-size: 20px; margin-right: 10px; }
+        .progress-row .name { flex: 1; font-weight: 600; color: #1565C0; font-size: 15px; }
+        .progress-row button {
+            background: white;
+            border: 1px solid #90CAF9;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #1976D2;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .progress-row .value { margin-left: 10px; color: #42A5F5; font-weight: 600; font-size: 14px; }
+        .footer { padding: 20px; background: #FAFAFA; text-align: center; color: #558B2F; font-weight: 600; border-radius: 0 0 24px 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Alex's Check-in</h1>
+            <div class="completed">✨ 2 tasks done today</div>
+            <div class="subtitle">Going at your own pace</div>
+        </div>
+        <div class="content">
+            <div class="section-title">CHECKLIST (2/4)</div>
+            <div class="task-row" onclick="this.classList.toggle('complete')">
+                <div class="task-name">Brush Teeth</div>
+                <div class="task-desc">2 min</div>
+            </div>
+            <div class="task-row complete">
+                <div class="task-name">Make Bed</div>
+                <div class="task-desc">Tidy up</div>
+            </div>
+            <div class="task-row" onclick="this.classList.toggle('complete')">
+                <div class="task-name">Homework</div>
+                <div class="task-desc">Complete work</div>
+            </div>
+            <div class="task-row complete">
+                <div class="task-name">Pack Backpack</div>
+                <div class="task-desc">Ready for school</div>
+            </div>
+            <div class="divider"></div>
+            <div class="section-title">RECORD PROGRESS (0/2)</div>
+            <div class="progress-row">
+                <span>💧</span>
+                <span class="name">Water</span>
+                <button>+ Add</button>
+                <span class="value">3/9 Great!</span>
+            </div>
+            <div class="progress-row">
+                <span>📚</span>
+                <span class="name">Read Pages</span>
+                <button>+ Add</button>
+                <span class="value">0 pgs</span>
+            </div>
+        </div>
+        <div class="footer">🌟 Keep going when ready</div>
+    </div>
+</body>
+</html>

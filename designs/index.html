@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in UI Designs - Soft Fade Style</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: white; font-size: 48px; text-align: center; margin-bottom: 12px; text-shadow: 0 2px 20px rgba(0,0,0,0.2); }
+        .subtitle { color: rgba(255,255,255,0.9); text-align: center; font-size: 20px; margin-bottom: 50px; }
+        .family { background: white; border-radius: 24px; padding: 32px; margin-bottom: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+        .family-title { font-size: 28px; font-weight: 700; color: #1F2937; margin-bottom: 8px; }
+        .family-desc { color: #6B7280; margin-bottom: 24px; }
+        .designs { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .design-card { border: 2px solid #E5E7EB; border-radius: 16px; padding: 20px; transition: all 0.2s; cursor: pointer; }
+        .design-card:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15); }
+        .design-name { font-size: 18px; font-weight: 600; color: #1F2937; margin-bottom: 8px; }
+        .design-desc { font-size: 14px; color: #6B7280; margin-bottom: 12px; line-height: 1.5; }
+        .design-badge { display: inline-block; background: #F3F4F6; color: #374151; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 12px; }
+        a { text-decoration: none; }
+        .color-key { background: #F9FAFB; border-radius: 12px; padding: 20px; margin-bottom: 32px; }
+        .color-key h3 { font-size: 18px; margin-bottom: 16px; color: #1F2937; }
+        .colors { display: flex; gap: 24px; flex-wrap: wrap; }
+        .color-item { display: flex; align-items: center; gap: 10px; }
+        .color-box { width: 40px; height: 40px; border-radius: 8px; border: 2px solid #E5E7EB; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Check-in UI Designs</h1>
+        <div class="subtitle">20 Designs with "Soft Fade" Style - Stress-free & Relief-focused</div>
+
+        <div class="color-key">
+            <h3>Color Philosophy</h3>
+            <div class="colors">
+                <div class="color-item">
+                    <div class="color-box" style="background: #B0BEC5;"></div>
+                    <div>
+                        <div style="font-weight:600; font-size:14px;">Incomplete</div>
+                        <div style="font-size:12px; color:#6B7280;">#B0BEC5 - Calm, patient</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-box" style="background: #81C784;"></div>
+                    <div>
+                        <div style="font-weight:600; font-size:14px;">Complete</div>
+                        <div style="font-size:12px; color:#6B7280;">#81C784 - Gentle relief</div>
+                    </div>
+                </div>
+                <div class="color-item">
+                    <div class="color-box" style="background: #90CAF9;"></div>
+                    <div>
+                        <div style="font-weight:600; font-size:14px;">Progress</div>
+                        <div style="font-size:12px; color:#6B7280;">#90CAF9 - Encouraging</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="family">
+            <div class="family-title">📱 Dashboard A Family (Smartphone)</div>
+            <div class="family-desc">Card-based designs with various completion indicators</div>
+            <div class="designs">
+                <a href="dashboard-a/a-gentle-circles.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A - Gentle Circles</div>
+                        <div class="design-desc">Large circles (○/◉) with soft colors, minimal cards for progress</div>
+                        <div class="design-badge">Medium Space</div>
+                    </div>
+                </a>
+                <a href="dashboard-a/a1-soft-checkboxes.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A1 - Soft Checkboxes</div>
+                        <div class="design-desc">Familiar checkbox style (☐/☑) with sage green completion</div>
+                        <div class="design-badge">Medium Space</div>
+                    </div>
+                </a>
+                <a href="dashboard-a/a2-minimal-dots.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A2 - Minimal Dots</div>
+                        <div class="design-desc">Small dots (•/●) for ultra-clean look</div>
+                        <div class="design-badge">High Space Efficiency</div>
+                    </div>
+                </a>
+                <a href="dashboard-a/a3-rounded-tags.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A3 - Rounded Tags</div>
+                        <div class="design-desc">Soft background cards, color changes on completion</div>
+                        <div class="design-badge">Medium Space</div>
+                    </div>
+                </a>
+                <a href="dashboard-a/a4-icon-badges.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A4 - Icon Badges</div>
+                        <div class="design-desc">Badge on right side with ○/✓ indicators</div>
+                        <div class="design-badge">Medium Space</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="family">
+            <div class="family-title">📱 Dashboard C Family (Smartphone)</div>
+            <div class="family-desc">Compact, high-efficiency designs with minimal visual weight</div>
+            <div class="designs">
+                <a href="dashboard-c/c-subtle-left-bars.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C - Subtle Left Bars</div>
+                        <div class="design-desc">Thin colored bar on left edge of each row</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+                <a href="dashboard-c/c1-gentle-backgrounds.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C1 - Gentle Backgrounds</div>
+                        <div class="design-desc">Full row background tinting (barely visible/soft green)</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+                <a href="dashboard-c/c2-thin-underlines.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C2 - Thin Underlines</div>
+                        <div class="design-desc">Colored underline below each task</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+                <a href="dashboard-c/c3-dots-lines.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C3 - Dots & Lines</div>
+                        <div class="design-desc">Small colored bullet points with no borders</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+                <a href="dashboard-c/c4-minimal-squares.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C4 - Minimal Squares</div>
+                        <div class="design-desc">Square/diamond shapes (□/■/◇)</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="family">
+            <div class="family-title">💻 Kiosk A Family (Tablet)</div>
+            <div class="family-desc">Two-column layouts with large touch targets</div>
+            <div class="designs">
+                <a href="kiosk-a/a-gentle-cards.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A - Gentle Cards</div>
+                        <div class="design-desc">Two columns: Checklist left, Progress right, circles (○/◉)</div>
+                        <div class="design-badge">Medium Space</div>
+                    </div>
+                </a>
+                <a href="kiosk-a/a1-checkbox-cards.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A1 - Checkbox Cards</div>
+                        <div class="design-desc">Card-based with checkboxes (☐/☑)</div>
+                        <div class="design-badge">Medium Space</div>
+                    </div>
+                </a>
+                <a href="kiosk-a/a2-tinted-cards.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A2 - Tinted Cards</div>
+                        <div class="design-desc">Background color changes on completion</div>
+                        <div class="design-badge">Medium Space</div>
+                    </div>
+                </a>
+                <a href="kiosk-a/a3-border-cards.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A3 - Border Cards</div>
+                        <div class="design-desc">Soft colored borders (gray/green/blue)</div>
+                        <div class="design-badge">Medium Space</div>
+                    </div>
+                </a>
+                <a href="kiosk-a/a4-badge-right.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">A4 - Badge Right</div>
+                        <div class="design-desc">Icon badge on right side (○/✓)</div>
+                        <div class="design-badge">Medium Space</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="family">
+            <div class="family-title">💻 Kiosk C Family (Tablet)</div>
+            <div class="family-desc">Ultra-compact single-line designs for maximum visibility</div>
+            <div class="designs">
+                <a href="kiosk-c/c-soft-bars.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C - Soft Bars</div>
+                        <div class="design-desc">Left bar + icons (○/◉) in single lines</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+                <a href="kiosk-c/c1-icons-only.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C1 - Icons Only</div>
+                        <div class="design-desc">No bars, just colored circles (○/◉)</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+                <a href="kiosk-c/c2-row-backgrounds.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C2 - Row Backgrounds</div>
+                        <div class="design-desc">Full row background tinting</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+                <a href="kiosk-c/c3-numbered-dots.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C3 - Numbered Dots</div>
+                        <div class="design-desc">Numbered list with circles (1. ○/◉)</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+                <a href="kiosk-c/c4-underlines.html" target="_blank">
+                    <div class="design-card">
+                        <div class="design-name">C4 - Underlines</div>
+                        <div class="design-desc">Colored underlines below each task</div>
+                        <div class="design-badge">Very High Efficiency</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

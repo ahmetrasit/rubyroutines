@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard A2 - Minimal Dots</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container { max-width: 420px; width: 100%; background: white; border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); }
+        .header { padding: 24px; border-bottom: 1px solid #ECEFF1; }
+        .header h1 { font-size: 26px; font-weight: 700; color: #1F2937; }
+        .completed { color: #66BB6A; font-size: 15px; font-weight: 600; margin-top: 4px; }
+        .subtitle { color: #6B7280; font-size: 14px; margin-top: 4px; }
+        .content { padding: 24px; }
+        .section-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 16px; text-transform: uppercase; }
+        .task { display: flex; gap: 14px; padding: 14px 0; cursor: pointer; align-items: flex-start; }
+        .dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
+        .task:not(.complete) .dot { border: 3px solid #CFD8DC; background: white; }
+        .task.complete .dot { background: #66BB6A; }
+        .task-info { flex: 1; }
+        .task-name { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+        .task:not(.complete) .task-name { color: #CFD8DC; }
+        .task.complete .task-name { color: #66BB6A; }
+        .task-desc { font-size: 13px; }
+        .task:not(.complete) .task-desc { color: #ECEFF1; }
+        .task.complete .task-desc { color: #A5D6A7; }
+        .divider { height: 1px; background: #ECEFF1; margin: 24px 0; }
+        .progress-card { background: #E3F2FD; border-radius: 16px; padding: 18px; margin-bottom: 12px; }
+        .progress-row { display: flex; align-items: center; gap: 10px; }
+        .progress-row button { background: white; border: none; color: #1976D2; border-radius: 10px; padding: 8px 16px; font-weight: 600; cursor: pointer; }
+        .footer { padding: 20px; background: #FAFAFA; text-align: center; color: #66BB6A; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Alex</h1>
+            <div class="completed">✨ 2 completed</div>
+            <div class="subtitle">Keep it up!</div>
+        </div>
+        <div class="content">
+            <div class="section-title">CHECKLIST (2/4)</div>
+            <div class="task" onclick="this.classList.toggle('complete')">
+                <div class="dot"></div>
+                <div class="task-info">
+                    <div class="task-name">Brush Teeth</div>
+                    <div class="task-desc">Brush for 2 min</div>
+                </div>
+            </div>
+            <div class="task complete">
+                <div class="dot"></div>
+                <div class="task-info">
+                    <div class="task-name">Make Bed</div>
+                    <div class="task-desc">Keep room tidy</div>
+                </div>
+            </div>
+            <div class="task" onclick="this.classList.toggle('complete')">
+                <div class="dot"></div>
+                <div class="task-info">
+                    <div class="task-name">Homework</div>
+                    <div class="task-desc">Complete assignments</div>
+                </div>
+            </div>
+            <div class="task complete">
+                <div class="dot"></div>
+                <div class="task-info">
+                    <div class="task-name">Pack Backpack</div>
+                    <div class="task-desc">Ready for school</div>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="section-title">RECORD PROGRESS (0/2)</div>
+            <div class="progress-card">
+                <div class="progress-row">
+                    <span style="font-size: 22px;">💧</span>
+                    <span style="flex:1; font-weight:600; color:#1565C0;">Water</span>
+                    <button>+ Add</button>
+                    <span style="color:#42A5F5; font-weight:600;">3/9</span>
+                </div>
+                <div style="color:#42A5F5; font-size:13px; margin-top:8px;">Wonderful! 💙</div>
+            </div>
+            <div class="progress-card">
+                <div class="progress-row">
+                    <span style="font-size: 22px;">📚</span>
+                    <span style="flex:1; font-weight:600; color:#1565C0;">Read</span>
+                    <button>+ Add</button>
+                    <span style="color:#42A5F5; font-weight:600;">0 pgs</span>
+                </div>
+                <div style="color:#42A5F5; font-size:13px; margin-top:8px;">At your pace 📖</div>
+            </div>
+        </div>
+        <div class="footer">🎯 Progressing nicely</div>
+    </div>
+</body>
+</html>
