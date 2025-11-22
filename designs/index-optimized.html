@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimized Check-in UI Designs - Gallery</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 56px;
+            font-weight: 900;
+            margin-bottom: 16px;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .header .subtitle {
+            font-size: 24px;
+            font-weight: 600;
+            opacity: 0.95;
+            margin-bottom: 12px;
+        }
+
+        .header .description {
+            font-size: 18px;
+            opacity: 0.85;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .header .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 60px 0 32px 0;
+            padding: 20px 32px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .section-header .icon {
+            font-size: 42px;
+        }
+
+        .section-header .text h2 {
+            font-size: 36px;
+            font-weight: 900;
+            color: #1F2937;
+            margin-bottom: 4px;
+        }
+
+        .section-header .text p {
+            font-size: 16px;
+            color: #6B7280;
+            font-weight: 600;
+        }
+
+        /* Design Grid */
+        .design-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 32px;
+            margin-bottom: 40px;
+        }
+
+        /* Design Card */
+        .design-card {
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .design-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 28px 80px rgba(0,0,0,0.25);
+        }
+
+        .design-card .card-header {
+            padding: 32px;
+            background: linear-gradient(135deg, var(--color-start), var(--color-end));
+            color: white;
+        }
+
+        .design-card .version {
+            font-size: 16px;
+            font-weight: 800;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .design-card .title {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+
+        .design-card .approach {
+            font-size: 15px;
+            opacity: 0.95;
+            font-weight: 600;
+        }
+
+        .design-card .card-body {
+            padding: 28px 32px;
+        }
+
+        .design-card .features {
+            list-style: none;
+            margin-bottom: 24px;
+        }
+
+        .design-card .features li {
+            padding: 10px 0;
+            color: #4B5563;
+            font-size: 15px;
+            line-height: 1.6;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .design-card .features li::before {
+            content: "✦";
+            color: var(--accent-color);
+            font-weight: 900;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .design-card .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: #F9FAFB;
+            border-radius: 12px;
+        }
+
+        .design-card .metric {
+            text-align: center;
+        }
+
+        .design-card .metric .value {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 4px;
+        }
+
+        .design-card .metric .label {
+            font-size: 12px;
+            color: #6B7280;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .design-card .cta {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background: var(--accent-color);
+            color: white;
+            text-align: center;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 16px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .design-card .cta:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        /* Color Schemes */
+        .card-blue { --color-start: #3b82f6; --color-end: #1d4ed8; --accent-color: #2563eb; }
+        .card-green { --color-start: #10b981; --color-end: #059669; --accent-color: #059669; }
+        .card-purple { --color-start: #8b5cf6; --color-end: #6d28d9; --accent-color: #7c3aed; }
+        .card-orange { --color-start: #f59e0b; --color-end: #d97706; --accent-color: #f59e0b; }
+        .card-cyan { --color-start: #06b6d4; --color-end: #0891b2; --accent-color: #0891b2; }
+        .card-pink { --color-start: #ec4899; --color-end: #db2777; --accent-color: #db2777; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 80px;
+            padding: 40px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 24px;
+            backdrop-filter: blur(10px);
+            color: white;
+        }
+
+        .footer h3 {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 16px;
+        }
+
+        .footer p {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .footer .tech {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 24px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 36px; }
+            .header .subtitle { font-size: 18px; }
+            .section-header { flex-direction: column; text-align: center; }
+            .design-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎨 Optimized Check-in Designs</h1>
+            <div class="subtitle">Space-Efficient Goal Progress Visualization</div>
+            <div class="description">
+                Combining the best visual elements from A3 (rounded tags), C4 (45° squares), and C2 (row backgrounds)
+                with smart goal progress indicators. Optimized to show more tasks without crowding the interface.
+            </div>
+            <div class="badge">✨ 6 Design Variations • A3+C4+C2 Hybrid • Soft Fade Philosophy</div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div class="section-header">
+            <span class="icon">📱</span>
+            <div class="text">
+                <h2>Dashboard Designs</h2>
+                <p>Smartphone Interface (375-420px) • A3 Cards + C4 Squares • 8-12 Tasks</p>
+            </div>
+        </div>
+
+        <div class="design-grid">
+            <!-- Dashboard V1 -->
+            <div class="design-card card-blue">
+                <div class="card-header">
+                    <div class="version">DASHBOARD V1</div>
+                    <div class="title">Inline Goal Progress Bars</div>
+                    <div class="approach">Full horizontal bars under tasks</div>
+                </div>
+                <div class="card-body">
+                    <ul class="features">
+                        <li>Complete progress bar with icon, name & percentage</li>
+                        <li>Most informative goal visualization</li>
+                        <li>Clear task-goal relationship</li>
+                        <li>Best for detailed progress tracking</li>
+                    </ul>
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="value">8-10</div>
+                            <div class="label">Tasks Shown</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value">⭐⭐⭐⭐⭐</div>
+                            <div class="label">Clarity</div>
+                        </div>
+                    </div>
+                    <a href="dashboard-optimized.html" class="cta">View Design V1 →</a>
+                </div>
+            </div>
+
+            <!-- Dashboard V2 -->
+            <div class="design-card card-green">
+                <div class="card-header">
+                    <div class="version">DASHBOARD V2</div>
+                    <div class="title">Compact Goal Pills</div>
+                    <div class="approach">Inline badges with task name</div>
+                </div>
+                <div class="card-body">
+                    <ul class="features">
+                        <li>Minimal pill badges next to task names</li>
+                        <li>Most space-efficient design</li>
+                        <li>Quick percentage scanning</li>
+                        <li>Best for maximum task density</li>
+                    </ul>
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="value">10-12</div>
+                            <div class="label">Tasks Shown</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value">⭐⭐⭐⭐⭐</div>
+                            <div class="label">Efficiency</div>
+                        </div>
+                    </div>
+                    <a href="dashboard-optimized-v2.html" class="cta">View Design V2 →</a>
+                </div>
+            </div>
+
+            <!-- Dashboard V3 -->
+            <div class="design-card card-purple">
+                <div class="card-header">
+                    <div class="version">DASHBOARD V3</div>
+                    <div class="title">Side Accent + Mini Bar</div>
+                    <div class="approach">Left colored bar with compact progress</div>
+                </div>
+                <div class="card-body">
+                    <ul class="features">
+                        <li>4px colored left border for visual cueing</li>
+                        <li>Minimal bar under description</li>
+                        <li>Best balance of space and information</li>
+                        <li>Recommended for most use cases</li>
+                    </ul>
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="value">9-11</div>
+                            <div class="label">Tasks Shown</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value">⭐⭐⭐⭐</div>
+                            <div class="label">Balance</div>
+                        </div>
+                    </div>
+                    <a href="dashboard-optimized-v3.html" class="cta">View Design V3 →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kiosk Section -->
+        <div class="section-header">
+            <span class="icon">🖥️</span>
+            <div class="text">
+                <h2>Kiosk Designs</h2>
+                <p>Tablet Interface (768-1024px) • C2 Row Backgrounds • 12-16 Tasks</p>
+            </div>
+        </div>
+
+        <div class="design-grid">
+            <!-- Kiosk V1 -->
+            <div class="design-card card-orange">
+                <div class="card-header">
+                    <div class="version">KIOSK V1</div>
+                    <div class="title">Inline Goal Progress</div>
+                    <div class="approach">Full bars + Goals Overview section</div>
+                </div>
+                <div class="card-body">
+                    <ul class="features">
+                        <li>Two-column layout (tasks + progress)</li>
+                        <li>Dedicated Goals Overview section</li>
+                        <li>Complete progress visualization</li>
+                        <li>Best for goal-focused workflows</li>
+                    </ul>
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="value">12-14</div>
+                            <div class="label">Tasks Shown</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value">⭐⭐⭐⭐⭐</div>
+                            <div class="label">Detail</div>
+                        </div>
+                    </div>
+                    <a href="kiosk-optimized.html" class="cta">View Design V1 →</a>
+                </div>
+            </div>
+
+            <!-- Kiosk V2 -->
+            <div class="design-card card-cyan">
+                <div class="card-header">
+                    <div class="version">KIOSK V2</div>
+                    <div class="title">Right-Aligned Goal Pills</div>
+                    <div class="approach">Pill badges on task right side</div>
+                </div>
+                <div class="card-body">
+                    <ul class="features">
+                        <li>Clean left-right organization</li>
+                        <li>Goal info separated from task content</li>
+                        <li>Quick visual scanning</li>
+                        <li>Recommended for most kiosk setups</li>
+                    </ul>
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="value">13-15</div>
+                            <div class="label">Tasks Shown</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value">⭐⭐⭐⭐⭐</div>
+                            <div class="label">Scanning</div>
+                        </div>
+                    </div>
+                    <a href="kiosk-optimized-v2.html" class="cta">View Design V2 →</a>
+                </div>
+            </div>
+
+            <!-- Kiosk V3 -->
+            <div class="design-card card-pink">
+                <div class="card-header">
+                    <div class="version">KIOSK V3</div>
+                    <div class="title">Left Accent Bars + Badges</div>
+                    <div class="approach">Color-coded bars with compact badges</div>
+                </div>
+                <div class="card-body">
+                    <ul class="features">
+                        <li>5px colored left bar for goal association</li>
+                        <li>Compact badge with emoji + percentage</li>
+                        <li>Maximum space efficiency</li>
+                        <li>Best for showing most tasks</li>
+                    </ul>
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="value">14-16</div>
+                            <div class="label">Tasks Shown</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value">⭐⭐⭐⭐⭐</div>
+                            <div class="label">Density</div>
+                        </div>
+                    </div>
+                    <a href="kiosk-optimized-v3.html" class="cta">View Design V3 →</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <h3>🎯 Design Philosophy</h3>
+            <p><strong>Base Elements:</strong> A3 Rounded Tags + C4 45° Square Rotation + C2 Row Backgrounds</p>
+            <p><strong>Optimization Focus:</strong> Space Efficiency • Goal Progress Clarity • Smart Layouts</p>
+            <p><strong>Color System:</strong> Soft Fade (Blue-Gray → Green) • Stress-Free Design</p>
+            <p><strong>Target Users:</strong> Kids (5-12) & Seniors (60+)</p>
+            <div class="tech">
+                <strong>Tech Stack:</strong> Pure HTML/CSS • No Framework Dependencies • Self-Contained Designs
+            </div>
+        </div>
+    </div>
+</body>
+</html>
