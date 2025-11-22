@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosk V1 - Green Harmony</title>
+    <style>
+        :root {
+            /* Green Harmony (Option B) */
+            --incomplete-primary: #7CB342;
+            --incomplete-secondary: #689F38;
+            --complete-primary: #9CCC65;
+            --complete-secondary: #7CB342;
+            --background: #F1F8E9;
+            --card-bg: #FFFFFF;
+            --text-primary: #33691E;
+            --text-secondary: #689F38;
+            --border-light: #DCEDC8;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden; /* CRITICAL - prevent body scroll */
+        }
+
+        .kiosk-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header - Fixed, no scroll */
+        .header {
+            flex-shrink: 0;
+            background: var(--card-bg);
+            padding: 20px;
+            border-bottom: 2px solid var(--border-light);
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .color-label {
+            background: var(--complete-primary);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Main grid layout */
+        .main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            overflow: hidden; /* prevent main from scrolling */
+            min-height: 0; /* Important for Firefox */
+        }
+
+        /* Left Column - Checklist with its own scroll */
+        .checklist-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto; /* Independent scroll */
+            box-shadow: var(--shadow);
+        }
+
+        /* Right Column - Split into two scrollable sections */
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow: hidden;
+            min-height: 0; /* Important for Firefox */
+        }
+
+        .progress-section {
+            flex: 0 0 auto;
+            max-height: 40vh;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto; /* Independent scroll */
+            box-shadow: var(--shadow);
+        }
+
+        .goals-section {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto; /* Independent scroll */
+            box-shadow: var(--shadow);
+            min-height: 0; /* Important for Firefox */
+        }
+
+        /* C4 Rotating Squares */
+        .square {
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--incomplete-primary);
+            background: transparent;
+            flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .task-row.complete .square {
+            background: var(--complete-primary);
+            border-color: var(--complete-primary);
+            transform: rotate(45deg);
+        }
+
+        /* Task Row Styling */
+        .task-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #F9FBF7;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .task-row:hover {
+            background: #F1F8E9;
+            transform: translateX(4px);
+        }
+
+        .task-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Inline Task Name and Description */
+        .task-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .task-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .task-row.complete .task-name {
+            color: var(--complete-secondary);
+            text-decoration: line-through;
+        }
+
+        .separator {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .task-desc {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .task-row.complete .task-desc {
+            opacity: 0.6;
+        }
+
+        /* Goal Progress Bar */
+        .goal-progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .goal-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            background: var(--incomplete-primary);
+            color: white;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        .task-row.complete .goal-badge {
+            background: var(--complete-primary);
+        }
+
+        .goal-bar-container {
+            flex: 1;
+            height: 4px;
+            background: var(--border-light);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .goal-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--complete-primary), var(--complete-secondary));
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .goal-percent {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* Progress Entry */
+        .progress-entry {
+            padding: 16px;
+            background: #F9FBF7;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .progress-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .progress-button {
+            background: var(--complete-primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 8px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .progress-button:hover {
+            background: var(--complete-secondary);
+        }
+
+        /* Goal Overview Card */
+        .goal-card {
+            padding: 16px;
+            background: #F9FBF7;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .goal-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .goal-main-progress {
+            height: 8px;
+            background: var(--border-light);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .goal-main-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--complete-primary), var(--complete-secondary));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .goal-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Section Headers */
+        h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .main {
+                grid-template-columns: 1fr;
+            }
+
+            .right-column {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .right-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="kiosk-container">
+        <!-- Fixed Header -->
+        <div class="header">
+            <div class="header-content">
+                <h1>Daily Check-In Kiosk</h1>
+                <div class="color-label">Green Harmony</div>
+            </div>
+        </div>
+
+        <!-- Main Grid Layout -->
+        <div class="main">
+            <!-- Left Column: Checklist (scrollable) -->
+            <div class="checklist-section">
+                <h2>🌿 Today's Checklist</h2>
+
+                <div class="task-row complete" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Wake Up Early</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">6:00 AM rise time</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">⏰ Routine</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 90%"></div>
+                            </div>
+                            <span class="goal-percent">90%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row complete" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Stretching</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">10 min morning stretch</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🏃 Fitness</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 80%"></div>
+                            </div>
+                            <span class="goal-percent">80%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Protein Shake</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Post-workout nutrition</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🥗 Nutrition</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 65%"></div>
+                            </div>
+                            <span class="goal-percent">65%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row complete" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Journal Entry</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Morning pages writing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Code Review</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Review PR queue</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">💻 Work</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 50%"></div>
+                            </div>
+                            <span class="goal-percent">50%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Client Meeting</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Q4 planning session</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">💻 Work</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 35%"></div>
+                            </div>
+                            <span class="goal-percent">35%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row complete" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Vitamins</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Daily supplements</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🥗 Nutrition</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 85%"></div>
+                            </div>
+                            <span class="goal-percent">85%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Design Sprint</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">UI mockup session</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Meal Prep</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Prepare tomorrow's lunch</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🥗 Nutrition</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 60%"></div>
+                            </div>
+                            <span class="goal-percent">60%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Yoga Session</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Evening vinyasa flow</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🏃 Fitness</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 70%"></div>
+                            </div>
+                            <span class="goal-percent">70%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Documentation</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Update API docs</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">💻 Work</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 40%"></div>
+                            </div>
+                            <span class="goal-percent">40%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Reading Time</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">30 min book reading</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">📚 Learning</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 55%"></div>
+                            </div>
+                            <span class="goal-percent">55%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Wind Down</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">No screens after 10pm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Split into two sections -->
+            <div class="right-column">
+                <!-- Progress Section (scrollable) -->
+                <div class="progress-section">
+                    <h2>📊 Record Progress</h2>
+
+                    <div class="progress-entry">
+                        <h3>Steps Walked</h3>
+                        <input type="number" class="progress-input" placeholder="Number of steps today" min="0" max="50000">
+                        <button class="progress-button">Update</button>
+                    </div>
+
+                    <div class="progress-entry">
+                        <h3>Calories Burned</h3>
+                        <input type="number" class="progress-input" placeholder="Active calories" min="0" max="2000">
+                        <button class="progress-button">Update</button>
+                    </div>
+
+                    <div class="progress-entry">
+                        <h3>Sleep Quality</h3>
+                        <input type="number" class="progress-input" placeholder="Rate 1-10" min="1" max="10">
+                        <button class="progress-button">Update</button>
+                    </div>
+                </div>
+
+                <!-- Goals Section (scrollable) -->
+                <div class="goals-section">
+                    <h2>🎯 Goals Overview</h2>
+
+                    <div class="goal-card">
+                        <div class="goal-title">
+                            <span>🏃</span>
+                            <span>Fitness Goals</span>
+                        </div>
+                        <div class="goal-main-progress">
+                            <div class="goal-main-fill" style="width: 75%"></div>
+                        </div>
+                        <div class="goal-stats">
+                            <span>Week Progress: 75%</span>
+                            <span>5/7 workouts done</span>
+                        </div>
+                    </div>
+
+                    <div class="goal-card">
+                        <div class="goal-title">
+                            <span>💻</span>
+                            <span>Work Projects</span>
+                        </div>
+                        <div class="goal-main-progress">
+                            <div class="goal-main-fill" style="width: 42%"></div>
+                        </div>
+                        <div class="goal-stats">
+                            <span>Week Progress: 42%</span>
+                            <span>3/7 tasks complete</span>
+                        </div>
+                    </div>
+
+                    <div class="goal-card">
+                        <div class="goal-title">
+                            <span>🥗</span>
+                            <span>Nutrition Tracking</span>
+                        </div>
+                        <div class="goal-main-progress">
+                            <div class="goal-main-fill" style="width: 70%"></div>
+                        </div>
+                        <div class="goal-stats">
+                            <span>Week Progress: 70%</span>
+                            <span>14/20 meals tracked</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTask(element) {
+            element.classList.toggle('complete');
+
+            // Update progress bars when tasks change
+            updateGoalProgress();
+        }
+
+        function updateGoalProgress() {
+            // This would normally calculate real progress
+            // For demo, just adds a visual feedback
+            const fills = document.querySelectorAll('.goal-bar-fill, .goal-main-fill');
+            fills.forEach(fill => {
+                fill.style.transition = 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            });
+        }
+    </script>
+</body>
+</html>

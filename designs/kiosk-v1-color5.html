@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosk V1 - Lavender Calm</title>
+    <style>
+        :root {
+            /* Lavender Calm */
+            --incomplete-primary: #9575CD;
+            --incomplete-secondary: #7E57C2;
+            --complete-primary: #CE93D8;
+            --complete-secondary: #BA68C8;
+            --background: #F3E5F5;
+            --card-bg: #FFFFFF;
+            --text-primary: #4A148C;
+            --text-secondary: #7B1FA2;
+            --border-light: #E1BEE7;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden; /* CRITICAL - prevent body scroll */
+        }
+
+        .kiosk-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header - Fixed, no scroll */
+        .header {
+            flex-shrink: 0;
+            background: var(--card-bg);
+            padding: 20px;
+            border-bottom: 2px solid var(--border-light);
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .color-label {
+            background: var(--complete-primary);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Main grid layout */
+        .main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            overflow: hidden; /* prevent main from scrolling */
+            min-height: 0; /* Important for Firefox */
+        }
+
+        /* Left Column - Checklist with its own scroll */
+        .checklist-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto; /* Independent scroll */
+            box-shadow: var(--shadow);
+        }
+
+        /* Right Column - Split into two scrollable sections */
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow: hidden;
+            min-height: 0; /* Important for Firefox */
+        }
+
+        .progress-section {
+            flex: 0 0 auto;
+            max-height: 40vh;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto; /* Independent scroll */
+            box-shadow: var(--shadow);
+        }
+
+        .goals-section {
+            flex: 1;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto; /* Independent scroll */
+            box-shadow: var(--shadow);
+            min-height: 0; /* Important for Firefox */
+        }
+
+        /* C4 Rotating Squares */
+        .square {
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--incomplete-primary);
+            background: transparent;
+            flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .task-row.complete .square {
+            background: var(--complete-primary);
+            border-color: var(--complete-primary);
+            transform: rotate(45deg);
+        }
+
+        /* Task Row Styling */
+        .task-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #FAF5FF;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .task-row:hover {
+            background: #F5EBFF;
+            transform: translateX(4px);
+        }
+
+        .task-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Inline Task Name and Description */
+        .task-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .task-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .task-row.complete .task-name {
+            color: var(--complete-secondary);
+            text-decoration: line-through;
+        }
+
+        .separator {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .task-desc {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .task-row.complete .task-desc {
+            opacity: 0.6;
+        }
+
+        /* Goal Progress Bar */
+        .goal-progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .goal-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            background: var(--incomplete-primary);
+            color: white;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        .task-row.complete .goal-badge {
+            background: var(--complete-primary);
+        }
+
+        .goal-bar-container {
+            flex: 1;
+            height: 4px;
+            background: var(--border-light);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .goal-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--complete-primary), var(--complete-secondary));
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .goal-percent {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* Progress Entry */
+        .progress-entry {
+            padding: 16px;
+            background: #FAF5FF;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .progress-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .progress-button {
+            background: var(--complete-primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 8px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .progress-button:hover {
+            background: var(--complete-secondary);
+        }
+
+        /* Goal Overview Card */
+        .goal-card {
+            padding: 16px;
+            background: #FAF5FF;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .goal-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .goal-main-progress {
+            height: 8px;
+            background: var(--border-light);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .goal-main-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--complete-primary), var(--complete-secondary));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .goal-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Section Headers */
+        h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .main {
+                grid-template-columns: 1fr;
+            }
+
+            .right-column {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .right-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="kiosk-container">
+        <!-- Fixed Header -->
+        <div class="header">
+            <div class="header-content">
+                <h1>Daily Check-In Kiosk</h1>
+                <div class="color-label">Lavender Calm</div>
+            </div>
+        </div>
+
+        <!-- Main Grid Layout -->
+        <div class="main">
+            <!-- Left Column: Checklist (scrollable) -->
+            <div class="checklist-section">
+                <h2>💜 Today's Checklist</h2>
+
+                <div class="task-row complete" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Morning Ritual</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Gratitude & intentions</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">✨ Spiritual</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 95%"></div>
+                            </div>
+                            <span class="goal-percent">95%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row complete" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Tea Ceremony</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Mindful tea preparation</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Creative Writing</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">30 min free writing</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">✍️ Creativity</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 60%"></div>
+                            </div>
+                            <span class="goal-percent">60%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row complete" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Garden Care</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Water plants & check growth</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🌱 Nature</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 82%"></div>
+                            </div>
+                            <span class="goal-percent">82%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Art Practice</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Sketching or painting</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🎨 Art</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 45%"></div>
+                            </div>
+                            <span class="goal-percent">45%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Gentle Yoga</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Restorative flow</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🧘 Wellness</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 70%"></div>
+                            </div>
+                            <span class="goal-percent">70%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row complete" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Nature Walk</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Forest bathing session</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🌱 Nature</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 90%"></div>
+                            </div>
+                            <span class="goal-percent">90%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Meditation</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">20 min sitting practice</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">✨ Spiritual</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 80%"></div>
+                            </div>
+                            <span class="goal-percent">80%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Poetry Reading</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Daily poetry reflection</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row complete" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Music Practice</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Instrument or singing</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🎵 Music</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 75%"></div>
+                            </div>
+                            <span class="goal-percent">75%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Dream Journal</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Record & interpret dreams</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">✨ Spiritual</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 55%"></div>
+                            </div>
+                            <span class="goal-percent">55%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Aromatherapy</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Evening essential oils</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-row" onclick="toggleTask(this)">
+                    <div class="square"></div>
+                    <div class="task-content">
+                        <div class="task-line">
+                            <span class="task-name">Moon Gazing</span>
+                            <span class="separator">•</span>
+                            <span class="task-desc">Evening sky meditation</span>
+                        </div>
+                        <div class="goal-progress">
+                            <span class="goal-badge">🌱 Nature</span>
+                            <div class="goal-bar-container">
+                                <div class="goal-bar-fill" style="width: 50%"></div>
+                            </div>
+                            <span class="goal-percent">50%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Split into two sections -->
+            <div class="right-column">
+                <!-- Progress Section (scrollable) -->
+                <div class="progress-section">
+                    <h2>📊 Record Progress</h2>
+
+                    <div class="progress-entry">
+                        <h3>Mindfulness Minutes</h3>
+                        <input type="number" class="progress-input" placeholder="Minutes of mindful practice" min="0" max="180">
+                        <button class="progress-button">Update</button>
+                    </div>
+
+                    <div class="progress-entry">
+                        <h3>Creative Output</h3>
+                        <input type="number" class="progress-input" placeholder="Pages/pieces created" min="0" max="20">
+                        <button class="progress-button">Update</button>
+                    </div>
+
+                    <div class="progress-entry">
+                        <h3>Self-Care Score</h3>
+                        <input type="number" class="progress-input" placeholder="Rate 1-10" min="1" max="10">
+                        <button class="progress-button">Update</button>
+                    </div>
+                </div>
+
+                <!-- Goals Section (scrollable) -->
+                <div class="goals-section">
+                    <h2>🎯 Goals Overview</h2>
+
+                    <div class="goal-card">
+                        <div class="goal-title">
+                            <span>✨</span>
+                            <span>Spiritual Growth</span>
+                        </div>
+                        <div class="goal-main-progress">
+                            <div class="goal-main-fill" style="width: 77%"></div>
+                        </div>
+                        <div class="goal-stats">
+                            <span>Week Progress: 77%</span>
+                            <span>5.5/7 days practiced</span>
+                        </div>
+                    </div>
+
+                    <div class="goal-card">
+                        <div class="goal-title">
+                            <span>🎨</span>
+                            <span>Creative Expression</span>
+                        </div>
+                        <div class="goal-main-progress">
+                            <div class="goal-main-fill" style="width: 53%"></div>
+                        </div>
+                        <div class="goal-stats">
+                            <span>Week Progress: 53%</span>
+                            <span>8/15 sessions done</span>
+                        </div>
+                    </div>
+
+                    <div class="goal-card">
+                        <div class="goal-title">
+                            <span>🌱</span>
+                            <span>Nature Connection</span>
+                        </div>
+                        <div class="goal-main-progress">
+                            <div class="goal-main-fill" style="width: 74%"></div>
+                        </div>
+                        <div class="goal-stats">
+                            <span>Week Progress: 74%</span>
+                            <span>Daily outdoor time</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTask(element) {
+            element.classList.toggle('complete');
+
+            // Update progress bars when tasks change
+            updateGoalProgress();
+        }
+
+        function updateGoalProgress() {
+            // This would normally calculate real progress
+            // For demo, just adds a visual feedback
+            const fills = document.querySelectorAll('.goal-bar-fill, .goal-main-fill');
+            fills.forEach(fill => {
+                fill.style.transition = 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            });
+        }
+    </script>
+</body>
+</html>

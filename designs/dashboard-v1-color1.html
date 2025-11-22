@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard V1 - Classic Soft Fade (Option A)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            /* Classic Soft Fade - Option A: Darker Blue-Gray */
+            --incomplete-primary: #607D8B;
+            --incomplete-secondary: #546E7A;
+            --incomplete-bg: rgba(96, 125, 139, 0.08);
+
+            --complete-primary: #66BB6A;
+            --complete-secondary: #558B2F;
+            --complete-bg: #F1F8E9;
+
+            --progress-primary: #42A5F5;
+            --progress-secondary: #1976D2;
+            --progress-bg: rgba(144, 202, 249, 0.08);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+
+        /* Header */
+        .header {
+            padding: 24px;
+            border-bottom: 1px solid #ECEFF1;
+            background: linear-gradient(135deg, rgba(102, 187, 106, 0.05), rgba(66, 165, 245, 0.05));
+        }
+        h1 { font-size: 26px; font-weight: 700; color: #1F2937; }
+        .completed { color: var(--complete-secondary); font-size: 15px; font-weight: 600; margin-top: 4px; }
+        .subtitle { color: #6B7280; font-size: 14px; margin-top: 4px; }
+        .color-label {
+            display: inline-block;
+            background: rgba(96, 125, 139, 0.1);
+            color: #546E7A;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Content */
+        .content { padding: 20px; }
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Task Card */
+        .task-card {
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .task-card:not(.complete) { background: var(--incomplete-bg); }
+        .task-card.complete { background: var(--complete-bg); }
+        .task-card:active { transform: scale(0.98); }
+
+        /* C4 Square Indicator */
+        .square {
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .task-card:not(.complete) .square {
+            border: 2.5px solid var(--incomplete-primary);
+            background: transparent;
+        }
+
+        .task-card.complete .square {
+            background: var(--complete-primary);
+            border: 2.5px solid var(--complete-primary);
+            transform: rotate(45deg);
+        }
+
+        /* Task Content */
+        .task-content { flex: 1; min-width: 0; }
+
+        .task-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            line-height: 1.3;
+        }
+        .task-card:not(.complete) .task-name { color: var(--incomplete-secondary); }
+        .task-card.complete .task-name { color: var(--complete-secondary); }
+
+        .task-desc {
+            font-size: 13px;
+            line-height: 1.3;
+        }
+        .task-card:not(.complete) .task-desc { color: var(--incomplete-primary); }
+        .task-card.complete .task-desc { color: var(--complete-primary); }
+
+        /* Goal Progress Bar */
+        .goal-progress {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .goal-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: var(--progress-bg);
+            color: var(--progress-secondary);
+            font-size: 12px;
+        }
+
+        .goal-bar-container {
+            flex: 1;
+            height: 4px;
+            background: rgba(144, 202, 249, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .goal-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--progress-primary) 0%, var(--progress-secondary) 100%);
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .goal-percent {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--progress-primary);
+            min-width: 32px;
+            text-align: right;
+        }
+
+        /* Divider */
+        .divider { height: 1px; background: #ECEFF1; margin: 20px 0; }
+
+        /* Progress Cards */
+        .progress-card {
+            background: var(--progress-bg);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .progress-card .emoji { font-size: 20px; }
+        .progress-card .name {
+            flex: 1;
+            font-weight: 600;
+            color: var(--progress-secondary);
+            font-size: 15px;
+        }
+
+        .progress-card button {
+            background: white;
+            border: 1px solid var(--progress-primary);
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-weight: 600;
+            color: var(--progress-secondary);
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .progress-card button:active { transform: scale(0.95); }
+
+        .progress-card .value {
+            color: var(--progress-primary);
+            font-weight: 600;
+            font-size: 13px;
+            min-width: 70px;
+            text-align: right;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 20px;
+            background: #FAFAFA;
+            text-align: center;
+            color: var(--complete-secondary);
+            font-weight: 600;
+            border-radius: 0 0 24px 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Alex's Check-in</h1>
+            <div class="completed">✨ 4 tasks done today</div>
+            <div class="subtitle">You're doing great!</div>
+            <div class="color-label">🎨 Classic Soft Fade (Option A)</div>
+        </div>
+
+        <div class="content">
+            <div class="section-title">CHECKLIST (4/8)</div>
+
+            <div class="task-card complete">
+                <div class="square"></div>
+                <div class="task-content">
+                    <div class="task-name">Brush Teeth</div>
+                    <div class="task-desc">Brush for 2 minutes</div>
+                    <div class="goal-progress">
+                        <span class="goal-badge">💪 Health</span>
+                        <div class="goal-bar-container">
+                            <div class="goal-bar-fill" style="width: 75%"></div>
+                        </div>
+                        <span class="goal-percent">75%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="task-card" onclick="this.classList.toggle('complete')">
+                <div class="square"></div>
+                <div class="task-content">
+                    <div class="task-name">Make Bed</div>
+                    <div class="task-desc">Keep room tidy</div>
+                </div>
+            </div>
+
+            <div class="task-card complete">
+                <div class="square"></div>
+                <div class="task-content">
+                    <div class="task-name">Morning Exercise</div>
+                    <div class="task-desc">10 jumping jacks</div>
+                    <div class="goal-progress">
+                        <span class="goal-badge">💪 Health</span>
+                        <div class="goal-bar-container">
+                            <div class="goal-bar-fill" style="width: 75%"></div>
+                        </div>
+                        <span class="goal-percent">75%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="task-card" onclick="this.classList.toggle('complete')">
+                <div class="square"></div>
+                <div class="task-content">
+                    <div class="task-name">Pack Lunch</div>
+                    <div class="task-desc">Healthy choices</div>
+                </div>
+            </div>
+
+            <div class="task-card complete">
+                <div class="square"></div>
+                <div class="task-content">
+                    <div class="task-name">Practice Piano</div>
+                    <div class="task-desc">15 minutes scales</div>
+                    <div class="goal-progress">
+                        <span class="goal-badge">🎵 Music</span>
+                        <div class="goal-bar-container">
+                            <div class="goal-bar-fill" style="width: 50%"></div>
+                        </div>
+                        <span class="goal-percent">50%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="task-card" onclick="this.classList.toggle('complete')">
+                <div class="square"></div>
+                <div class="task-content">
+                    <div class="task-name">Homework</div>
+                    <div class="task-desc">Math worksheet</div>
+                </div>
+            </div>
+
+            <div class="task-card complete">
+                <div class="square"></div>
+                <div class="task-content">
+                    <div class="task-name">Eat Vegetables</div>
+                    <div class="task-desc">At least 2 servings</div>
+                    <div class="goal-progress">
+                        <span class="goal-badge">💪 Health</span>
+                        <div class="goal-bar-container">
+                            <div class="goal-bar-fill" style="width: 75%"></div>
+                        </div>
+                        <span class="goal-percent">75%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="task-card" onclick="this.classList.toggle('complete')">
+                <div class="square"></div>
+                <div class="task-content">
+                    <div class="task-name">Clean Up Toys</div>
+                    <div class="task-desc">Before bedtime</div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section-title">RECORD PROGRESS (0/2)</div>
+
+            <div class="progress-card">
+                <span class="emoji">💧</span>
+                <span class="name">Water</span>
+                <button>+ Add</button>
+                <span class="value">5/8 🎯</span>
+            </div>
+
+            <div class="progress-card">
+                <span class="emoji">📚</span>
+                <span class="name">Reading</span>
+                <button>+ Add</button>
+                <span class="value">12/20 pgs</span>
+            </div>
+        </div>
+
+        <div class="footer">🎯 Keep up the great work!</div>
+    </div>
+</body>
+</html>
