@@ -623,7 +623,7 @@ export default function KioskModePage() {
                           <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
                             🌍 Checklist
                           </h2>
-                          <div className="flex-1 overflow-y-auto space-y-3">
+                          <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-3 content-start">
                             {simpleTasks.map((task) => {
                               const undoTime = undoTimers[task.id];
                               const canUndo = task.isComplete && undoTime !== undefined && undoTime > 0;
@@ -746,7 +746,7 @@ export default function KioskModePage() {
                               <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
                                 📊 Record Progress
                               </h2>
-                              <div className="flex-1 overflow-y-auto space-y-3">
+                              <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-3 content-start">
                                 {recordProgressTasks.map((task) => {
                                   const isMulti = task.type === TaskType.MULTIPLE_CHECKIN;
                                   const isProgress = task.type === TaskType.PROGRESS;
@@ -844,45 +844,52 @@ export default function KioskModePage() {
 
                           {/* BOTTOM: Goals Overview (flex remaining space) */}
                           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-                            <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
+                            <h2
+                              className="text-[36px] font-bold mb-4 cursor-pointer flex items-center gap-3"
+                              style={{ color: '#37474F' }}
+                              onClick={() => setGoalsOpen(!goalsOpen)}
+                            >
                               🎯 Goals Overview
+                              <span className="text-[28px]">{goalsOpen ? '▼' : '▶'}</span>
                             </h2>
-                            <div className="flex-1 overflow-y-auto space-y-4">
-                              {activeGoals.length === 0 ? (
-                                <div className="text-center py-12">
-                                  <p className="text-[24px]" style={{ color: '#607D8B' }}>
-                                    No active goals yet
-                                  </p>
-                                </div>
-                              ) : (
-                                activeGoals.map((goal: any) => (
-                                  <div
-                                    key={goal.id}
-                                    className="rounded-[12px] p-[20px]"
-                                    style={{ background: '#FAF8F7' }}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-[28px]">🎯</span>
-                                      <h3 className="text-[28px] font-semibold" style={{ color: '#37474F' }}>
-                                        {goal.name}
-                                      </h3>
-                                      <div className="flex-1 h-1.5 rounded-sm overflow-hidden" style={{ background: '#D7CCC8' }}>
-                                        <div
-                                          className="h-full rounded-sm transition-all duration-300"
-                                          style={{
-                                            width: `${goal.progress?.percentage || 0}%`,
-                                            background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
-                                          }}
-                                        />
-                                      </div>
-                                      <div className="text-[22px] font-bold min-w-[48px] text-right" style={{ color: '#607D8B' }}>
-                                        {Math.round(goal.progress?.percentage || 0)}%
+                            {goalsOpen && (
+                              <div className="flex-1 overflow-y-auto space-y-4">
+                                {activeGoals.length === 0 ? (
+                                  <div className="text-center py-12">
+                                    <p className="text-[24px]" style={{ color: '#607D8B' }}>
+                                      No active goals yet
+                                    </p>
+                                  </div>
+                                ) : (
+                                  activeGoals.map((goal: any) => (
+                                    <div
+                                      key={goal.id}
+                                      className="rounded-[12px] p-[20px]"
+                                      style={{ background: '#FAF8F7' }}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-[28px]">🎯</span>
+                                        <h3 className="text-[28px] font-semibold" style={{ color: '#37474F' }}>
+                                          {goal.name}
+                                        </h3>
+                                        <div className="flex-1 h-1.5 rounded-sm overflow-hidden" style={{ background: '#D7CCC8' }}>
+                                          <div
+                                            className="h-full rounded-sm transition-all duration-300"
+                                            style={{
+                                              width: `${goal.progress?.percentage || 0}%`,
+                                              background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
+                                            }}
+                                          />
+                                        </div>
+                                        <div className="text-[22px] font-bold min-w-[48px] text-right" style={{ color: '#607D8B' }}>
+                                          {Math.round(goal.progress?.percentage || 0)}%
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                ))
-                              )}
-                            </div>
+                                  ))
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
