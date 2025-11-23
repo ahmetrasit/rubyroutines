@@ -711,7 +711,7 @@ export default function KioskModePage() {
                                             >
                                               🎯 {goal.name}
                                             </div>
-                                            <div className="flex-1 h-2 rounded-sm overflow-hidden" style={{
+                                            <div className="flex-1 h-1.5 rounded-sm overflow-hidden" style={{
                                               background: '#D7CCC8'
                                             }}>
                                               <div
@@ -862,8 +862,8 @@ export default function KioskModePage() {
                                     style={{ background: '#FAF8F7' }}
                                   >
                                     <div className="flex items-center gap-3 mb-3">
-                                      <span className="text-[32px]">🎯</span>
-                                      <h3 className="text-[32px] font-semibold" style={{ color: '#37474F' }}>
+                                      <span className="text-[28px]">🎯</span>
+                                      <h3 className="text-[28px] font-semibold" style={{ color: '#37474F' }}>
                                         {goal.name}
                                       </h3>
                                     </div>
