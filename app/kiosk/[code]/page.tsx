@@ -861,24 +861,23 @@ export default function KioskModePage() {
                                     className="rounded-[12px] p-[20px]"
                                     style={{ background: '#FAF8F7' }}
                                   >
-                                    <div className="flex items-center gap-3 mb-3">
+                                    <div className="flex items-center gap-3">
                                       <span className="text-[28px]">🎯</span>
                                       <h3 className="text-[28px] font-semibold" style={{ color: '#37474F' }}>
                                         {goal.name}
                                       </h3>
-                                    </div>
-                                    <div className="h-2 rounded-sm overflow-hidden mb-3" style={{ background: '#D7CCC8' }}>
-                                      <div
-                                        className="h-full rounded-sm transition-all duration-300"
-                                        style={{
-                                          width: `${goal.progress?.percentage || 0}%`,
-                                          background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="flex justify-between text-[24px]" style={{ color: '#607D8B' }}>
-                                      <span>{goal.period} Progress: {Math.round(goal.progress?.percentage || 0)}%</span>
-                                      <span>{goal.progress?.completed || 0}/{goal.progress?.target || 0}</span>
+                                      <div className="flex-1 h-1.5 rounded-sm overflow-hidden" style={{ background: '#D7CCC8' }}>
+                                        <div
+                                          className="h-full rounded-sm transition-all duration-300"
+                                          style={{
+                                            width: `${goal.progress?.percentage || 0}%`,
+                                            background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="text-[22px] font-bold min-w-[48px] text-right" style={{ color: '#607D8B' }}>
+                                        {Math.round(goal.progress?.percentage || 0)}%
+                                      </div>
                                     </div>
                                   </div>
                                 ))
