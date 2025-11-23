@@ -138,7 +138,7 @@ export default function KioskModePage() {
   const tasks = personTasksData?.tasks || [];
 
   // Fetch goals for the selected person
-  const { data: goals } = trpc.goal.list.useQuery(
+  const { data: goals, isLoading: goalsLoading, error: goalsError } = trpc.goal.list.useQuery(
     { roleId: kioskData?.roleId!, personId: selectedPersonId! },
     { enabled: !!kioskData?.roleId && !!selectedPersonId }
   );
@@ -150,6 +150,8 @@ export default function KioskModePage() {
     personId: selectedPersonId,
     rawGoals: goals,
     goalsLength: goals?.length,
+    isLoading: goalsLoading,
+    error: goalsError,
   });
 
   const activeGoals = (goals?.filter(g => g.status === 'ACTIVE') || []).sort((a, b) => {
