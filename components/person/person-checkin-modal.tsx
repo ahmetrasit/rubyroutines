@@ -478,6 +478,9 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                             </div>
                           )}
                         </div>
+                        <div className="text-[13px] font-semibold min-w-[32px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
+                          {task.completionCount || 0}x
+                        </div>
                         <button
                           onClick={() => handleCompleteWithAnimation(task.id)}
                           disabled={completeMutation.isPending}
@@ -489,9 +492,6 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                         >
                           +1
                         </button>
-                        <div className="text-[13px] font-semibold min-w-[70px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
-                          {task.completionCount || 0}x
-                        </div>
                       </div>
                     ))}
                   </div>
