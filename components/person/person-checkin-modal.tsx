@@ -173,9 +173,45 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   const teacherOnlyTasks = tasks.filter((t) => t.isTeacherOnly);
 
   // Group regular tasks by type
-  const simpleTasks = regularTasks.filter((t) => t.type === TaskType.SIMPLE);
-  const multiTasks = regularTasks.filter((t) => t.type === TaskType.MULTIPLE_CHECKIN);
-  const progressTasks = regularTasks.filter((t) => t.type === TaskType.PROGRESS);
+  const simpleTasks = regularTasks
+    .filter((t) => t.type === TaskType.SIMPLE)
+    .sort((a, b) => {
+      // First: incomplete tasks on top
+      if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
+      // Second: group by routine name
+      const routineCompare = (a.routine?.name || '').localeCompare(b.routine?.name || '');
+      if (routineCompare !== 0) return routineCompare;
+      // Third: by task order within routine
+      return (a.order || 0) - (b.order || 0);
+    });
+
+  const multiTasks = regularTasks
+    .filter((t) => t.type === TaskType.MULTIPLE_CHECKIN)
+    .sort((a, b) => {
+      // First: tasks with 0 completions on top
+      const aIncomplete = (a.completionCount || 0) === 0;
+      const bIncomplete = (b.completionCount || 0) === 0;
+      if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
+      // Second: group by routine name
+      const routineCompare = (a.routine?.name || '').localeCompare(b.routine?.name || '');
+      if (routineCompare !== 0) return routineCompare;
+      // Third: by task order within routine
+      return (a.order || 0) - (b.order || 0);
+    });
+
+  const progressTasks = regularTasks
+    .filter((t) => t.type === TaskType.PROGRESS)
+    .sort((a, b) => {
+      // First: tasks with 0 progress on top
+      const aIncomplete = (a.totalValue || 0) === 0;
+      const bIncomplete = (b.totalValue || 0) === 0;
+      if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
+      // Second: group by routine name
+      const routineCompare = (a.routine?.name || '').localeCompare(b.routine?.name || '');
+      if (routineCompare !== 0) return routineCompare;
+      // Third: by task order within routine
+      return (a.order || 0) - (b.order || 0);
+    });
 
   // Group teacher-only tasks by type
   const teacherSimpleTasks = teacherOnlyTasks.filter((t) => t.type === TaskType.SIMPLE);

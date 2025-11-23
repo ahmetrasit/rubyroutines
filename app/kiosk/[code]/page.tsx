@@ -554,11 +554,65 @@ export default function KioskModePage() {
                   </div>
                 ) : (
                   (() => {
-                    // Group tasks by type
-                    const simpleTasks = tasks.filter((t: Task) => t.type === TaskType.SIMPLE);
-                    const multiTasks = tasks.filter((t: Task) => t.type === TaskType.MULTIPLE_CHECKIN);
-                    const progressTasks = tasks.filter((t: Task) => t.type === TaskType.PROGRESS);
-                    const checklistTasks = [...simpleTasks, ...multiTasks]; // Combine for left column
+                    // Group tasks by type and sort
+                    const simpleTasks = tasks
+                      .filter((t: Task) => t.type === TaskType.SIMPLE)
+                      .sort((a: Task, b: Task) => {
+                        // First: incomplete tasks on top
+                        if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
+                        // Second: group by routine name
+                        const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
+                        if (routineCompare !== 0) return routineCompare;
+                        // Third: by task order within routine
+                        return ((a as any).order || 0) - ((b as any).order || 0);
+                      });
+
+                    const multiTasks = tasks
+                      .filter((t: Task) => t.type === TaskType.MULTIPLE_CHECKIN)
+                      .sort((a: Task, b: Task) => {
+                        // First: tasks with 0 completions on top
+                        const aIncomplete = (a.completionCount || 0) === 0;
+                        const bIncomplete = (b.completionCount || 0) === 0;
+                        if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
+                        // Second: group by routine name
+                        const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
+                        if (routineCompare !== 0) return routineCompare;
+                        // Third: by task order within routine
+                        return ((a as any).order || 0) - ((b as any).order || 0);
+                      });
+
+                    const progressTasks = tasks
+                      .filter((t: Task) => t.type === TaskType.PROGRESS)
+                      .sort((a: Task, b: Task) => {
+                        // First: tasks with 0 progress on top
+                        const aIncomplete = (a.totalValue || 0) === 0;
+                        const bIncomplete = (b.totalValue || 0) === 0;
+                        if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
+                        // Second: group by routine name
+                        const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
+                        if (routineCompare !== 0) return routineCompare;
+                        // Third: by task order within routine
+                        return ((a as any).order || 0) - ((b as any).order || 0);
+                      });
+
+                    // Combine simple and multi tasks for left column, maintaining sort
+                    const checklistTasks = [...simpleTasks, ...multiTasks].sort((a: Task, b: Task) => {
+                      // Determine if each task is incomplete
+                      const aIncomplete = a.type === TaskType.SIMPLE
+                        ? !a.isComplete
+                        : (a.completionCount || 0) === 0;
+                      const bIncomplete = b.type === TaskType.SIMPLE
+                        ? !b.isComplete
+                        : (b.completionCount || 0) === 0;
+
+                      // First: incomplete tasks on top
+                      if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
+                      // Second: group by routine name
+                      const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
+                      if (routineCompare !== 0) return routineCompare;
+                      // Third: by task order within routine
+                      return ((a as any).order || 0) - ((b as any).order || 0);
+                    });
 
                     return (
                       <div className="h-full grid grid-cols-2 gap-5 overflow-hidden">
