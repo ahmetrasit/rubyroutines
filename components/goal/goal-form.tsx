@@ -50,7 +50,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
   // Fetch routines to get tasks for linking
-  const { data: routines } = trpc.routine.list.useQuery(
+  const { data: routines, isLoading: routinesLoading } = trpc.routine.list.useQuery(
     { roleId, personId },
     { enabled: !!roleId }
   );
@@ -756,62 +756,74 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                 {!selectedTaskId && (
                   <div className="space-y-2">
                     <Label htmlFor="task">Select Task *</Label>
-                    <Select
-                      value={selectedTaskId}
-                      onValueChange={(value) => {
-                        setSelectedTaskId(value);
-                        // Clear target value when switching tasks
-                        // This ensures we don't carry over values between different task types
-                        const newTask = availableTasks.find((t: any) => t.id === value);
-                        if (newTask) {
-                          if (newTask.type === 'SIMPLE') {
-                            setTargetValue(''); // Clear target value for SIMPLE tasks
-                            // Set intelligent default period for SIMPLE tasks
-                            if (!goal) setPeriod(ResetPeriod.DAILY);
-                          } else {
-                            // Set intelligent default period for MULTI/PROGRESS tasks
-                            if (!goal) setPeriod(ResetPeriod.WEEKLY);
+                    {routinesLoading ? (
+                      <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Loading tasks...
+                      </div>
+                    ) : availableTasks.length === 0 ? (
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <p className="text-sm text-gray-500 mb-2">No tasks available</p>
+                        <p className="text-xs text-gray-400">Create a routine with tasks first</p>
+                      </div>
+                    ) : (
+                      <Select
+                        value={selectedTaskId}
+                        onValueChange={(value) => {
+                          setSelectedTaskId(value);
+                          // Clear target value when switching tasks
+                          // This ensures we don't carry over values between different task types
+                          const newTask = availableTasks.find((t: any) => t.id === value);
+                          if (newTask) {
+                            if (newTask.type === 'SIMPLE') {
+                              setTargetValue(''); // Clear target value for SIMPLE tasks
+                              // Set intelligent default period for SIMPLE tasks
+                              if (!goal) setPeriod(ResetPeriod.DAILY);
+                            } else {
+                              // Set intelligent default period for MULTI/PROGRESS tasks
+                              if (!goal) setPeriod(ResetPeriod.WEEKLY);
+                            }
                           }
-                        }
-                      }}
-                    >
-                      <SelectTrigger disabled={isPending}>
-                        <SelectValue placeholder="Choose a task" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableTasks.map((task: any) => (
-                          <SelectItem key={task.id} value={task.id}>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
-                                <span>{task.name}</span>
-                                <span
-                                  className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
-                                  style={{
-                                    backgroundColor:
-                                      task.type === 'SIMPLE' ? '#E0F2FE' :
-                                      task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
-                                      '#FEF3C7',
-                                    color:
-                                      task.type === 'SIMPLE' ? '#0369A1' :
-                                      task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
-                                      '#B45309'
-                                  }}
-                                >
-                                  {task.type === 'SIMPLE' ? 'Simple' :
-                                   task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
-                                   'Progress'}
-                                </span>
+                        }}
+                      >
+                        <SelectTrigger disabled={isPending}>
+                          <SelectValue placeholder="Choose a task" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTasks.map((task: any) => (
+                            <SelectItem key={task.id} value={task.id}>
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                  {task.icon && <RenderIconEmoji value={task.icon} className="h-4 w-4" />}
+                                  <span>{task.name}</span>
+                                  <span
+                                    className="px-1.5 py-0.5 text-[10px] font-medium rounded uppercase"
+                                    style={{
+                                      backgroundColor:
+                                        task.type === 'SIMPLE' ? '#E0F2FE' :
+                                        task.type === 'MULTIPLE_CHECKIN' ? '#FCE7F3' :
+                                        '#FEF3C7',
+                                      color:
+                                        task.type === 'SIMPLE' ? '#0369A1' :
+                                        task.type === 'MULTIPLE_CHECKIN' ? '#BE185D' :
+                                        '#B45309'
+                                    }}
+                                  >
+                                    {task.type === 'SIMPLE' ? 'Simple' :
+                                     task.type === 'MULTIPLE_CHECKIN' ? 'Multi' :
+                                     'Progress'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-gray-500 ml-6">
+                                  <span>📋</span>
+                                  <span>{task.routineName}</span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1 text-xs text-gray-500 ml-6">
-                                <span>📋</span>
-                                <span>{task.routineName}</span>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 )}
               </div>
