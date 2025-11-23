@@ -49,6 +49,9 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   const utils = trpc.useUtils();
   const [undoTimers, setUndoTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
+  // State for tracking progress task input values
+  const [progressInputValues, setProgressInputValues] = useState<Record<string, string>>({});
+
   // Determine if we're in kiosk mode (tablet) or dashboard mode (smartphone)
   const [isKioskMode, setIsKioskMode] = useState(false);
 
@@ -61,6 +64,13 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     window.addEventListener('resize', checkMode);
     return () => window.removeEventListener('resize', checkMode);
   }, []);
+
+  // Clear progress input values when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setProgressInputValues({});
+    }
+  }, [isOpen]);
 
   const { data: session } = trpc.auth.getSession.useQuery();
 
@@ -312,7 +322,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                 <div className="dashboard-section-title">PROGRESS ({progressTasks.length})</div>
                 <div className="space-y-2.5">
                   {progressTasks.map((task) => {
-                    const [inputValue, setInputValue] = useState('');
+                    const inputValue = progressInputValues[task.id] || '';
                     return (
                       <div key={task.id} className="dashboard-progress-card">
                         <div className="dashboard-progress-emoji">📊</div>
@@ -325,7 +335,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                         <input
                           type="number"
                           value={inputValue}
-                          onChange={(e) => setInputValue(e.target.value)}
+                          onChange={(e) => setProgressInputValues(prev => ({ ...prev, [task.id]: e.target.value }))}
                           placeholder="0"
                           className="dashboard-progress-input"
                         />
@@ -333,7 +343,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                           size="sm"
                           onClick={() => {
                             handleProgressUpdate(task.id, inputValue);
-                            setInputValue('');
+                            setProgressInputValues(prev => ({ ...prev, [task.id]: '' }));
                           }}
                           disabled={completeMutation.isPending || !inputValue}
                           className="dashboard-progress-button"
