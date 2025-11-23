@@ -146,6 +146,23 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     });
   };
 
+  const handleCompleteWithAnimation = (taskId: string, value?: string) => {
+    // Trigger animation
+    setAnimatingTasks(prev => new Set(prev).add(taskId));
+
+    // Complete the task
+    handleComplete(taskId, value);
+
+    // Remove animation after 1 second
+    setTimeout(() => {
+      setAnimatingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+    }, 1000);
+  };
+
   const handleUndo = (completionId: string) => {
     undoMutation.mutate({ completionId });
   };
@@ -187,6 +204,9 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
 
   // State for progress task input values
   const [progressValues, setProgressValues] = useState<Record<string, string>>({});
+
+  // State for animating tasks (visual feedback)
+  const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -397,8 +417,10 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                     {multiTasks.map((task) => (
                       <div
                         key={task.id}
-                        className="rounded-[14px] p-[14px_16px] flex items-center gap-3"
-                        style={{ background: 'var(--warm-progress-bg)' }}
+                        className="rounded-[14px] p-[14px_16px] flex items-center gap-3 transition-all duration-1000"
+                        style={{
+                          background: animatingTasks.has(task.id) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
+                        }}
                       >
                         <span className="text-[20px] flex-shrink-0">✔️</span>
                         <div className="flex-1 min-w-0">
@@ -412,7 +434,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                           )}
                         </div>
                         <button
-                          onClick={() => handleComplete(task.id)}
+                          onClick={() => handleCompleteWithAnimation(task.id)}
                           disabled={completeMutation.isPending}
                           className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95"
                           style={{
@@ -444,8 +466,10 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                     {progressTasks.map((task) => (
                       <div
                         key={task.id}
-                        className="rounded-[14px] p-[14px_16px]"
-                        style={{ background: 'var(--warm-progress-bg)' }}
+                        className="rounded-[14px] p-[14px_16px] transition-all duration-1000"
+                        style={{
+                          background: animatingTasks.has(task.id) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
+                        }}
                       >
                         <div className="flex items-center gap-3 mb-2">
                           <span className="text-[20px] flex-shrink-0">📊</span>
@@ -482,7 +506,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                                 toast({ title: 'Error', description: 'Please enter a value', variant: 'destructive' });
                                 return;
                               }
-                              handleComplete(task.id, value);
+                              handleCompleteWithAnimation(task.id, value);
                               setProgressValues({ ...progressValues, [task.id]: '' });
                             }}
                             disabled={completeMutation.isPending}
