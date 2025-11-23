@@ -595,15 +595,15 @@ export default function KioskModePage() {
                         return ((a as any).order || 0) - ((b as any).order || 0);
                       });
 
-                    // Combine simple and multi tasks for left column, maintaining sort
-                    const checklistTasks = [...simpleTasks, ...multiTasks].sort((a: Task, b: Task) => {
+                    // Combine multi and progress tasks for right column
+                    const recordProgressTasks = [...multiTasks, ...progressTasks].sort((a: Task, b: Task) => {
                       // Determine if each task is incomplete
-                      const aIncomplete = a.type === TaskType.SIMPLE
-                        ? !a.isComplete
-                        : (a.completionCount || 0) === 0;
-                      const bIncomplete = b.type === TaskType.SIMPLE
-                        ? !b.isComplete
-                        : (b.completionCount || 0) === 0;
+                      const aIncomplete = a.type === TaskType.MULTIPLE_CHECKIN
+                        ? (a.completionCount || 0) === 0
+                        : (a.totalValue || 0) === 0;
+                      const bIncomplete = b.type === TaskType.MULTIPLE_CHECKIN
+                        ? (b.completionCount || 0) === 0
+                        : (b.totalValue || 0) === 0;
 
                       // First: incomplete tasks on top
                       if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
@@ -616,17 +616,16 @@ export default function KioskModePage() {
 
                     return (
                       <div className="h-full grid grid-cols-2 gap-5 overflow-hidden">
-                        {/* LEFT COLUMN: Checklist (Simple + Multi tasks) */}
+                        {/* LEFT COLUMN: Checklist (Simple tasks only) */}
                         <div className="flex flex-col overflow-hidden">
                           <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
                             🌍 Checklist
                           </h2>
                           <div className="flex-1 overflow-y-auto space-y-3">
-                            {checklistTasks.map((task) => {
+                            {simpleTasks.map((task) => {
                               const undoTime = undoTimers[task.id];
                               const canUndo = task.isComplete && undoTime !== undefined && undoTime > 0;
                               const isLocked = task.isComplete && !canUndo;
-                              const isSimple = task.type === TaskType.SIMPLE;
 
                               return (
                                 <div
@@ -641,29 +640,20 @@ export default function KioskModePage() {
                                   }}
                                   onClick={() => {
                                     if (isLocked || completeMutation.isPending) return;
-                                    if (isSimple) {
-                                      task.isComplete ? handleUndo(task.completions?.[0]?.id!) : handleComplete(task.id);
-                                    }
+                                    task.isComplete ? handleUndo(task.completions?.[0]?.id!) : handleComplete(task.id);
                                   }}
                                 >
                                   <div className="flex items-start gap-4">
-                                    {/* C4 Rotating Square (Simple tasks only) */}
-                                    {isSimple && (
-                                      <div
-                                        className="w-3 h-3 mt-2 flex-shrink-0 transition-all duration-[250ms]"
-                                        style={{
-                                          border: `2.5px solid ${task.isComplete ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)'}`,
-                                          background: task.isComplete ? 'var(--warm-complete-primary)' : 'transparent',
-                                          transform: task.isComplete ? 'rotate(45deg)' : 'rotate(0deg)',
-                                          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
-                                        }}
-                                      />
-                                    )}
-
-                                    {/* Multi-checkin icon */}
-                                    {!isSimple && (
-                                      <span className="text-[40px] flex-shrink-0">✔️</span>
-                                    )}
+                                    {/* C4 Rotating Square */}
+                                    <div
+                                      className="w-3 h-3 mt-2 flex-shrink-0 transition-all duration-[250ms]"
+                                      style={{
+                                        border: `2.5px solid ${task.isComplete ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)'}`,
+                                        background: task.isComplete ? 'var(--warm-complete-primary)' : 'transparent',
+                                        transform: task.isComplete ? 'rotate(45deg)' : 'rotate(0deg)',
+                                        transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+                                      }}
+                                    />
 
                                     {/* Task Content */}
                                     <div className="flex-1 min-w-0">
@@ -694,38 +684,14 @@ export default function KioskModePage() {
                                           )}
                                         </div>
 
-                                        {/* Undo timer for Simple tasks */}
-                                        {isSimple && canUndo && (
+                                        {/* Undo timer */}
+                                        {canUndo && (
                                           <div className="text-[20px] font-semibold px-3 py-1 rounded-md flex-shrink-0" style={{
                                             background: 'rgba(77, 182, 172, 0.15)',
                                             color: 'var(--warm-complete-secondary)'
                                           }}>
                                             {Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')}
                                           </div>
-                                        )}
-
-                                        {/* Multi-checkin counter and button */}
-                                        {!isSimple && (
-                                          <>
-                                            <div className="text-[24px] font-semibold min-w-[48px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
-                                              {task.completionCount || 0}x
-                                            </div>
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleCompleteWithAnimation(task.id);
-                                              }}
-                                              disabled={completeMutation.isPending}
-                                              className="px-5 py-3 rounded-[12px] text-[24px] font-semibold bg-white transition-all duration-200 active:scale-95"
-                                              style={{
-                                                border: '2px solid var(--warm-progress-primary)',
-                                                color: 'var(--warm-progress-secondary)',
-                                                minHeight: '48px'
-                                              }}
-                                            >
-                                              +1
-                                            </button>
-                                          </>
                                         )}
                                       </div>
 
@@ -772,75 +738,104 @@ export default function KioskModePage() {
 
                         {/* RIGHT COLUMN: Split into Progress (top) and Goals (bottom) */}
                         <div className="flex flex-col gap-5 overflow-hidden">
-                          {/* TOP: Progress Tasks (40vh max-height) */}
-                          {progressTasks.length > 0 && (
+                          {/* TOP: Record Progress (Multi + Progress tasks, 40vh max-height) */}
+                          {recordProgressTasks.length > 0 && (
                             <div className="flex flex-col" style={{ maxHeight: '40vh' }}>
                               <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
                                 📊 Record Progress
                               </h2>
-                              <div className="flex-1 overflow-y-auto space-y-4">
-                                {progressTasks.map((task) => (
-                                  <div
-                                    key={task.id}
-                                    className="rounded-[12px] p-[20px] transition-all duration-1000"
-                                    style={{
-                                      background: animatingTasks.has(task.id) ? '#DDD5D0' : '#FAF8F7'
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-3 mb-3">
-                                      <span className="text-[40px] flex-shrink-0">📊</span>
-                                      <div className="flex-1">
-                                        <h3 className="text-[28px] font-semibold mb-2" style={{ color: '#37474F' }}>
+                              <div className="flex-1 overflow-y-auto space-y-3">
+                                {recordProgressTasks.map((task) => {
+                                  const isMulti = task.type === TaskType.MULTIPLE_CHECKIN;
+                                  const isProgress = task.type === TaskType.PROGRESS;
+
+                                  return (
+                                    <div
+                                      key={task.id}
+                                      className="rounded-[12px] p-[16px] flex items-center gap-4 transition-all duration-1000"
+                                      style={{
+                                        background: animatingTasks.has(task.id) ? '#DDD5D0' : '#FAF8F7'
+                                      }}
+                                    >
+                                      {/* Task Name */}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-[28px] font-semibold leading-tight" style={{ color: '#37474F' }}>
                                           {task.name}
-                                        </h3>
+                                        </div>
                                         {task.description && (
-                                          <div className="text-[26px]" style={{ color: '#607D8B' }}>
+                                          <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
                                             {task.description}
                                           </div>
                                         )}
                                       </div>
+
+                                      {/* Multi-checkin: Counter + Button */}
+                                      {isMulti && (
+                                        <>
+                                          <div className="text-[24px] font-semibold min-w-[48px] text-right" style={{ color: '#607D8B' }}>
+                                            {task.completionCount || 0}x
+                                          </div>
+                                          <button
+                                            onClick={() => handleCompleteWithAnimation(task.id)}
+                                            disabled={completeMutation.isPending}
+                                            className="px-4 py-2 rounded-[10px] text-[22px] font-semibold text-white transition-all duration-200 active:scale-95"
+                                            style={{
+                                              background: 'var(--warm-complete-primary)',
+                                              minHeight: '48px',
+                                              minWidth: '70px'
+                                            }}
+                                          >
+                                            +1
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {/* Progress: Input + Button + Total */}
+                                      {isProgress && (
+                                        <>
+                                          <input
+                                            type="number"
+                                            min="1"
+                                            max="99"
+                                            value={progressValues[task.id] || ''}
+                                            onChange={(e) => setProgressValues({ ...progressValues, [task.id]: e.target.value })}
+                                            placeholder="0"
+                                            className="px-3 py-2 rounded-[10px] text-[24px] font-semibold text-center"
+                                            style={{
+                                              border: '2px solid #D7CCC8',
+                                              color: '#37474F',
+                                              width: '70px',
+                                              minHeight: '48px'
+                                            }}
+                                          />
+                                          <button
+                                            onClick={() => {
+                                              const value = progressValues[task.id];
+                                              if (!value || parseInt(value, 10) <= 0) {
+                                                toast({ title: 'Error', description: 'Please enter a value', variant: 'destructive' });
+                                                return;
+                                              }
+                                              handleCompleteWithAnimation(task.id, value);
+                                              setProgressValues({ ...progressValues, [task.id]: '' });
+                                            }}
+                                            disabled={completeMutation.isPending}
+                                            className="px-4 py-2 rounded-[10px] text-[22px] font-semibold text-white transition-all duration-200 active:scale-95"
+                                            style={{
+                                              background: 'var(--warm-complete-primary)',
+                                              minHeight: '48px',
+                                              minWidth: '70px'
+                                            }}
+                                          >
+                                            Add
+                                          </button>
+                                          <div className="text-[22px] font-semibold min-w-[80px] text-right" style={{ color: '#607D8B' }}>
+                                            {task.summedValue || task.totalValue || 0} {task.unit}
+                                          </div>
+                                        </>
+                                      )}
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                      <input
-                                        type="number"
-                                        min="1"
-                                        max="999"
-                                        value={progressValues[task.id] || ''}
-                                        onChange={(e) => setProgressValues({ ...progressValues, [task.id]: e.target.value })}
-                                        placeholder="0"
-                                        className="flex-1 px-5 py-4 rounded-[12px] text-[28px] font-semibold text-center"
-                                        style={{
-                                          border: '2px solid #D7CCC8',
-                                          color: '#37474F',
-                                          minHeight: '48px'
-                                        }}
-                                      />
-                                      <button
-                                        onClick={() => {
-                                          const value = progressValues[task.id];
-                                          if (!value || parseInt(value, 10) <= 0) {
-                                            toast({ title: 'Error', description: 'Please enter a value', variant: 'destructive' });
-                                            return;
-                                          }
-                                          handleCompleteWithAnimation(task.id, value);
-                                          setProgressValues({ ...progressValues, [task.id]: '' });
-                                        }}
-                                        disabled={completeMutation.isPending}
-                                        className="px-8 py-4 rounded-[12px] text-[28px] font-semibold text-white transition-all duration-200 active:scale-95"
-                                        style={{
-                                          background: 'var(--warm-complete-primary)',
-                                          minHeight: '48px',
-                                          whiteSpace: 'nowrap'
-                                        }}
-                                      >
-                                        Update
-                                      </button>
-                                      <div className="text-[24px] font-semibold min-w-[100px] text-right" style={{ color: '#607D8B' }}>
-                                        {task.summedValue || task.totalValue || 0} {task.unit}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
