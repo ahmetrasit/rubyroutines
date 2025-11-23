@@ -462,36 +462,72 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                     {multiTasks.map((task) => (
                       <div
                         key={task.id}
-                        className="rounded-[14px] p-[14px_16px] flex items-center gap-3 transition-all duration-1000"
+                        className="rounded-[14px] p-[14px_16px] transition-all duration-1000"
                         style={{
                           background: animatingTasks.has(task.id) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
                         }}
                       >
-                        <span className="text-[20px] flex-shrink-0">✔️</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[15px] font-semibold" style={{ color: 'var(--warm-progress-secondary)' }}>
-                            {task.name}
-                          </div>
-                          {task.description && (
-                            <div className="text-[13px]" style={{ color: 'var(--warm-progress-primary)' }}>
-                              {task.description}
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-[20px] flex-shrink-0">✔️</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[15px] font-semibold" style={{ color: 'var(--warm-progress-secondary)' }}>
+                              {task.name}
                             </div>
-                          )}
+                            {task.description && (
+                              <div className="text-[13px]" style={{ color: 'var(--warm-progress-primary)' }}>
+                                {task.description}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-[13px] font-semibold min-w-[32px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
+                            {task.completionCount || 0}x
+                          </div>
+                          <button
+                            onClick={() => handleCompleteWithAnimation(task.id)}
+                            disabled={completeMutation.isPending}
+                            className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95"
+                            style={{
+                              border: '1px solid var(--warm-progress-primary)',
+                              color: 'var(--warm-progress-secondary)'
+                            }}
+                          >
+                            +1
+                          </button>
                         </div>
-                        <div className="text-[13px] font-semibold min-w-[32px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
-                          {task.completionCount || 0}x
-                        </div>
-                        <button
-                          onClick={() => handleCompleteWithAnimation(task.id)}
-                          disabled={completeMutation.isPending}
-                          className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95"
-                          style={{
-                            border: '1px solid var(--warm-progress-primary)',
-                            color: 'var(--warm-progress-secondary)'
-                          }}
-                        >
-                          +1
-                        </button>
+
+                        {/* Inline Goal Progress Bar */}
+                        {activeGoals
+                          .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                          .map((goal: any) => (
+                            <div key={goal.id} className="flex items-center gap-2 ml-8">
+                              <div
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap"
+                                style={{
+                                  background: 'var(--warm-progress-bg)',
+                                  color: 'var(--warm-progress-secondary)'
+                                }}
+                              >
+                                🎯 {goal.name}
+                              </div>
+                              <div className="flex-1 h-1 rounded-sm overflow-hidden" style={{
+                                background: 'rgba(144, 202, 249, 0.2)'
+                              }}>
+                                <div
+                                  className="h-full rounded-sm transition-all duration-300"
+                                  style={{
+                                    width: `${goal.progress?.percentage || 0}%`,
+                                    background: 'linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%)'
+                                  }}
+                                />
+                              </div>
+                              <div className="text-[11px] font-bold min-w-[32px] text-right" style={{
+                                color: 'var(--warm-progress-primary)'
+                              }}>
+                                {Math.round(goal.progress?.percentage || 0)}%
+                              </div>
+                            </div>
+                          ))
+                        }
                       </div>
                     ))}
                   </div>
@@ -529,7 +565,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 mb-2">
                           <input
                             type="number"
                             min="1"
@@ -567,6 +603,40 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                             {task.summedValue || task.totalValue || 0} {task.unit}
                           </div>
                         </div>
+
+                        {/* Inline Goal Progress Bar */}
+                        {activeGoals
+                          .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                          .map((goal: any) => (
+                            <div key={goal.id} className="flex items-center gap-2 ml-8">
+                              <div
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap"
+                                style={{
+                                  background: 'var(--warm-progress-bg)',
+                                  color: 'var(--warm-progress-secondary)'
+                                }}
+                              >
+                                🎯 {goal.name}
+                              </div>
+                              <div className="flex-1 h-1 rounded-sm overflow-hidden" style={{
+                                background: 'rgba(144, 202, 249, 0.2)'
+                              }}>
+                                <div
+                                  className="h-full rounded-sm transition-all duration-300"
+                                  style={{
+                                    width: `${goal.progress?.percentage || 0}%`,
+                                    background: 'linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%)'
+                                  }}
+                                />
+                              </div>
+                              <div className="text-[11px] font-bold min-w-[32px] text-right" style={{
+                                color: 'var(--warm-progress-primary)'
+                              }}>
+                                {Math.round(goal.progress?.percentage || 0)}%
+                              </div>
+                            </div>
+                          ))
+                        }
                       </div>
                     ))}
                   </div>
