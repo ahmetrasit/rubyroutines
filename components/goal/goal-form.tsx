@@ -55,13 +55,26 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
     { enabled: !!roleId }
   );
 
-  // Extract all tasks from routines
-  const availableTasks = routines?.flatMap(routine =>
+  // Extract all tasks from routines and sort by routine, type, then name
+  const availableTasks = (routines?.flatMap(routine =>
     routine.tasks?.map((task: any) => ({
       ...task,
       routineName: routine.name
     })) || []
-  ) || [];
+  ) || []).sort((a, b) => {
+    // First: Sort by routine name
+    const routineCompare = a.routineName.localeCompare(b.routineName);
+    if (routineCompare !== 0) return routineCompare;
+
+    // Second: Sort by task type (SIMPLE < MULTIPLE_CHECKIN < PROGRESS)
+    const typeOrder = { SIMPLE: 1, MULTIPLE_CHECKIN: 2, PROGRESS: 3 };
+    const typeCompare = (typeOrder[a.type as keyof typeof typeOrder] || 999) -
+                       (typeOrder[b.type as keyof typeof typeOrder] || 999);
+    if (typeCompare !== 0) return typeCompare;
+
+    // Third: Sort by task name (alphanumeric)
+    return a.name.localeCompare(b.name, undefined, { numeric: true });
+  });
 
   // Close pickers when clicking outside
   useEffect(() => {
