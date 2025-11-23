@@ -365,10 +365,10 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     </>
   );
 
-  // Render kiosk mode (tablet - existing implementation)
+  // Render kiosk mode (tablet - with TaskColumn component and Warm Earth styling)
   const renderKioskMode = () => (
     <>
-      {/* Kiosk mode uses task-column component which already has Warm Earth styling */}
+      {/* Kiosk Header */}
       <div className="warm-earth-header-kiosk">
         <div className="flex items-center justify-between">
           <h2 className="kiosk-title">{personName}'s Check-in</h2>
@@ -378,17 +378,131 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
         </div>
       </div>
 
+      {/* Kiosk Content */}
       <div className="kiosk-content">
         {tasksLoading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin" style={{ color: 'var(--warm-complete-primary)' }} />
           </div>
+        ) : tasks.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-6xl mb-4">🎉</div>
+              <h2 className="text-2xl font-bold" style={{ color: 'var(--warm-text-primary)' }}>All done!</h2>
+            </div>
+          </div>
         ) : (
-          <div className="kiosk-task-grid">
-            {/* Kiosk implementation would use TaskColumn component */}
-            {/* For now, showing simplified version */}
-            <div className="text-center py-12">
-              <p>Kiosk mode - Using existing TaskColumn implementation</p>
+          <div className="grid grid-cols-2 gap-6 h-full">
+            {/* Left Column: Simple Tasks */}
+            <div className="flex flex-col h-full">
+              <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--warm-text-primary)' }}>
+                Simple Tasks ({simpleCompleted}/{simpleTotal})
+              </h3>
+              <div className="flex-1 overflow-y-auto pr-2">
+                <TaskColumn
+                  title=""
+                  tasks={simpleTasks}
+                  personId={personId}
+                  onComplete={handleComplete}
+                  onUndo={handleUndo}
+                  isPending={completeMutation.isPending || undoMutation.isPending}
+                />
+              </div>
+            </div>
+
+            {/* Right Column: Multi Check-in and Progress */}
+            <div className="flex flex-col gap-6 h-full">
+              {/* Multi Check-in Tasks */}
+              {multiTasks.length > 0 && (
+                <div className="flex flex-col" style={{ maxHeight: '45%' }}>
+                  <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--warm-text-primary)' }}>
+                    Check-ins ({multiTasks.length})
+                  </h3>
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <TaskColumn
+                      title=""
+                      tasks={multiTasks}
+                      personId={personId}
+                      onComplete={handleComplete}
+                      onUndo={handleUndo}
+                      isPending={completeMutation.isPending || undoMutation.isPending}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Progress Tasks */}
+              {progressTasks.length > 0 && (
+                <div className="flex flex-col" style={{ maxHeight: multiTasks.length > 0 ? '45%' : '100%' }}>
+                  <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--warm-text-primary)' }}>
+                    Progress ({progressTasks.length})
+                  </h3>
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <TaskColumn
+                      title=""
+                      tasks={progressTasks}
+                      personId={personId}
+                      onComplete={handleComplete}
+                      onUndo={handleUndo}
+                      isPending={completeMutation.isPending || undoMutation.isPending}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Goals Overview */}
+              {activeGoals.length > 0 && (
+                <div className="flex flex-col" style={{ maxHeight: '30%' }}>
+                  <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--warm-text-primary)' }}>
+                    🎯 Goals ({goalCount})
+                  </h3>
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <div className="space-y-2">
+                      {activeGoals.map((goal) => (
+                        <div
+                          key={goal.id}
+                          className="p-3 rounded-lg"
+                          style={{
+                            backgroundColor: goal.progress?.achieved
+                              ? 'var(--warm-complete-bg)'
+                              : 'var(--warm-progress-bg)',
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold" style={{ color: 'var(--warm-text-primary)' }}>
+                              {goal.name}
+                            </span>
+                            {goal.progress?.achieved && (
+                              <span className="text-xs px-2 py-1 rounded-full" style={{
+                                backgroundColor: 'var(--warm-complete-primary)',
+                                color: 'white'
+                              }}>
+                                Achieved!
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-2 rounded-full overflow-hidden" style={{
+                              backgroundColor: 'rgba(144, 202, 249, 0.2)'
+                            }}>
+                              <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${goal.progress?.percentage || 0}%`,
+                                  background: 'linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%)'
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm font-bold" style={{ color: 'var(--warm-progress-primary)' }}>
+                              {Math.round(goal.progress?.percentage || 0)}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
