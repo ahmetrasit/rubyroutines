@@ -565,7 +565,7 @@ export default function KioskModePage() {
                         {/* LEFT COLUMN: Checklist (Simple + Multi tasks) */}
                         <div className="flex flex-col overflow-hidden">
                           <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
-                            🌍 Today's Checklist
+                            🌍 Checklist
                           </h2>
                           <div className="flex-1 overflow-y-auto space-y-3">
                             {checklistTasks.map((task) => {
@@ -736,7 +736,7 @@ export default function KioskModePage() {
                                     <div className="flex items-center gap-3 mb-3">
                                       <span className="text-[40px] flex-shrink-0">📊</span>
                                       <div className="flex-1">
-                                        <h3 className="text-[32px] font-semibold mb-2" style={{ color: '#37474F' }}>
+                                        <h3 className="text-[28px] font-semibold mb-2" style={{ color: '#37474F' }}>
                                           {task.name}
                                         </h3>
                                         {task.description && (
