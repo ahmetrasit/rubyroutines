@@ -283,6 +283,65 @@ export const kioskRouter = router({
     }),
 
   /**
+   * Get goals for person in kiosk mode (public)
+   */
+  getPersonGoals: publicProcedure
+    .input(z.object({
+      kioskCodeId: z.string().cuid(),
+      personId: z.string().cuid(),
+      roleId: z.string().uuid()
+    }))
+    .query(async ({ ctx, input }) => {
+      // Validate kiosk session
+      const validation = await validateKioskSession(input.kioskCodeId, input.personId);
+      if (!validation.valid) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: validation.error || 'Invalid kiosk session'
+        });
+      }
+
+      // Fetch goals for this person
+      const goals = await ctx.prisma.goal.findMany({
+        where: {
+          roleId: input.roleId,
+          status: 'ACTIVE',
+          personIds: { has: input.personId }
+        },
+        include: {
+          taskLinks: {
+            include: {
+              task: {
+                include: {
+                  routine: true
+                }
+              }
+            }
+          },
+          routineLinks: {
+            include: {
+              routine: true
+            }
+          },
+          progress: true
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // Calculate progress for all goals
+      const { calculateGoalProgressBatchEnhanced } = await import('@/lib/services/goal-progress-enhanced');
+      const goalIds = goals.map((g) => g.id);
+      const progressMap = await calculateGoalProgressBatchEnhanced(goalIds);
+
+      const goalsWithProgress = goals.map((goal) => ({
+        ...goal,
+        progress: progressMap.get(goal.id) || { current: 0, target: goal.target, percentage: 0, achieved: false },
+      }));
+
+      return goalsWithProgress;
+    }),
+
+  /**
    * Complete task in kiosk mode (public)
    */
   completeTask: publicProcedure

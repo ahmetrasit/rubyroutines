@@ -137,24 +137,17 @@ export default function KioskModePage() {
 
   const tasks = personTasksData?.tasks || [];
 
-  // Fetch goals for the selected person
-  const { data: goals, isLoading: goalsLoading, error: goalsError } = trpc.goal.list.useQuery(
-    { roleId: kioskData?.roleId!, personId: selectedPersonId! },
-    { enabled: !!kioskData?.roleId && !!selectedPersonId }
+  // Fetch goals for the selected person using kiosk endpoint
+  const { data: goals } = trpc.kiosk.getPersonGoals.useQuery(
+    {
+      kioskCodeId: sessionData?.codeId!,
+      personId: selectedPersonId!,
+      roleId: kioskData?.roleId!
+    },
+    { enabled: !!sessionData?.codeId && !!selectedPersonId && !!kioskData?.roleId }
   );
 
-  // Debug logging
-  console.log('Goals Debug:', {
-    enabled: !!kioskData?.roleId && !!selectedPersonId,
-    roleId: kioskData?.roleId,
-    personId: selectedPersonId,
-    rawGoals: goals,
-    goalsLength: goals?.length,
-    isLoading: goalsLoading,
-    error: goalsError,
-  });
-
-  const activeGoals = (goals?.filter(g => g.status === 'ACTIVE') || []).sort((a, b) => {
+  const activeGoals = (goals || []).sort((a, b) => {
     // First: Sort by completion status (incomplete first)
     const aComplete = (a.progress?.percentage || 0) >= 100;
     const bComplete = (b.progress?.percentage || 0) >= 100;
@@ -852,7 +845,7 @@ export default function KioskModePage() {
                           {/* BOTTOM: Goals Overview (flex remaining space) */}
                           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                             <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
-                              🎯 Goals Overview ({activeGoals.length})
+                              🎯 Goals Overview
                             </h2>
                             <div className="flex-1 overflow-y-auto space-y-4">
                               {activeGoals.length === 0 ? (
