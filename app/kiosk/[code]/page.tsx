@@ -841,7 +841,7 @@ export default function KioskModePage() {
                           {/* BOTTOM: Goals Overview (flex remaining space) */}
                           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                             <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
-                              🎯 Goals Overview
+                              🎯 Goals Overview ({activeGoals.length})
                             </h2>
                             <div className="flex-1 overflow-y-auto space-y-4">
                               {activeGoals.length === 0 ? (
