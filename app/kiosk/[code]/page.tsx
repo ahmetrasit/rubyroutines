@@ -143,7 +143,15 @@ export default function KioskModePage() {
     { enabled: !!kioskData?.roleId && !!selectedPersonId }
   );
 
-  const activeGoals = goals?.filter(g => g.status === 'ACTIVE') || [];
+  const activeGoals = (goals?.filter(g => g.status === 'ACTIVE') || []).sort((a, b) => {
+    // First: Sort by completion status (incomplete first)
+    const aComplete = (a.progress?.percentage || 0) >= 100;
+    const bComplete = (b.progress?.percentage || 0) >= 100;
+    if (aComplete !== bComplete) return aComplete ? 1 : -1;
+
+    // Second: Sort alphanumerically by name
+    return a.name.localeCompare(b.name, undefined, { numeric: true });
+  });
 
   // Fetch tasks for all persons for progress calculation
   const personTaskQueries = activePersons.map((person: Person) =>
