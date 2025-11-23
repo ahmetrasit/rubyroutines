@@ -597,21 +597,11 @@ export default function KioskModePage() {
 
                     // Combine multi and progress tasks for right column
                     const recordProgressTasks = [...multiTasks, ...progressTasks].sort((a: Task, b: Task) => {
-                      // Determine if each task is incomplete
-                      const aIncomplete = a.type === TaskType.MULTIPLE_CHECKIN
-                        ? (a.completionCount || 0) === 0
-                        : (a.totalValue || 0) === 0;
-                      const bIncomplete = b.type === TaskType.MULTIPLE_CHECKIN
-                        ? (b.completionCount || 0) === 0
-                        : (b.totalValue || 0) === 0;
-
-                      // First: incomplete tasks on top
-                      if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
-                      // Second: group by routine name
+                      // First: group by routine name
                       const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
                       if (routineCompare !== 0) return routineCompare;
-                      // Third: by task order within routine
-                      return ((a as any).order || 0) - ((b as any).order || 0);
+                      // Second: alphanumeric by task name
+                      return a.name.localeCompare(b.name, undefined, { numeric: true });
                     });
 
                     return (
