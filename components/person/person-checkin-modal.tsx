@@ -52,18 +52,9 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   // State for tracking progress task input values
   const [progressInputValues, setProgressInputValues] = useState<Record<string, string>>({});
 
-  // Determine if we're in kiosk mode (tablet) or dashboard mode (smartphone)
-  const [isKioskMode, setIsKioskMode] = useState(false);
-
-  useEffect(() => {
-    const checkMode = () => {
-      setIsKioskMode(window.innerWidth >= 768);
-    };
-
-    checkMode();
-    window.addEventListener('resize', checkMode);
-    return () => window.removeEventListener('resize', checkMode);
-  }, []);
+  // PersonCheckinModal always uses dashboard mode (mobile design)
+  // Kiosk mode is used in a separate kiosk interface context
+  const isKioskMode = false;
 
   // Clear progress input values when modal is closed
   useEffect(() => {
