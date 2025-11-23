@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
+import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
 
 interface Task {
   id: string;
@@ -208,6 +209,29 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   // State for animating tasks (visual feedback)
   const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
 
+  // State for undo timers
+  const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
+
+  // Update undo timers every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newTimers: Record<string, number> = {};
+
+      simpleTasks.forEach((task) => {
+        if (task.type === TaskType.SIMPLE && task.completions && task.completions.length > 0) {
+          const recentCompletion = task.completions.find((c) => c.personId === personId);
+          if (recentCompletion && canUndoCompletion(recentCompletion.completedAt, task.type)) {
+            newTimers[task.id] = getRemainingUndoTime(recentCompletion.completedAt);
+          }
+        }
+      });
+
+      setUndoTimers(newTimers);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [simpleTasks, personId]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[420px] h-auto max-h-[90vh] p-0 gap-0 rounded-[24px]">
@@ -325,81 +349,102 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                     CHECKLIST ({simpleCompleted}/{simpleTotal})
                   </h3>
                   <div className="space-y-[10px]">
-                    {simpleTasks.map((task) => (
-                      <button
-                        key={task.id}
-                        onClick={() => task.isComplete ? handleUndo(task.completions?.[0]?.id!) : handleComplete(task.id)}
-                        disabled={completeMutation.isPending || undoMutation.isPending}
-                        className="w-full text-left rounded-[16px] p-[14px_16px] flex items-start gap-3 cursor-pointer transition-all duration-[250ms]"
-                        style={{
-                          background: task.isComplete ? 'var(--warm-complete-bg)' : 'var(--warm-incomplete-bg)',
-                          transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
-                        }}
-                      >
-                        {/* C4 Rotating Square */}
-                        <div
-                          className="w-3 h-3 mt-1 flex-shrink-0 transition-all duration-[250ms]"
-                          style={{
-                            border: `2.5px solid ${task.isComplete ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)'}`,
-                            background: task.isComplete ? 'var(--warm-complete-primary)' : 'transparent',
-                            transform: task.isComplete ? 'rotate(45deg)' : 'rotate(0deg)',
-                            transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+                    {simpleTasks.map((task) => {
+                      const undoTime = undoTimers[task.id];
+                      const canUndo = task.isComplete && undoTime !== undefined && undoTime > 0;
+                      const isLocked = task.isComplete && !canUndo;
+
+                      return (
+                        <button
+                          key={task.id}
+                          onClick={() => {
+                            if (isLocked) return; // No action for locked tasks
+                            task.isComplete ? handleUndo(task.completions?.[0]?.id!) : handleComplete(task.id);
                           }}
-                        />
-
-                        {/* Task Content */}
-                        <div className="flex-1 min-w-0">
+                          disabled={completeMutation.isPending || undoMutation.isPending}
+                          className="w-full text-left rounded-[16px] p-[14px_16px] flex items-start gap-3 transition-all duration-[250ms]"
+                          style={{
+                            background: task.isComplete ? 'var(--warm-complete-bg)' : 'var(--warm-incomplete-bg)',
+                            transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                            cursor: isLocked ? 'default' : 'pointer',
+                            opacity: isLocked ? 0.7 : 1
+                          }}
+                        >
+                          {/* C4 Rotating Square */}
                           <div
-                            className="text-[16px] font-semibold mb-0.5 leading-[1.3]"
-                            style={{ color: task.isComplete ? 'var(--warm-complete-secondary)' : 'var(--warm-incomplete-secondary)' }}
-                          >
-                            {task.name}
-                          </div>
-                          {task.description && (
-                            <div
-                              className="text-[13px] leading-[1.3] mt-0.5"
-                              style={{ color: task.isComplete ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)' }}
-                            >
-                              {task.description}
-                            </div>
-                          )}
+                            className="w-3 h-3 mt-1 flex-shrink-0 transition-all duration-[250ms]"
+                            style={{
+                              border: `2.5px solid ${task.isComplete ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)'}`,
+                              background: task.isComplete ? 'var(--warm-complete-primary)' : 'transparent',
+                              transform: task.isComplete ? 'rotate(45deg)' : 'rotate(0deg)',
+                              transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                          />
 
-                          {/* Inline Goal Progress Bar */}
-                          {activeGoals
-                            .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
-                            .map((goal: any) => (
-                              <div key={goal.id} className="mt-2 flex items-center gap-2">
-                                <div
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap"
-                                  style={{
-                                    background: 'var(--warm-progress-bg)',
-                                    color: 'var(--warm-progress-secondary)'
-                                  }}
-                                >
-                                  🎯 {goal.name}
-                                </div>
-                                <div className="flex-1 h-1 rounded-sm overflow-hidden" style={{
-                                  background: 'rgba(144, 202, 249, 0.2)'
-                                }}>
-                                  <div
-                                    className="h-full rounded-sm transition-all duration-300"
-                                    style={{
-                                      width: `${goal.progress?.percentage || 0}%`,
-                                      background: 'linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%)'
-                                    }}
-                                  />
-                                </div>
-                                <div className="text-[11px] font-bold min-w-[32px] text-right" style={{
-                                  color: 'var(--warm-progress-primary)'
-                                }}>
-                                  {Math.round(goal.progress?.percentage || 0)}%
-                                </div>
+                          {/* Task Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <div
+                                className="text-[16px] font-semibold mb-0.5 leading-[1.3]"
+                                style={{ color: task.isComplete ? 'var(--warm-complete-secondary)' : 'var(--warm-incomplete-secondary)' }}
+                              >
+                                {task.name}
                               </div>
-                            ))
-                          }
-                        </div>
-                      </button>
-                    ))}
+                              {canUndo && (
+                                <div className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={{
+                                  background: 'rgba(77, 182, 172, 0.15)',
+                                  color: 'var(--warm-complete-secondary)'
+                                }}>
+                                  {Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')}
+                                </div>
+                              )}
+                            </div>
+                            {task.description && (
+                              <div
+                                className="text-[13px] leading-[1.3] mt-0.5"
+                                style={{ color: task.isComplete ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)' }}
+                              >
+                                {task.description}
+                              </div>
+                            )}
+
+                            {/* Inline Goal Progress Bar */}
+                            {activeGoals
+                              .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                              .map((goal: any) => (
+                                <div key={goal.id} className="mt-2 flex items-center gap-2">
+                                  <div
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap"
+                                    style={{
+                                      background: 'var(--warm-progress-bg)',
+                                      color: 'var(--warm-progress-secondary)'
+                                    }}
+                                  >
+                                    🎯 {goal.name}
+                                  </div>
+                                  <div className="flex-1 h-1 rounded-sm overflow-hidden" style={{
+                                    background: 'rgba(144, 202, 249, 0.2)'
+                                  }}>
+                                    <div
+                                      className="h-full rounded-sm transition-all duration-300"
+                                      style={{
+                                        width: `${goal.progress?.percentage || 0}%`,
+                                        background: 'linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%)'
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="text-[11px] font-bold min-w-[32px] text-right" style={{
+                                    color: 'var(--warm-progress-primary)'
+                                  }}>
+                                    {Math.round(goal.progress?.percentage || 0)}%
+                                  </div>
+                                </div>
+                              ))
+                            }
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
