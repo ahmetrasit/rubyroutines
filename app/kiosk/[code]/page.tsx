@@ -143,6 +143,15 @@ export default function KioskModePage() {
     { enabled: !!kioskData?.roleId && !!selectedPersonId }
   );
 
+  // Debug logging
+  console.log('Goals Debug:', {
+    enabled: !!kioskData?.roleId && !!selectedPersonId,
+    roleId: kioskData?.roleId,
+    personId: selectedPersonId,
+    rawGoals: goals,
+    goalsLength: goals?.length,
+  });
+
   const activeGoals = (goals?.filter(g => g.status === 'ACTIVE') || []).sort((a, b) => {
     // First: Sort by completion status (incomplete first)
     const aComplete = (a.progress?.percentage || 0) >= 100;
