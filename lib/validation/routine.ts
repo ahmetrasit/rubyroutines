@@ -69,6 +69,7 @@ export const listRoutinesSchema = z.object({
   roleId: idValidator.optional(),
   personId: idValidator.optional(),
   includeInactive: z.boolean().optional().default(false),
+  includeTasks: z.boolean().optional().default(false),
 });
 
 export const getRoutineSchema = z.object({

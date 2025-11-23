@@ -51,7 +51,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
 
   // Fetch routines to get tasks for linking
   const { data: routines, isLoading: routinesLoading } = trpc.routine.list.useQuery(
-    { roleId, personId },
+    { roleId, personId, includeTasks: true },
     { enabled: !!roleId }
   );
 
