@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { SessionTimeout } from '@/components/kiosk/session-timeout';
 import { TaskColumn } from '@/components/kiosk/task-column';
@@ -12,6 +12,8 @@ import { TaskType } from '@/lib/types/prisma-enums';
 import { usePageVisibility } from '@/hooks/use-page-visibility';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
+import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
+import { getResetPeriodStart } from '@/lib/services/reset-period';
 
 interface Task {
   id: string;
@@ -53,11 +55,24 @@ export default function KioskModePage() {
   const utils = trpc.useUtils();
   const isPageVisible = usePageVisibility();
 
-  // State for collapsible sections
+  // State for collapsible sections (not used in Warm Earth kiosk)
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [simpleOpen, setSimpleOpen] = useState(false);
   const [multiOpen, setMultiOpen] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
+
+  // State for Warm Earth kiosk
+  const [progressValues, setProgressValues] = useState<Record<string, string>>({});
+  const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
+  const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
+
+  // Dynamic layout state
+  const [simpleTasksColumns, setSimpleTasksColumns] = useState<1 | 2>(2); // 1 or 2 columns for simple tasks
+  const [multiTasksColumns, setMultiTasksColumns] = useState<1 | 2>(2); // 1 or 2 columns for multi tasks
+
+  // Refs for measuring container heights
+  const checklistContainerRef = useRef<HTMLDivElement>(null);
+  const recordProgressContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Verify session from localStorage
@@ -124,11 +139,31 @@ export default function KioskModePage() {
     { kioskCodeId: sessionData?.codeId!, personId: selectedPersonId! },
     {
       enabled: !!sessionData && !!selectedPersonId,
-      refetchInterval: false, // Disable auto refetch, will use optimized polling
+      refetchInterval: 10000, // Auto refetch every 10 seconds
     }
   );
 
   const tasks = personTasksData?.tasks || [];
+
+  // Fetch goals for the selected person using kiosk endpoint
+  const { data: goals } = trpc.kiosk.getPersonGoals.useQuery(
+    {
+      kioskCodeId: sessionData?.codeId!,
+      personId: selectedPersonId!,
+      roleId: kioskData?.roleId!
+    },
+    { enabled: !!sessionData?.codeId && !!selectedPersonId && !!kioskData?.roleId }
+  );
+
+  const activeGoals = (goals || []).sort((a, b) => {
+    // First: Sort by completion status (incomplete first)
+    const aComplete = (a.progress?.percentage || 0) >= 100;
+    const bComplete = (b.progress?.percentage || 0) >= 100;
+    if (aComplete !== bComplete) return aComplete ? 1 : -1;
+
+    // Second: Sort alphanumerically by name
+    return a.name.localeCompare(b.name, undefined, { numeric: true });
+  });
 
   // Fetch tasks for all persons for progress calculation
   const personTaskQueries = activePersons.map((person: Person) =>
@@ -233,6 +268,25 @@ export default function KioskModePage() {
     });
   };
 
+  const handleCompleteWithAnimation = (taskId: string, value?: string) => {
+    if (!selectedPersonId) return;
+
+    // Trigger animation
+    setAnimatingTasks(prev => new Set(prev).add(taskId));
+
+    // Complete the task
+    handleComplete(taskId, value);
+
+    // Remove animation after 1 second
+    setTimeout(() => {
+      setAnimatingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+    }, 1000);
+  };
+
   const handleUndo = (completionId: string) => {
     resetInactivityTimer();
     undoMutation.mutate({ kioskCodeId: sessionData!.codeId, completionId });
@@ -258,6 +312,79 @@ export default function KioskModePage() {
       setSelectedPersonId(activePersons[0].id);
     }
   }, [isIndividualCode, activePersons, selectedPersonId]);
+
+  // Update undo timers every second for simple tasks
+  useEffect(() => {
+    if (!tasks.length) return;
+
+    const interval = setInterval(() => {
+      const newTimers: Record<string, number> = {};
+
+      tasks.forEach((task: Task) => {
+        if (task.type === TaskType.SIMPLE && task.completions && task.completions.length > 0) {
+          const recentCompletion = task.completions.find((c) => c.personId === selectedPersonId);
+          if (recentCompletion && canUndoCompletion(recentCompletion.completedAt, task.type)) {
+            newTimers[task.id] = getRemainingUndoTime(recentCompletion.completedAt);
+          }
+        }
+      });
+
+      setUndoTimers(newTimers);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [tasks, selectedPersonId]);
+
+  // Calculate dynamic layout based on available space
+  useEffect(() => {
+    if (!selectedPersonId || !tasks.length) return;
+
+    // Calculate after a short delay to ensure DOM is rendered
+    const timeoutId = setTimeout(() => {
+      // Calculate simple tasks layout
+      if (checklistContainerRef.current) {
+        const container = checklistContainerRef.current;
+        const availableHeight = container.clientHeight;
+
+        // Count simple tasks
+        const simpleTaskCount = tasks.filter((t: Task) => t.type === TaskType.SIMPLE).length;
+
+        // Estimate height per task (card height + gap)
+        // Card: ~120px, gap: 12px
+        const estimatedTaskHeight = 132;
+        const totalHeightNeeded = simpleTaskCount * estimatedTaskHeight;
+
+        // If all tasks fit in available height, use 1 column, otherwise 2
+        setSimpleTasksColumns(totalHeightNeeded <= availableHeight ? 1 : 2);
+      }
+
+      // Calculate multi tasks layout
+      if (recordProgressContainerRef.current) {
+        const container = recordProgressContainerRef.current;
+        const availableHeight = container.clientHeight;
+
+        // Count multi and progress tasks
+        const multiTaskCount = tasks.filter((t: Task) => t.type === TaskType.MULTIPLE_CHECKIN).length;
+        const progressTaskCount = tasks.filter((t: Task) => t.type === TaskType.PROGRESS).length;
+
+        // Estimate heights
+        const multiTaskHeight = 120; // Approximate height of multi task card
+        const progressTaskHeight = 120; // Approximate height of progress task card
+        const gapHeight = 12;
+        const sectionGap = 16; // Gap between multi and progress sections
+
+        // Calculate total height if multi tasks are 1 per row
+        const multiTasksHeightSingleColumn = multiTaskCount * (multiTaskHeight + gapHeight);
+        const progressTasksHeight = progressTaskCount * (progressTaskHeight + gapHeight);
+        const totalHeightNeeded = multiTasksHeightSingleColumn + progressTasksHeight + (multiTaskCount > 0 && progressTaskCount > 0 ? sectionGap : 0);
+
+        // If all tasks fit in available height with multi at 1 per row, use 1 column for multi, otherwise 2
+        setMultiTasksColumns(totalHeightNeeded <= availableHeight ? 1 : 2);
+      }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [tasks, selectedPersonId]);
 
   const handleDone = () => {
     setSelectedPersonId(null);
@@ -498,154 +625,317 @@ export default function KioskModePage() {
                   </div>
                 ) : (
                   (() => {
-                    // Group tasks by type
-                    const simpleTasks = tasks.filter((t: Task) => t.type === TaskType.SIMPLE);
-                    const multiTasks = tasks.filter((t: Task) => t.type === TaskType.MULTIPLE_CHECKIN);
-                    const progressTasks = tasks.filter((t: Task) => t.type === TaskType.PROGRESS);
+                    // Group tasks by type and sort
+                    const simpleTasks = tasks
+                      .filter((t: Task) => t.type === TaskType.SIMPLE)
+                      .sort((a: Task, b: Task) => {
+                        // First: incomplete tasks on top
+                        if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
+                        // Second: group by routine name
+                        const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
+                        if (routineCompare !== 0) return routineCompare;
+                        // Third: by task order within routine
+                        return ((a as any).order || 0) - ((b as any).order || 0);
+                      });
 
-                    // Calculate stats for Simple tasks
-                    const simpleCompleted = simpleTasks.filter((t: Task) => t.isComplete).length;
-                    const simpleTotal = simpleTasks.length;
+                    const multiTasks = tasks
+                      .filter((t: Task) => t.type === TaskType.MULTIPLE_CHECKIN)
+                      .sort((a: Task, b: Task) => {
+                        // First: tasks with 0 completions on top
+                        const aIncomplete = (a.completionCount || 0) === 0;
+                        const bIncomplete = (b.completionCount || 0) === 0;
+                        if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
+                        // Second: group by routine name
+                        const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
+                        if (routineCompare !== 0) return routineCompare;
+                        // Third: by task order within routine
+                        return ((a as any).order || 0) - ((b as any).order || 0);
+                      });
+
+                    const progressTasks = tasks
+                      .filter((t: Task) => t.type === TaskType.PROGRESS)
+                      .sort((a: Task, b: Task) => {
+                        // First: tasks with 0 progress on top
+                        const aIncomplete = (a.totalValue || 0) === 0;
+                        const bIncomplete = (b.totalValue || 0) === 0;
+                        if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
+                        // Second: group by routine name
+                        const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
+                        if (routineCompare !== 0) return routineCompare;
+                        // Third: by task order within routine
+                        return ((a as any).order || 0) - ((b as any).order || 0);
+                      });
+
+                    // Combine multi and progress tasks for right column
+                    const recordProgressTasks = [...multiTasks, ...progressTasks].sort((a: Task, b: Task) => {
+                      // First: group by routine name
+                      const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
+                      if (routineCompare !== 0) return routineCompare;
+                      // Second: alphanumeric by task name
+                      return a.name.localeCompare(b.name, undefined, { numeric: true });
+                    });
 
                     return (
-                      <div className="space-y-3">
-                        {/* Goals Section */}
-                        <Collapsible open={goalsOpen} onOpenChange={setGoalsOpen}>
-                          <div className="border-2 border-gray-300 rounded-lg bg-white">
-                            <CollapsibleTrigger asChild>
-                              <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="text-lg font-bold text-gray-900">🎯 Goals</h3>
-                                    <span className="text-sm text-gray-500">(Coming soon)</span>
-                                  </div>
-                                  <div className="mt-2">
-                                    <Progress value={0} max={100} className="h-2" />
-                                    <p className="text-xs text-gray-500 mt-1">0% Complete</p>
-                                  </div>
-                                </div>
-                                {goalsOpen ? (
-                                  <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                                ) : (
-                                  <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                                )}
-                              </button>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              <div className="p-4 pt-0 border-t">
-                                <p className="text-sm text-gray-500 text-center py-8">
-                                  Goal tracking coming soon...
-                                </p>
-                              </div>
-                            </CollapsibleContent>
-                          </div>
-                        </Collapsible>
+                      <div className="h-full grid grid-cols-2 gap-5 overflow-hidden">
+                        {/* LEFT COLUMN: Checklist (Simple tasks only) */}
+                        <div className="flex flex-col overflow-hidden">
+                          <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
+                            🌍 Checklist
+                          </h2>
+                          <div
+                            ref={checklistContainerRef}
+                            className={`flex-1 overflow-y-auto gap-3 content-start ${simpleTasksColumns === 1 ? 'space-y-3' : 'grid grid-cols-2'}`}
+                          >
+                            {simpleTasks.map((task) => {
+                              const undoTime = undoTimers[task.id];
+                              const canUndo = task.isComplete && undoTime !== undefined && undoTime > 0;
+                              const isLocked = task.isComplete && !canUndo;
 
-                        {/* Simple Tasks Section */}
-                        {simpleTasks.length > 0 && (
-                          <Collapsible open={simpleOpen} onOpenChange={setSimpleOpen}>
-                            <div className="border-2 border-gray-300 rounded-lg bg-white">
-                              <CollapsibleTrigger asChild>
-                                <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                  <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-2">✓ Simple Tasks</h3>
-                                    <div>
-                                      <Progress value={simpleCompleted} max={simpleTotal} className="h-2" />
-                                      <p className="text-xs text-gray-500 mt-1">
-                                        {simpleCompleted} of {simpleTotal} completed
-                                      </p>
+                              return (
+                                <div
+                                  key={task.id}
+                                  className="rounded-[12px] p-[16px] transition-all duration-1000"
+                                  style={{
+                                    background: animatingTasks.has(task.id)
+                                      ? '#DDD5D0'
+                                      : (task.isComplete ? '#DDD5D0' : '#FAF8F7'),
+                                    opacity: isLocked ? 0.7 : 1,
+                                    cursor: isLocked ? 'default' : 'pointer'
+                                  }}
+                                  onClick={() => {
+                                    if (isLocked || completeMutation.isPending) return;
+                                    task.isComplete ? handleUndo(task.completions?.[0]?.id!) : handleComplete(task.id);
+                                  }}
+                                >
+                                  <div className="flex items-start gap-4">
+                                    {/* C4 Rotating Square */}
+                                    <div
+                                      className="w-3 h-3 mt-2 flex-shrink-0 transition-all duration-[250ms]"
+                                      style={{
+                                        border: `2.5px solid ${task.isComplete ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)'}`,
+                                        background: task.isComplete ? 'var(--warm-complete-primary)' : 'transparent',
+                                        transform: task.isComplete ? 'rotate(45deg)' : 'rotate(0deg)',
+                                        transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+                                      }}
+                                    />
+
+                                    {/* Task Content */}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2 flex-wrap flex-1">
+                                          <span
+                                            className="font-semibold leading-tight"
+                                            style={{
+                                              fontSize: task.name.length > 16 ? `${28 * (16 / task.name.length)}px` : '28px',
+                                              color: task.isComplete ? 'var(--warm-complete-secondary)' : '#37474F',
+                                              textDecoration: task.isComplete ? 'line-through' : 'none'
+                                            }}
+                                          >
+                                            {task.name}
+                                          </span>
+                                        </div>
+
+                                        {/* Undo timer */}
+                                        {canUndo && (
+                                          <div className="text-[20px] font-semibold px-3 py-1 rounded-md flex-shrink-0" style={{
+                                            background: 'rgba(77, 182, 172, 0.15)',
+                                            color: 'var(--warm-complete-secondary)'
+                                          }}>
+                                            {Math.floor(undoTime / 60)}:{(undoTime % 60).toString().padStart(2, '0')}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-                                  {simpleOpen ? (
-                                    <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                                  ) : (
-                                    <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                                  )}
-                                </button>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <div className="p-4 pt-0 border-t">
-                                  <TaskColumn
-                                    title=""
-                                    tasks={simpleTasks}
-                                    personId={selectedPersonId!}
-                                    onComplete={handleComplete}
-                                    onUndo={handleUndo}
-                                    isPending={completeMutation.isPending || undoMutation.isPending}
-                                  />
                                 </div>
-                              </CollapsibleContent>
-                            </div>
-                          </Collapsible>
-                        )}
+                              );
+                            })}
+                          </div>
+                        </div>
 
-                        {/* Multi Check-in Tasks Section */}
-                        {multiTasks.length > 0 && (
-                          <Collapsible open={multiOpen} onOpenChange={setMultiOpen}>
-                            <div className="border-2 border-gray-300 rounded-lg bg-white">
-                              <CollapsibleTrigger asChild>
-                                <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                  <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-gray-900">
-                                      ✔️ Check-ins ({multiTasks.length})
-                                    </h3>
-                                  </div>
-                                  {multiOpen ? (
-                                    <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                                  ) : (
-                                    <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                                  )}
-                                </button>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <div className="p-4 pt-0 border-t">
-                                  <TaskColumn
-                                    title=""
-                                    tasks={multiTasks}
-                                    personId={selectedPersonId!}
-                                    onComplete={handleComplete}
-                                    onUndo={handleUndo}
-                                    isPending={completeMutation.isPending || undoMutation.isPending}
-                                  />
-                                </div>
-                              </CollapsibleContent>
-                            </div>
-                          </Collapsible>
-                        )}
+                        {/* RIGHT COLUMN: Record Progress */}
+                        <div className="flex flex-col overflow-hidden">
+                          {recordProgressTasks.length > 0 && (
+                            <div className="flex flex-col flex-1 overflow-hidden">
+                              <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
+                                📊 Record Progress
+                              </h2>
+                              <div
+                                ref={recordProgressContainerRef}
+                                className="flex-1 overflow-y-auto space-y-4"
+                              >
+                                {/* Multi tasks - dynamic layout */}
+                                {multiTasks.length > 0 && (
+                                  <div className={multiTasksColumns === 1 ? 'space-y-3' : 'grid grid-cols-2 gap-3'}>
+                                    {multiTasks.map((task) => (
+                                      <div
+                                        key={task.id}
+                                        className="rounded-[12px] p-[16px] flex items-center gap-4 transition-all duration-1000"
+                                        style={{
+                                          background: animatingTasks.has(task.id) ? '#DDD5D0' : '#FAF8F7'
+                                        }}
+                                      >
+                                        {/* Task Name */}
+                                        <div className="flex-1 min-w-0">
+                                          <div
+                                            className="font-semibold leading-tight"
+                                            style={{
+                                              fontSize: task.name.length > 16 ? `${28 * (16 / task.name.length)}px` : '28px',
+                                              color: '#37474F'
+                                            }}
+                                          >
+                                            {task.name}
+                                          </div>
 
-                        {/* Progress Tasks Section */}
-                        {progressTasks.length > 0 && (
-                          <Collapsible open={progressOpen} onOpenChange={setProgressOpen}>
-                            <div className="border-2 border-gray-300 rounded-lg bg-white">
-                              <CollapsibleTrigger asChild>
-                                <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                  <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-gray-900">
-                                      📊 Progress ({progressTasks.length})
-                                    </h3>
+                                          {/* Subtitle and Goal Badges */}
+                                          <div className="flex items-center flex-wrap gap-2 mt-1">
+                                            <div className="text-[22px] leading-tight" style={{ color: '#607D8B' }}>
+                                              {task.completionCount || 0}x
+                                            </div>
+                                            {activeGoals
+                                              .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                                              .map((goal: any) => (
+                                                <div
+                                                  key={goal.id}
+                                                  className="relative inline-flex items-center gap-1 px-3 py-1 rounded-[16px] text-[20px] font-semibold whitespace-nowrap overflow-hidden"
+                                                  style={{
+                                                    background: '#D7CCC8',
+                                                    color: 'white'
+                                                  }}
+                                                >
+                                                  {/* Progress fill */}
+                                                  <div
+                                                    className="absolute inset-0 transition-all duration-300"
+                                                    style={{
+                                                      width: `${goal.progress?.percentage || 0}%`,
+                                                      background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
+                                                    }}
+                                                  />
+                                                  {/* Content */}
+                                                  <span className="relative z-10">🎯 {goal.name}</span>
+                                                </div>
+                                              ))
+                                            }
+                                          </div>
+                                        </div>
+
+                                        {/* Multi-checkin: Button */}
+                                        <button
+                                          onClick={() => handleCompleteWithAnimation(task.id)}
+                                          disabled={completeMutation.isPending}
+                                          className="px-4 py-2 rounded-[10px] text-[22px] font-semibold text-white transition-all duration-200 active:scale-95"
+                                          style={{
+                                            background: 'var(--warm-complete-primary)',
+                                            minHeight: '48px',
+                                            minWidth: '70px'
+                                          }}
+                                        >
+                                          +1
+                                        </button>
+                                      </div>
+                                    ))}
                                   </div>
-                                  {progressOpen ? (
-                                    <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                                  ) : (
-                                    <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                                  )}
-                                </button>
-                              </CollapsibleTrigger>
-                              <CollapsibleContent>
-                                <div className="p-4 pt-0 border-t">
-                                  <TaskColumn
-                                    title=""
-                                    tasks={progressTasks}
-                                    personId={selectedPersonId!}
-                                    onComplete={handleComplete}
-                                    onUndo={handleUndo}
-                                    isPending={completeMutation.isPending || undoMutation.isPending}
-                                  />
-                                </div>
-                              </CollapsibleContent>
+                                )}
+
+                                {/* Progress tasks - 1 per row */}
+                                {progressTasks.length > 0 && (
+                                  <div className="space-y-3">
+                                    {progressTasks.map((task) => (
+                                      <div
+                                        key={task.id}
+                                        className="rounded-[12px] p-[16px] flex items-center gap-4 transition-all duration-1000"
+                                        style={{
+                                          background: animatingTasks.has(task.id) ? '#DDD5D0' : '#FAF8F7'
+                                        }}
+                                      >
+                                        {/* Task Name */}
+                                        <div className="flex-1 min-w-0">
+                                          <div
+                                            className="font-semibold leading-tight"
+                                            style={{
+                                              fontSize: task.name.length > 16 ? `${28 * (16 / task.name.length)}px` : '28px',
+                                              color: '#37474F'
+                                            }}
+                                          >
+                                            {task.name}
+                                          </div>
+
+                                          {/* Subtitle and Goal Badges */}
+                                          <div className="flex items-center flex-wrap gap-2 mt-1">
+                                            <div className="text-[22px] leading-tight" style={{ color: '#607D8B' }}>
+                                              {task.summedValue || task.totalValue || 0} {task.unit}
+                                            </div>
+                                            {activeGoals
+                                              .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                                              .map((goal: any) => (
+                                                <div
+                                                  key={goal.id}
+                                                  className="relative inline-flex items-center gap-1 px-3 py-1 rounded-[16px] text-[20px] font-semibold whitespace-nowrap overflow-hidden"
+                                                  style={{
+                                                    background: '#D7CCC8',
+                                                    color: 'white'
+                                                  }}
+                                                >
+                                                  {/* Progress fill */}
+                                                  <div
+                                                    className="absolute inset-0 transition-all duration-300"
+                                                    style={{
+                                                      width: `${goal.progress?.percentage || 0}%`,
+                                                      background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
+                                                    }}
+                                                  />
+                                                  {/* Content */}
+                                                  <span className="relative z-10">🎯 {goal.name}</span>
+                                                </div>
+                                              ))
+                                            }
+                                          </div>
+                                        </div>
+
+                                        {/* Progress: Input + Button */}
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          max="99"
+                                          value={progressValues[task.id] || ''}
+                                          onChange={(e) => setProgressValues({ ...progressValues, [task.id]: e.target.value })}
+                                          placeholder="0"
+                                          className="px-3 py-2 rounded-[10px] text-[24px] font-semibold text-center"
+                                          style={{
+                                            border: '2px solid #D7CCC8',
+                                            color: '#37474F',
+                                            width: '70px',
+                                            minHeight: '48px'
+                                          }}
+                                        />
+                                        <button
+                                          onClick={() => {
+                                            const value = progressValues[task.id];
+                                            if (!value || parseInt(value, 10) <= 0) {
+                                              toast({ title: 'Error', description: 'Please enter a value', variant: 'destructive' });
+                                              return;
+                                            }
+                                            handleCompleteWithAnimation(task.id, value);
+                                            setProgressValues({ ...progressValues, [task.id]: '' });
+                                          }}
+                                          disabled={completeMutation.isPending}
+                                          className="px-4 py-2 rounded-[10px] text-[22px] font-semibold text-white transition-all duration-200 active:scale-95"
+                                          style={{
+                                            background: 'var(--warm-complete-primary)',
+                                            minHeight: '48px',
+                                            minWidth: '70px'
+                                          }}
+                                        >
+                                          Add
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </Collapsible>
-                        )}
+                          )}
+                        </div>
                       </div>
                     );
                   })()

@@ -94,18 +94,17 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
     e.preventDefault();
 
     if (task) {
-      // When editing, allow changing emoji, color, and description
+      // When editing, allow changing emoji and color
       updateMutation.mutate({
         id: task.id,
         emoji,
         color,
-        description: description || undefined,
       });
     } else if (routineId) {
       // When creating, all fields are available
       const taskData = {
         name,
-        description: description || undefined,
+        description: '-', // Set to '-' to disable descriptions
         type,
         unit: type === TaskType.PROGRESS && unit ? unit : undefined,
         isSmart,
@@ -173,20 +172,6 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
                   </p>
                 </div>
               </div>
-
-              {/* Description - Editable when editing */}
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  maxLength={20}
-                  placeholder="Add a brief description..."
-                  className="mt-1"
-                />
-                <p className="text-xs text-gray-500 mt-1">{description.length}/20 characters</p>
-              </div>
             </>
           ) : (
             <>
@@ -219,26 +204,12 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    maxLength={16}
+                    maxLength={30}
                     placeholder="Brush teeth"
                     className="flex-1"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{name.length}/16 characters</p>
-              </div>
-
-              {/* Description - Only when creating */}
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  maxLength={20}
-                  placeholder="2 min, twice daily"
-                  className="mt-1"
-                />
-                <p className="text-xs text-gray-500 mt-1">{description.length}/20 characters</p>
+                <p className="text-xs text-gray-500 mt-1">{name.length}/30 characters</p>
               </div>
             </>
           )}
@@ -357,11 +328,6 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
                   <p className="font-semibold text-gray-900">
                     {name || 'Task name'}
                   </p>
-                  {description && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      {description}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>

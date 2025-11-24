@@ -53,14 +53,23 @@ export const routineRouter = router({
             person: true,
           },
         },
-        // Remove full task fetching - just use count for list view
-        _count: {
-          select: {
-            tasks: {
-              where: { status: EntityStatus.ACTIVE },
-            },
-          },
-        },
+        // Conditionally include tasks for goal form, otherwise just count
+        ...(input.includeTasks
+          ? {
+              tasks: {
+                where: { status: EntityStatus.ACTIVE },
+                orderBy: { order: 'asc' },
+              },
+            }
+          : {
+              _count: {
+                select: {
+                  tasks: {
+                    where: { status: EntityStatus.ACTIVE },
+                  },
+                },
+              },
+            }),
       },
       orderBy: { name: 'asc' },
     });
