@@ -13,6 +13,7 @@ import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 import { CoParentDetailModal } from '@/components/coparent/CoParentDetailModal';
 import type { Person } from '@/lib/types/database';
 import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
+import { CacheInspector } from '@/components/debug/cache-inspector';
 
 interface PersonListProps {
   roleId: string;
@@ -127,6 +128,7 @@ export const PersonList = memo(function PersonList({
 
   return (
     <div className="space-y-8">
+      <CacheInspector roleId={roleId} />
       {/* Row 1: Family Group Kiosk Code - Collapsible */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <button

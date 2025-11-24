@@ -119,10 +119,11 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
     entityName: 'Routine',
     listKey: personIds?.[0]
       ? [
-          ['routine', 'list', { roleId: roleId!, personId: personIds[0] }],
-          ['routine', 'list', { roleId: roleId! }],
+          // tRPC v11 format: [procedurePath, { input, type }]
+          [['routine', 'list'], { input: { roleId: roleId!, personId: personIds[0] }, type: 'query' }],
+          [['routine', 'list'], { input: { roleId: roleId! }, type: 'query' }],
         ]
-      : ['routine', 'list', { roleId: roleId! }],
+      : [[['routine', 'list'], { input: { roleId: roleId! }, type: 'query' }]],
     createItem: (input, tempId) => ({
       id: tempId,
       name: input.name,
@@ -148,7 +149,7 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
     }),
     closeDialog: onClose,
     invalidateKeys: [
-      ['person', 'getById'],
+      [['person', 'getById'], { type: 'query' }],
     ],
   });
 
@@ -156,10 +157,11 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const updateMutation = useOptimisticUpdate(updateMutationBase, {
     entityName: 'Routine',
     listKey: [
-      ['routine', 'list', { roleId: routine?.roleId! }],
-      ['routine', 'list', { roleId: routine?.roleId!, personId: undefined }],
+      // tRPC v11 format: [procedurePath, { input, type }]
+      [['routine', 'list'], { input: { roleId: routine?.roleId! }, type: 'query' }],
+      [['routine', 'list'], { input: { roleId: routine?.roleId!, personId: undefined }, type: 'query' }],
     ],
-    itemKey: routine?.id ? ['routine', 'getById', { id: routine.id }] : undefined,
+    itemKey: routine?.id ? [['routine', 'getById'], { input: { id: routine.id }, type: 'query' }] : undefined,
     getId: (input) => input.id,
     updateItem: (item, input) => ({
       ...item,
@@ -177,7 +179,7 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
     }),
     closeDialog: onClose,
     invalidateKeys: [
-      ['person', 'getById'],
+      [['person', 'getById'], { type: 'query' }],
     ],
   });
 

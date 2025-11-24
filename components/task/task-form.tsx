@@ -56,7 +56,8 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
   const createMutationBase = trpc.task.create.useMutation();
   const createMutation = useOptimisticCreate(createMutationBase, {
     entityName: 'Task',
-    listKey: ['task', 'list', { routineId: routineId! }],
+    // tRPC v11 format: [procedurePath, { input, type }]
+    listKey: [['task', 'list'], { input: { routineId: routineId! }, type: 'query' }],
     createItem: (input, tempId) => ({
       id: tempId,
       name: input.name,
@@ -76,14 +77,15 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
     }),
     closeDialog: onClose,
     invalidateKeys: [
-      ['person', 'getById'],
+      [['person', 'getById'], { type: 'query' }],
     ],
   });
 
   const updateMutationBase = trpc.task.update.useMutation();
   const updateMutation = useOptimisticUpdate(updateMutationBase, {
     entityName: 'Task',
-    listKey: ['task', 'list', { routineId: task?.routineId! }],
+    // tRPC v11 format: [procedurePath, { input, type }]
+    listKey: [['task', 'list'], { input: { routineId: task?.routineId! }, type: 'query' }],
     getId: (input) => input.id,
     updateItem: (item, input) => ({
       ...item,
@@ -93,7 +95,7 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
     }),
     closeDialog: onClose,
     invalidateKeys: [
-      ['person', 'getById'],
+      [['person', 'getById'], { type: 'query' }],
     ],
   });
 

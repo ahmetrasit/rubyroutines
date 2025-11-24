@@ -158,10 +158,11 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     {
       entityName: 'Person',
       listKey: [
-        ['person', 'list', { roleId: roleId! }],
-        ['person', 'list', { roleId: roleId!, includeInactive: true }],
+        // tRPC v11 format: [procedurePath, { input, type }]
+        [['person', 'list'], { input: { roleId: roleId! }, type: 'query' }],
+        [['person', 'list'], { input: { roleId: roleId!, includeInactive: true }, type: 'query' }],
         // CRITICAL: Also update the query that PersonList actually uses!
-        ['personSharing', 'getAccessiblePersons', { roleId: roleId! }],
+        [['personSharing', 'getAccessiblePersons'], { input: { roleId: roleId! }, type: 'query' }],
       ],
       createItem: (input, tempId) => ({
         id: tempId,
@@ -179,8 +180,8 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
       }),
       // These will be invalidated after success to ensure consistency
       invalidateKeys: [
-        ['person', 'list', { roleId: roleId! }],
-        ['personSharing', 'getAccessiblePersons', { roleId: roleId! }],
+        [['person', 'list'], { input: { roleId: roleId! }, type: 'query' }],
+        [['personSharing', 'getAccessiblePersons'], { input: { roleId: roleId! }, type: 'query' }],
       ],
       closeDialog: onClose,
       onSuccess: async (newPerson) => {
@@ -208,12 +209,13 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     {
       entityName: 'Person',
       listKey: [
-        ['person', 'list', { roleId: person?.roleId! }],
-        ['person', 'list', { roleId: person?.roleId!, includeInactive: true }],
+        // tRPC v11 format: [procedurePath, { input, type }]
+        [['person', 'list'], { input: { roleId: person?.roleId! }, type: 'query' }],
+        [['person', 'list'], { input: { roleId: person?.roleId!, includeInactive: true }, type: 'query' }],
         // CRITICAL: Also update the query that PersonList actually uses!
-        ['personSharing', 'getAccessiblePersons', { roleId: person?.roleId! }],
+        [['personSharing', 'getAccessiblePersons'], { input: { roleId: person?.roleId! }, type: 'query' }],
       ],
-      itemKey: person?.id ? ['person', 'getById', { id: person.id }] : undefined,
+      itemKey: person?.id ? [['person', 'getById'], { input: { id: person.id }, type: 'query' }] : undefined,
       getId: (input) => input.id,
       updateItem: (item, input) => ({
         ...item,
@@ -222,8 +224,8 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         updatedAt: new Date(),
       }),
       invalidateKeys: [
-        ['person', 'list', { roleId: person?.roleId! }],
-        ['personSharing', 'getAccessiblePersons', { roleId: person?.roleId! }],
+        [['person', 'list'], { input: { roleId: person?.roleId! }, type: 'query' }],
+        [['personSharing', 'getAccessiblePersons'], { input: { roleId: person?.roleId! }, type: 'query' }],
       ],
       closeDialog: onClose,
     }
@@ -244,6 +246,10 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         avatar: avatarData,
       });
     } else if (roleId) {
+      console.log('🚀 CREATE PERSON TRIGGERED');
+      console.log('  roleId:', roleId);
+      console.log('  name:', name);
+      console.log('  avatar:', avatarData);
       createPerson({
         roleId,
         name,
