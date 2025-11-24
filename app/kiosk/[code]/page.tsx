@@ -670,20 +670,6 @@ export default function KioskModePage() {
                                           >
                                             {task.name}
                                           </span>
-                                          {task.description && (
-                                            <>
-                                              <span className="text-[24px]" style={{ color: '#607D8B' }}>•</span>
-                                              <span
-                                                className="text-[26px] leading-tight"
-                                                style={{
-                                                  color: '#607D8B',
-                                                  opacity: task.isComplete ? 0.6 : 1
-                                                }}
-                                              >
-                                                {task.description}
-                                              </span>
-                                            </>
-                                          )}
 
                                           {/* Inline Goal Progress Badges */}
                                           {activeGoals

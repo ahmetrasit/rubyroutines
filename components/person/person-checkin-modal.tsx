@@ -435,14 +435,6 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                                 </div>
                               )}
                             </div>
-                            {task.description && (
-                              <div
-                                className="text-[13px] leading-[1.3] mt-0.5"
-                                style={{ color: task.isComplete ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)' }}
-                              >
-                                {task.description}
-                              </div>
-                            )}
 
                             {/* Inline Goal Progress Bar */}
                             {activeGoals
@@ -509,11 +501,6 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                             <div className="text-[15px] font-semibold" style={{ color: 'var(--warm-progress-secondary)' }}>
                               {task.name}
                             </div>
-                            {task.description && (
-                              <div className="text-[13px]" style={{ color: 'var(--warm-progress-primary)' }}>
-                                {task.description}
-                              </div>
-                            )}
                           </div>
                           <div className="text-[13px] font-semibold min-w-[32px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
                             {task.completionCount || 0}x
@@ -594,11 +581,6 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                             <div className="text-[15px] font-semibold" style={{ color: 'var(--warm-progress-secondary)' }}>
                               {task.name}
                             </div>
-                            {task.description && (
-                              <div className="text-[13px]" style={{ color: 'var(--warm-progress-primary)' }}>
-                                {task.description}
-                              </div>
-                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3 mb-2">
