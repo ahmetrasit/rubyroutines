@@ -7,7 +7,6 @@ import { TaskForm } from './task-form';
 import { useToast } from '@/components/ui/toast';
 import { Plus } from 'lucide-react';
 import { getTierLimit, ComponentTierLimits } from '@/lib/services/tier-limits';
-import { CacheInspector } from '@/components/debug/cache-inspector';
 
 interface TaskListProps {
   routineId: string;
@@ -84,7 +83,6 @@ export const TaskList = memo(function TaskList({ routineId, personId = '', effec
 
   return (
     <div className="space-y-6">
-      <CacheInspector routineId={routineId} />
       <div className="flex justify-between items-center">
         <h3 className="text-2xl font-bold text-gray-900">Tasks</h3>
       </div>
