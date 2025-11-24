@@ -53,11 +53,17 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
   const currentSmartTaskCount = tasks?.filter((t: any) => t.isSmart).length || 0;
   const canAddSmartTask = currentSmartTaskCount < smartTaskLimit;
 
+  // Get the actual tRPC query keys that match what useQuery generates
+  const taskListQueryKey = routineId ? utils.task.list.getQueryKey({ routineId }) : [];
+  const taskListQueryKeyForUpdate = task?.routineId ? utils.task.list.getQueryKey({ routineId: task.routineId }) : [];
+  const routineQueryKey = routineId ? utils.routine.getById.getQueryKey({ id: routineId }) : [];
+  const routineQueryKeyForUpdate = task?.routineId ? utils.routine.getById.getQueryKey({ id: task.routineId }) : [];
+
   const createMutationBase = trpc.task.create.useMutation();
   const createMutation = useOptimisticCreate(createMutationBase, {
     entityName: 'Task',
-    // tRPC v11 format: [procedurePath, { input, type }]
-    listKey: [['task', 'list'], { input: { routineId: routineId! }, type: 'query' }],
+    // Use the actual tRPC-generated query key instead of manual construction
+    listKey: taskListQueryKey,
     createItem: (input, tempId) => ({
       id: tempId,
       name: input.name,
@@ -79,15 +85,15 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
     invalidateKeys: [
       [['person', 'getById'], { type: 'query' }],
       // Also invalidate routine.getById to ensure it refetches with the new task
-      [['routine', 'getById'], { input: { id: routineId! }, type: 'query' }],
+      ...(routineQueryKey.length > 0 ? [routineQueryKey] : []),
     ],
   });
 
   const updateMutationBase = trpc.task.update.useMutation();
   const updateMutation = useOptimisticUpdate(updateMutationBase, {
     entityName: 'Task',
-    // tRPC v11 format: [procedurePath, { input, type }]
-    listKey: [['task', 'list'], { input: { routineId: task?.routineId! }, type: 'query' }],
+    // Use the actual tRPC-generated query key instead of manual construction
+    listKey: taskListQueryKeyForUpdate,
     getId: (input) => input.id,
     updateItem: (item, input) => ({
       ...item,
@@ -99,7 +105,7 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
     invalidateKeys: [
       [['person', 'getById'], { type: 'query' }],
       // Also invalidate routine.getById to ensure it refetches with the updated task
-      [['routine', 'getById'], { input: { id: task?.routineId! }, type: 'query' }],
+      ...(routineQueryKeyForUpdate.length > 0 ? [routineQueryKeyForUpdate] : []),
     ],
   });
 
