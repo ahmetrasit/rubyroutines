@@ -670,34 +670,6 @@ export default function KioskModePage() {
                                           >
                                             {task.name}
                                           </span>
-
-                                          {/* Inline Goal Progress Badges */}
-                                          {activeGoals
-                                            .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
-                                            .map((goal: any) => (
-                                              <div
-                                                key={goal.id}
-                                                className="relative inline-flex items-center gap-1 px-3 py-1 rounded-[16px] text-[22px] font-semibold whitespace-nowrap overflow-hidden"
-                                                style={{
-                                                  background: '#D7CCC8',
-                                                  color: 'white'
-                                                }}
-                                              >
-                                                {/* Progress fill */}
-                                                <div
-                                                  className="absolute inset-0 transition-all duration-300"
-                                                  style={{
-                                                    width: `${goal.progress?.percentage || 0}%`,
-                                                    background: task.isComplete
-                                                      ? 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
-                                                      : 'linear-gradient(90deg, var(--warm-incomplete-primary), var(--warm-incomplete-secondary))'
-                                                  }}
-                                                />
-                                                {/* Content */}
-                                                <span className="relative z-10">🎯 {goal.name}</span>
-                                              </div>
-                                            ))
-                                          }
                                         </div>
 
                                         {/* Undo timer */}

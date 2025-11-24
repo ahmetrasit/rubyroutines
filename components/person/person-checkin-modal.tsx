@@ -435,40 +435,6 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                                 </div>
                               )}
                             </div>
-
-                            {/* Inline Goal Progress Bar */}
-                            {activeGoals
-                              .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
-                              .map((goal: any) => (
-                                <div key={goal.id} className="mt-2 flex items-center gap-2">
-                                  <div
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap"
-                                    style={{
-                                      background: 'var(--warm-progress-bg)',
-                                      color: 'var(--warm-progress-secondary)'
-                                    }}
-                                  >
-                                    🎯 {goal.name}
-                                  </div>
-                                  <div className="flex-1 h-1 rounded-sm overflow-hidden" style={{
-                                    background: 'rgba(144, 202, 249, 0.2)'
-                                  }}>
-                                    <div
-                                      className="h-full rounded-sm transition-all duration-300"
-                                      style={{
-                                        width: `${goal.progress?.percentage || 0}%`,
-                                        background: 'linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%)'
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="text-[11px] font-bold min-w-[32px] text-right" style={{
-                                    color: 'var(--warm-progress-primary)'
-                                  }}>
-                                    {Math.round(goal.progress?.percentage || 0)}%
-                                  </div>
-                                </div>
-                              ))
-                            }
                           </div>
                         </button>
                       );
