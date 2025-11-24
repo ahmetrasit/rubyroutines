@@ -58,7 +58,10 @@ export const PersonCard = memo(function PersonCard({
     deleteMutation,
     {
       entityName: person.name,
-      invalidateQueries: [() => utils.person.list.invalidate()],
+      invalidateQueries: [
+        () => utils.person.list.invalidate(),
+        () => utils.personSharing.getAccessiblePersons.invalidate()
+      ],
     }
   );
 

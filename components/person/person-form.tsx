@@ -102,6 +102,8 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         variant: 'success',
       });
       utils.person.list.invalidate();
+      // Invalidate the query that PersonList actually uses
+      utils.personSharing.getAccessiblePersons.invalidate();
       utils.group.getById.invalidate();
       utils.group.list.invalidate();
       onClose();
@@ -137,6 +139,8 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         variant: 'success',
       });
       utils.person.list.invalidate();
+      // Invalidate the query that PersonList actually uses
+      utils.personSharing.getAccessiblePersons.invalidate();
       onClose();
     },
     onError: (error) => {
@@ -153,7 +157,10 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     createMutationBase,
     {
       entityName: 'Person',
-      listKey: ['person', 'list', { roleId: roleId!, includeInactive: false }],
+      listKey: [
+        ['person', 'list', { roleId: roleId! }],
+        ['person', 'list', { roleId: roleId!, includeInactive: true }],
+      ],
       createItem: (input, tempId) => ({
         id: tempId,
         name: input.name,
@@ -168,6 +175,10 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         groupMembers: [],
         assignments: [],
       }),
+      // Add invalidation for the query that PersonList actually uses
+      invalidateKeys: [
+        ['personSharing', 'getAccessiblePersons', { roleId: roleId! }],
+      ],
       closeDialog: onClose,
       onSuccess: async (newPerson) => {
         // If classroomId is provided, add the person to the classroom
@@ -193,7 +204,10 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     updateMutationBase,
     {
       entityName: 'Person',
-      listKey: ['person', 'list', { roleId: person?.roleId!, includeInactive: false }],
+      listKey: [
+        ['person', 'list', { roleId: person?.roleId! }],
+        ['person', 'list', { roleId: person?.roleId!, includeInactive: true }],
+      ],
       itemKey: person?.id ? ['person', 'getById', { id: person.id }] : undefined,
       getId: (input) => input.id,
       updateItem: (item, input) => ({
@@ -203,7 +217,7 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         updatedAt: new Date(),
       }),
       invalidateKeys: [
-        ['personSharing', 'getAccessiblePersons'],
+        ['personSharing', 'getAccessiblePersons', { roleId: person?.roleId! }],
       ],
       closeDialog: onClose,
     }
