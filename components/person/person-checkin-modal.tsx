@@ -484,39 +484,35 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                           </button>
                         </div>
 
-                        {/* Inline Goal Progress Bar */}
-                        {activeGoals
-                          .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
-                          .map((goal: any) => (
-                            <div key={goal.id} className="flex items-center gap-2 ml-8">
-                              <div
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap"
-                                style={{
-                                  background: 'var(--warm-progress-bg)',
-                                  color: 'var(--warm-progress-secondary)'
-                                }}
-                              >
-                                🎯 {goal.name}
-                              </div>
-                              <div className="flex-1 h-1 rounded-sm overflow-hidden" style={{
-                                background: 'rgba(144, 202, 249, 0.2)'
-                              }}>
+                        {/* Goal Badges */}
+                        {activeGoals.filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id)).length > 0 && (
+                          <div className="flex flex-wrap gap-2 ml-8">
+                            {activeGoals
+                              .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                              .map((goal: any) => (
                                 <div
-                                  className="h-full rounded-sm transition-all duration-300"
+                                  key={goal.id}
+                                  className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap overflow-hidden"
                                   style={{
-                                    width: `${goal.progress?.percentage || 0}%`,
-                                    background: 'linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%)'
+                                    background: '#D7CCC8',
+                                    color: 'white'
                                   }}
-                                />
-                              </div>
-                              <div className="text-[11px] font-bold min-w-[32px] text-right" style={{
-                                color: 'var(--warm-progress-primary)'
-                              }}>
-                                {Math.round(goal.progress?.percentage || 0)}%
-                              </div>
-                            </div>
-                          ))
-                        }
+                                >
+                                  {/* Progress fill */}
+                                  <div
+                                    className="absolute inset-0 transition-all duration-300"
+                                    style={{
+                                      width: `${goal.progress?.percentage || 0}%`,
+                                      background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
+                                    }}
+                                  />
+                                  {/* Content */}
+                                  <span className="relative z-10">🎯 {goal.name}</span>
+                                </div>
+                              ))
+                            }
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -588,39 +584,35 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                           </div>
                         </div>
 
-                        {/* Inline Goal Progress Bar */}
-                        {activeGoals
-                          .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
-                          .map((goal: any) => (
-                            <div key={goal.id} className="flex items-center gap-2 ml-8">
-                              <div
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap"
-                                style={{
-                                  background: 'var(--warm-progress-bg)',
-                                  color: 'var(--warm-progress-secondary)'
-                                }}
-                              >
-                                🎯 {goal.name}
-                              </div>
-                              <div className="flex-1 h-1 rounded-sm overflow-hidden" style={{
-                                background: 'rgba(144, 202, 249, 0.2)'
-                              }}>
+                        {/* Goal Badges */}
+                        {activeGoals.filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id)).length > 0 && (
+                          <div className="flex flex-wrap gap-2 ml-8">
+                            {activeGoals
+                              .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                              .map((goal: any) => (
                                 <div
-                                  className="h-full rounded-sm transition-all duration-300"
+                                  key={goal.id}
+                                  className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap overflow-hidden"
                                   style={{
-                                    width: `${goal.progress?.percentage || 0}%`,
-                                    background: 'linear-gradient(90deg, var(--warm-progress-primary) 0%, var(--warm-progress-secondary) 100%)'
+                                    background: '#D7CCC8',
+                                    color: 'white'
                                   }}
-                                />
-                              </div>
-                              <div className="text-[11px] font-bold min-w-[32px] text-right" style={{
-                                color: 'var(--warm-progress-primary)'
-                              }}>
-                                {Math.round(goal.progress?.percentage || 0)}%
-                              </div>
-                            </div>
-                          ))
-                        }
+                                >
+                                  {/* Progress fill */}
+                                  <div
+                                    className="absolute inset-0 transition-all duration-300"
+                                    style={{
+                                      width: `${goal.progress?.percentage || 0}%`,
+                                      background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
+                                    }}
+                                  />
+                                  {/* Content */}
+                                  <span className="relative z-10">🎯 {goal.name}</span>
+                                </div>
+                              ))
+                            }
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
