@@ -709,7 +709,6 @@ export default function KioskModePage() {
                                                 />
                                                 {/* Content */}
                                                 <span className="relative z-10">🎯 {goal.name}</span>
-                                                <span className="relative z-10 font-bold">{Math.round(goal.progress?.percentage || 0)}%</span>
                                               </div>
                                             ))
                                           }
