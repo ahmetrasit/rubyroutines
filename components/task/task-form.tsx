@@ -111,6 +111,11 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
       });
     } else if (routineId) {
       // When creating, all fields are available
+      console.log('🚀 CREATE TASK TRIGGERED');
+      console.log('  routineId:', routineId);
+      console.log('  name:', name);
+      console.log('  type:', type);
+
       const taskData = {
         name,
         description: '-', // Set to '-' to disable descriptions
