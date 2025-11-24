@@ -60,11 +60,18 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
   const routineQueryKey = routineId ? getQueryKey(trpc.routine.getById, { id: routineId }, 'query') : [];
   const routineQueryKeyForUpdate = task?.routineId ? getQueryKey(trpc.routine.getById, { id: task.routineId }, 'query') : [];
 
+  // Debug: log what query key we generated
+  if (routineId) {
+    console.log('🔑 Generated taskListQueryKey:', JSON.stringify(taskListQueryKey));
+    console.log('🔑 Query key type:', Array.isArray(taskListQueryKey) ? 'array' : typeof taskListQueryKey);
+    console.log('🔑 Query key length:', taskListQueryKey.length);
+  }
+
   const createMutationBase = trpc.task.create.useMutation();
   const createMutation = useOptimisticCreate(createMutationBase, {
     entityName: 'Task',
-    // Use the actual tRPC-generated query key instead of manual construction
-    listKey: taskListQueryKey,
+    // Wrap query key in array - hook expects array of keys
+    listKey: [taskListQueryKey],
     createItem: (input, tempId) => ({
       id: tempId,
       name: input.name,
@@ -93,8 +100,8 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
   const updateMutationBase = trpc.task.update.useMutation();
   const updateMutation = useOptimisticUpdate(updateMutationBase, {
     entityName: 'Task',
-    // Use the actual tRPC-generated query key instead of manual construction
-    listKey: taskListQueryKeyForUpdate,
+    // Wrap query key in array - hook expects array of keys
+    listKey: [taskListQueryKeyForUpdate],
     getId: (input) => input.id,
     updateItem: (item, input) => ({
       ...item,
