@@ -732,11 +732,10 @@ export default function KioskModePage() {
                           </div>
                         </div>
 
-                        {/* RIGHT COLUMN: Split into Progress (top) and Goals (bottom) */}
-                        <div className="flex flex-col gap-5 overflow-hidden">
-                          {/* TOP: Record Progress (Multi + Progress tasks, 40vh max-height) */}
+                        {/* RIGHT COLUMN: Record Progress */}
+                        <div className="flex flex-col overflow-hidden">
                           {recordProgressTasks.length > 0 && (
-                            <div className="flex flex-col" style={{ maxHeight: '40vh' }}>
+                            <div className="flex flex-col flex-1 overflow-hidden">
                               <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
                                 📊 Record Progress
                               </h2>
