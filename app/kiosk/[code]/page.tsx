@@ -659,7 +659,7 @@ export default function KioskModePage() {
 
                                     {/* Task Content */}
                                     <div className="flex-1 min-w-0">
-                                      <div className="flex items-center justify-between gap-3 mb-2">
+                                      <div className="flex items-center justify-between gap-3">
                                         <div className="flex items-center gap-2 flex-wrap flex-1">
                                           <span
                                             className="text-[28px] font-semibold leading-tight"
@@ -684,6 +684,35 @@ export default function KioskModePage() {
                                               </span>
                                             </>
                                           )}
+
+                                          {/* Inline Goal Progress Badges */}
+                                          {activeGoals
+                                            .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                                            .map((goal: any) => (
+                                              <div
+                                                key={goal.id}
+                                                className="relative inline-flex items-center gap-1 px-3 py-1 rounded-[16px] text-[22px] font-semibold whitespace-nowrap overflow-hidden"
+                                                style={{
+                                                  background: '#D7CCC8',
+                                                  color: 'white'
+                                                }}
+                                              >
+                                                {/* Progress fill */}
+                                                <div
+                                                  className="absolute inset-0 transition-all duration-300"
+                                                  style={{
+                                                    width: `${goal.progress?.percentage || 0}%`,
+                                                    background: task.isComplete
+                                                      ? 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
+                                                      : 'linear-gradient(90deg, var(--warm-incomplete-primary), var(--warm-incomplete-secondary))'
+                                                  }}
+                                                />
+                                                {/* Content */}
+                                                <span className="relative z-10">🎯 {goal.name}</span>
+                                                <span className="relative z-10 font-bold">{Math.round(goal.progress?.percentage || 0)}%</span>
+                                              </div>
+                                            ))
+                                          }
                                         </div>
 
                                         {/* Undo timer */}
@@ -696,40 +725,6 @@ export default function KioskModePage() {
                                           </div>
                                         )}
                                       </div>
-
-                                      {/* Inline Goal Progress Bar */}
-                                      {activeGoals
-                                        .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
-                                        .map((goal: any) => (
-                                          <div key={goal.id} className="flex items-center gap-3 mt-2">
-                                            <div
-                                              className="inline-flex items-center gap-1 px-3 py-1 rounded-[16px] text-[22px] font-semibold whitespace-nowrap"
-                                              style={{
-                                                background: task.isComplete ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)',
-                                                color: 'white'
-                                              }}
-                                            >
-                                              🎯 {goal.name}
-                                            </div>
-                                            <div className="flex-1 h-1.5 rounded-sm overflow-hidden" style={{
-                                              background: '#D7CCC8'
-                                            }}>
-                                              <div
-                                                className="h-full rounded-sm transition-all duration-300"
-                                                style={{
-                                                  width: `${goal.progress?.percentage || 0}%`,
-                                                  background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
-                                                }}
-                                              />
-                                            </div>
-                                            <div className="text-[22px] font-bold min-w-[48px] text-right" style={{
-                                              color: '#607D8B'
-                                            }}>
-                                              {Math.round(goal.progress?.percentage || 0)}%
-                                            </div>
-                                          </div>
-                                        ))
-                                      }
                                     </div>
                                   </div>
                                 </div>
