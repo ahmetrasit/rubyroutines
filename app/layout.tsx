@@ -5,6 +5,7 @@ import { PageErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { CookieConsent } from "@/components/cookie-consent";
 import { SkipNavigation } from "@/components/skip-navigation";
+import { NetworkStatusIndicator } from "@/components/ui/network-status-indicator";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -40,6 +41,11 @@ export default function RootLayout({
           <PageErrorBoundary>
             <TRPCProvider>
               <ToasterProvider>{children}</ToasterProvider>
+              <NetworkStatusIndicator
+                position="bottom-right"
+                hideWhenOnline={true}
+                compact={true}
+              />
             </TRPCProvider>
           </PageErrorBoundary>
           <CookieConsent />

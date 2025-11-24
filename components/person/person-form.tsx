@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { RotateCcw } from 'lucide-react';
 import { parseAvatar, serializeAvatar } from '@/lib/utils/avatar';
 import { AVATAR_COLORS } from '@/lib/constants/theme';
-import { useCreateMutation, useUpdateMutation } from '@/lib/hooks';
+import { useOptimisticCreate, useOptimisticUpdate } from '@/lib/hooks';
 import { EntityStatus } from '@/lib/types/prisma-enums';
 import { useToast } from '@/components/ui/toast';
 import type { Person } from '@/lib/types/database';
@@ -148,44 +148,62 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
     },
   });
 
-  const createMutationBase = trpc.person.create.useMutation({
-    onSuccess: async (newPerson) => {
-      // If classroomId is provided, add the person to the classroom
-      if (classroomId && newPerson?.id) {
-        try {
-          await addMemberMutation.mutateAsync({
-            groupId: classroomId,
-            personId: newPerson.id,
-          });
-          // Invalidate both person list and group queries
-          utils.person.list.invalidate();
-          utils.group.getById.invalidate();
-          utils.group.list.invalidate();
-        } catch (error) {
-          console.error('Failed to add person to classroom:', error);
-        }
-      }
-    },
-  });
-
-  const { mutate: createPerson, isLoading: isCreating } = useCreateMutation(
+  const createMutationBase = trpc.person.create.useMutation();
+  const { mutate: createPerson, isLoading: isCreating } = useOptimisticCreate(
     createMutationBase,
     {
       entityName: 'Person',
-      invalidateQueries: [() => utils.person.list.invalidate()],
+      listKey: ['person', 'list', { roleId: roleId!, includeInactive: false }],
+      createItem: (input, tempId) => ({
+        id: tempId,
+        name: input.name,
+        avatar: input.avatar,
+        roleId: input.roleId,
+        status: EntityStatus.ACTIVE,
+        isAccountOwner: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        archivedAt: null,
+        kioskLastUpdatedAt: new Date(),
+        groupMembers: [],
+        assignments: [],
+      }),
       closeDialog: onClose,
+      onSuccess: async (newPerson) => {
+        // If classroomId is provided, add the person to the classroom
+        if (classroomId && newPerson?.id) {
+          try {
+            await addMemberMutation.mutateAsync({
+              groupId: classroomId,
+              personId: newPerson.id,
+            });
+            // Invalidate group queries
+            utils.group.getById.invalidate();
+            utils.group.list.invalidate();
+          } catch (error) {
+            console.error('Failed to add person to classroom:', error);
+          }
+        }
+      },
     }
   );
 
   const updateMutationBase = trpc.person.update.useMutation();
-  const { mutate: updatePerson, isLoading: isUpdating } = useUpdateMutation(
+  const { mutate: updatePerson, isLoading: isUpdating } = useOptimisticUpdate(
     updateMutationBase,
     {
       entityName: 'Person',
-      invalidateQueries: [
-        () => utils.person.list.invalidate(),
-        () => utils.person.getById.invalidate(),
-        () => utils.personSharing.getAccessiblePersons.invalidate(),
+      listKey: ['person', 'list', { roleId: person?.roleId!, includeInactive: false }],
+      itemKey: person?.id ? ['person', 'getById', { id: person.id }] : undefined,
+      getId: (input) => input.id,
+      updateItem: (item, input) => ({
+        ...item,
+        name: input.name ?? item.name,
+        avatar: input.avatar ?? item.avatar,
+        updatedAt: new Date(),
+      }),
+      invalidateKeys: [
+        ['personSharing', 'getAccessiblePersons'],
       ],
       closeDialog: onClose,
     }

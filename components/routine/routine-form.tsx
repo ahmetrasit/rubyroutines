@@ -1,11 +1,12 @@
 'use client';
 
-import { ResetPeriod, Visibility } from '@/lib/types/prisma-enums';
+import { ResetPeriod, Visibility, EntityStatus } from '@/lib/types/prisma-enums';
 type Routine = any;
 import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/toast';
+import { useOptimisticCreate, useOptimisticUpdate } from '@/lib/hooks';
 import {
   Dialog,
   DialogContent,
@@ -113,72 +114,63 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
 
   const timeOptions = generateTimeOptions();
 
-  const createMutation = trpc.routine.create.useMutation({
-    onSuccess: async () => {
-      toast({
-        title: 'Success',
-        description: 'Routine created successfully',
-        variant: 'success',
-      });
-
-      // Invalidate all routine queries
-      await utils.routine.invalidate();
-
-      // If we have roleId and personIds, specifically refetch those queries
-      if (roleId && personIds && personIds.length > 0) {
-        for (const personId of personIds) {
-          await utils.routine.list.refetch({ roleId, personId });
-        }
-      }
-
-      // Also refetch any routine list queries without personId (general lists)
-      if (roleId) {
-        await utils.routine.list.refetch({ roleId });
-      }
-
-      onClose();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+  const createMutationBase = trpc.routine.create.useMutation();
+  const createMutation = useOptimisticCreate(createMutationBase, {
+    entityName: 'Routine',
+    listKey: ['routine', 'list', { roleId: roleId! }],
+    createItem: (input, tempId) => ({
+      id: tempId,
+      name: input.name,
+      description: input.description || null,
+      type: input.type || 'REGULAR',
+      resetPeriod: input.resetPeriod,
+      resetDay: input.resetDay || null,
+      visibility: input.visibility,
+      visibleDays: input.visibleDays || [],
+      startTime: input.startTime || null,
+      endTime: input.endTime || null,
+      color: input.color || '#3B82F6',
+      status: EntityStatus.ACTIVE,
+      roleId: input.roleId,
+      isTeacherOnly: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      archivedAt: null,
+      kioskLastUpdatedAt: new Date(),
+      tasks: [],
+      assignments: [],
+      conditions: [],
+    }),
+    closeDialog: onClose,
+    invalidateKeys: [
+      ['person', 'getById'],
+    ],
   });
 
-  const updateMutation = trpc.routine.update.useMutation({
-    onSuccess: async () => {
-      toast({
-        title: 'Success',
-        description: 'Routine updated successfully',
-        variant: 'success',
-      });
-
-      // Invalidate all routine queries
-      await utils.routine.invalidate();
-
-      // If we have roleId and personIds, specifically refetch those queries
-      if (roleId && personIds && personIds.length > 0) {
-        for (const personId of personIds) {
-          await utils.routine.list.refetch({ roleId, personId });
-        }
-      }
-
-      // Also refetch any routine list queries without personId (general lists)
-      if (roleId) {
-        await utils.routine.list.refetch({ roleId });
-      }
-
-      onClose();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+  const updateMutationBase = trpc.routine.update.useMutation();
+  const updateMutation = useOptimisticUpdate(updateMutationBase, {
+    entityName: 'Routine',
+    listKey: ['routine', 'list', { roleId: routine?.roleId! }],
+    itemKey: routine?.id ? ['routine', 'getById', { id: routine.id }] : undefined,
+    getId: (input) => input.id,
+    updateItem: (item, input) => ({
+      ...item,
+      name: input.name ?? item.name,
+      description: input.description ?? item.description,
+      type: input.type ?? item.type,
+      resetPeriod: input.resetPeriod ?? item.resetPeriod,
+      resetDay: input.resetDay ?? item.resetDay,
+      visibility: input.visibility ?? item.visibility,
+      visibleDays: input.visibleDays ?? item.visibleDays,
+      startTime: input.startTime ?? item.startTime,
+      endTime: input.endTime ?? item.endTime,
+      color: input.color ?? item.color,
+      updatedAt: new Date(),
+    }),
+    closeDialog: onClose,
+    invalidateKeys: [
+      ['person', 'getById'],
+    ],
   });
 
   const handleSubmit = (e: React.FormEvent) => {

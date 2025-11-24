@@ -1,10 +1,11 @@
 'use client';
 
-import { TaskType } from '@/lib/types/prisma-enums';
+import { TaskType, EntityStatus } from '@/lib/types/prisma-enums';
 import type { Task } from "@/lib/types/task";
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
+import { useOptimisticCreate, useOptimisticUpdate } from '@/lib/hooks';
 import {
   Dialog,
   DialogContent,
@@ -52,42 +53,48 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
   const currentSmartTaskCount = tasks?.filter((t: any) => t.isSmart).length || 0;
   const canAddSmartTask = currentSmartTaskCount < smartTaskLimit;
 
-  const createMutation = trpc.task.create.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Task created successfully',
-        variant: 'success',
-      });
-      utils.task.list.invalidate();
-      onClose();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+  const createMutationBase = trpc.task.create.useMutation();
+  const createMutation = useOptimisticCreate(createMutationBase, {
+    entityName: 'Task',
+    listKey: ['task', 'list', { routineId: routineId! }],
+    createItem: (input, tempId) => ({
+      id: tempId,
+      name: input.name,
+      description: input.description || null,
+      type: input.type,
+      unit: input.unit || null,
+      targetValue: null,
+      isSmart: input.isSmart || false,
+      emoji: input.emoji || '😊',
+      color: input.color || '#3B82F6',
+      order: tasks?.length || 0,
+      status: EntityStatus.ACTIVE,
+      routineId: input.routineId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completions: [],
+    }),
+    closeDialog: onClose,
+    invalidateKeys: [
+      ['person', 'getById'],
+    ],
   });
 
-  const updateMutation = trpc.task.update.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Task updated successfully',
-        variant: 'success',
-      });
-      utils.task.list.invalidate();
-      onClose();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+  const updateMutationBase = trpc.task.update.useMutation();
+  const updateMutation = useOptimisticUpdate(updateMutationBase, {
+    entityName: 'Task',
+    listKey: ['task', 'list', { routineId: task?.routineId! }],
+    getId: (input) => input.id,
+    updateItem: (item, input) => ({
+      ...item,
+      emoji: input.emoji ?? item.emoji,
+      color: input.color ?? item.color,
+      updatedAt: new Date(),
+    }),
+    closeDialog: onClose,
+    invalidateKeys: [
+      ['person', 'getById'],
+    ],
   });
 
   const handleSubmit = (e: React.FormEvent) => {

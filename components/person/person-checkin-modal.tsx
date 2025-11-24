@@ -13,6 +13,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Progress } from '@/components/ui/progress';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
+import { useOptimisticCheckin, useOptimisticUndo } from '@/lib/hooks/useOptimisticCheckin';
+import { NetworkStatusBadge } from '@/components/ui/network-status-indicator';
 
 interface Task {
   id: string;
@@ -95,48 +97,22 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     })
   ) || [];
 
-  const completeMutation = trpc.task.complete.useMutation({
+  // Use optimistic mutations for instant UI feedback
+  const baseMutation = trpc.task.complete.useMutation();
+  const completeMutation = useOptimisticCheckin(baseMutation, {
+    personId,
+    personKey: ['person', 'getById', { id: personId }],
     onSuccess: async () => {
-      await utils.person.getById.refetch({ id: personId });
-      // Invalidate goal queries to update progress bars in real-time
+      // Invalidate goal queries to update progress bars
       await utils.goal.list.invalidate();
       await utils.goal.getGoalsForTask.invalidate();
       await utils.goal.getGoalsForRoutine.invalidate();
-      toast({
-        title: 'Success',
-        description: 'Task completed!',
-        variant: 'success',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
     },
   });
 
-  const undoMutation = trpc.task.undoCompletion.useMutation({
-    onSuccess: async () => {
-      await utils.person.getById.refetch({ id: personId });
-      // Invalidate goal queries to update progress bars in real-time
-      await utils.goal.list.invalidate();
-      await utils.goal.getGoalsForTask.invalidate();
-      await utils.goal.getGoalsForRoutine.invalidate();
-      toast({
-        title: 'Success',
-        description: 'Task undone',
-        variant: 'success',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
+  const baseUndoMutation = trpc.task.undoCompletion.useMutation();
+  const undoMutation = useOptimisticUndo(baseUndoMutation, {
+    personId,
   });
 
   const handleComplete = (taskId: string, value?: string) => {
@@ -276,9 +252,12 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
           background: 'linear-gradient(135deg, rgba(77, 182, 172, 0.05), rgba(38, 166, 154, 0.05))'
         }}>
           <div className="flex items-center justify-between">
-            <h1 className="text-[26px] font-bold leading-tight" style={{ color: '#1F2937' }}>
-              {personName}'s Check-in
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-[26px] font-bold leading-tight" style={{ color: '#1F2937' }}>
+                {personName}'s Check-in
+              </h1>
+              <NetworkStatusBadge />
+            </div>
             <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
               <X className="h-5 w-5" />
             </Button>

@@ -8,6 +8,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Loader2 } from 'lucide-react';
 import { usePageVisibility } from '@/hooks/use-page-visibility';
+import { useOptimisticCheckin, useOptimisticUndo } from '@/lib/hooks/useOptimisticCheckin';
 
 export default function KioskTasksPage() {
   const router = useRouter();
@@ -98,44 +99,28 @@ export default function KioskTasksPage() {
     return () => clearInterval(interval);
   }, [sessionData?.codeId, personId, lastCheckedAt, utils, isPageVisible]);
 
-  const completeMutation = trpc.kiosk.completeTask.useMutation({
-    onSuccess: () => {
-      utils.kiosk.getPersonTasks.invalidate();
+  // Use optimistic mutations for instant UI feedback
+  const baseCompleteMutation = trpc.kiosk.completeTask.useMutation();
+  const completeMutation = useOptimisticCheckin(baseCompleteMutation, {
+    personId: personId!,
+    personKey: ['kiosk', 'getPersonTasks', { kioskCodeId: sessionData?.codeId!, personId: personId! }],
+    onSuccess: async () => {
       // Invalidate goal queries for real-time progress updates
-      utils.goal.list.invalidate();
-      utils.goal.getGoalsForTask.invalidate();
-      utils.goal.getGoalsForRoutine.invalidate();
+      await utils.goal.list.invalidate();
+      await utils.goal.getGoalsForTask.invalidate();
+      await utils.goal.getGoalsForRoutine.invalidate();
       setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
     },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+    onCelebration: () => {
+      // Could trigger confetti or other celebration here
     },
   });
 
-  const undoMutation = trpc.kiosk.undoCompletion.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Task completion undone',
-        variant: 'success',
-      });
-      utils.kiosk.getPersonTasks.invalidate();
-      // Invalidate goal queries for real-time progress updates
-      utils.goal.list.invalidate();
-      utils.goal.getGoalsForTask.invalidate();
-      utils.goal.getGoalsForRoutine.invalidate();
-      setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+  const baseUndoMutation = trpc.kiosk.undoCompletion.useMutation();
+  const undoMutation = useOptimisticUndo(baseUndoMutation, {
+    personId: personId!,
+    messages: {
+      success: 'Task completion undone',
     },
   });
 
