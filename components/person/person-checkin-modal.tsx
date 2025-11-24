@@ -116,6 +116,14 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   });
 
   const handleComplete = (taskId: string, value?: string) => {
+    // Debug logging to track task updates
+    console.log('🎯 [PersonCheckinModal] Completing task:', {
+      taskId,
+      personId,
+      value,
+      taskName: tasks.find(t => t.id === taskId)?.name
+    });
+
     completeMutation.mutate({
       taskId,
       personId,
@@ -365,16 +373,20 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                   </h3>
                   <div className="space-y-[10px]">
                     {simpleTasks.map((task) => {
-                      const undoTime = undoTimers[task.id];
+                      // Capture task data in block scope to prevent closure issues
+                      const taskId = task.id;
+                      const taskName = task.name;
+                      const undoTime = undoTimers[taskId];
                       const canUndo = task.isComplete && undoTime !== undefined && undoTime > 0;
                       const isLocked = task.isComplete && !canUndo;
 
                       return (
                         <button
-                          key={task.id}
+                          key={taskId}
                           onClick={() => {
+                            console.log('✅ [Simple Task] Button clicked:', { taskId, taskName, isComplete: task.isComplete });
                             if (isLocked) return; // No action for locked tasks
-                            task.isComplete ? handleUndo(task.completions?.[0]?.id!) : handleComplete(task.id);
+                            task.isComplete ? handleUndo(task.completions?.[0]?.id!) : handleComplete(taskId);
                           }}
                           disabled={completeMutation.isPending || undoMutation.isPending}
                           className="w-full text-left rounded-[16px] p-[14px_16px] flex items-start gap-3 transition-all duration-[250ms]"
@@ -402,11 +414,11 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                               <div
                                 className="font-semibold mb-0.5 leading-[1.3]"
                                 style={{
-                                  fontSize: task.name.length > 16 ? `${16 * (16 / task.name.length)}px` : '16px',
+                                  fontSize: taskName.length > 16 ? `${16 * (16 / taskName.length)}px` : '16px',
                                   color: task.isComplete ? 'var(--warm-complete-secondary)' : 'var(--warm-incomplete-secondary)'
                                 }}
                               >
-                                {task.name}
+                                {taskName}
                               </div>
                               {canUndo && (
                                 <div className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={{
@@ -435,147 +447,36 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                     CHECK-INS ({multiTasks.length})
                   </h3>
                   <div className="space-y-[10px]">
-                    {multiTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="rounded-[14px] p-[14px_16px] transition-all duration-1000"
-                        style={{
-                          background: animatingTasks.has(task.id) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
-                        }}
-                      >
-                        <div className="flex items-center flex-wrap gap-2">
-                          <span className="text-[20px] flex-shrink-0">✔️</span>
-                          <div
-                            className="font-semibold"
-                            style={{
-                              fontSize: task.name.length > 16 ? `${15 * (16 / task.name.length)}px` : '15px',
-                              color: 'var(--warm-progress-secondary)'
-                            }}
-                          >
-                            {task.name}
-                          </div>
-                          <div className="text-[13px] font-semibold" style={{ color: 'var(--warm-progress-primary)' }}>
-                            {task.completionCount || 0}x
-                          </div>
-                          {/* Goal Badges */}
-                          {activeGoals
-                            .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
-                            .map((goal: any) => (
-                              <div
-                                key={goal.id}
-                                className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap overflow-hidden"
-                                style={{
-                                  background: '#D7CCC8',
-                                  color: 'white'
-                                }}
-                              >
-                                {/* Progress fill */}
-                                <div
-                                  className="absolute inset-0 transition-all duration-300"
-                                  style={{
-                                    width: `${goal.progress?.percentage || 0}%`,
-                                    background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
-                                  }}
-                                />
-                                {/* Content */}
-                                <span className="relative z-10">🎯 {goal.name}</span>
-                              </div>
-                            ))
-                          }
-                          <button
-                            onClick={() => handleCompleteWithAnimation(task.id)}
-                            disabled={completeMutation.isPending}
-                            className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95 ml-auto"
-                            style={{
-                              border: '1px solid var(--warm-progress-primary)',
-                              color: 'var(--warm-progress-secondary)'
-                            }}
-                          >
-                            +1
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    {multiTasks.map((task) => {
+                      // Capture task data in block scope to prevent closure issues
+                      const taskId = task.id;
+                      const taskName = task.name;
 
-              {/* Progress Tasks Section */}
-              {progressTasks.length > 0 && (
-                <div className="mb-5">
-                  <h3 className="text-[12px] font-bold uppercase mb-3" style={{
-                    color: '#374151',
-                    letterSpacing: '0.5px'
-                  }}>
-                    PROGRESS ({progressTasks.length})
-                  </h3>
-                  <div className="space-y-[10px]">
-                    {progressTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="rounded-[14px] p-[14px_16px] transition-all duration-1000"
-                        style={{
-                          background: animatingTasks.has(task.id) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
-                        }}
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-[20px] flex-shrink-0">📊</span>
-                          <div className="flex-1 min-w-0">
+                      return (
+                        <div
+                          key={taskId}
+                          className="rounded-[14px] p-[14px_16px] transition-all duration-1000"
+                          style={{
+                            background: animatingTasks.has(taskId) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
+                          }}
+                        >
+                          <div className="flex items-center flex-wrap gap-2">
+                            <span className="text-[20px] flex-shrink-0">✔️</span>
                             <div
                               className="font-semibold"
                               style={{
-                                fontSize: task.name.length > 16 ? `${15 * (16 / task.name.length)}px` : '15px',
+                                fontSize: taskName.length > 16 ? `${15 * (16 / taskName.length)}px` : '15px',
                                 color: 'var(--warm-progress-secondary)'
                               }}
                             >
-                              {task.name}
+                              {taskName}
                             </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <input
-                            type="number"
-                            min="1"
-                            max="999"
-                            value={progressValues[task.id] || ''}
-                            onChange={(e) => setProgressValues({ ...progressValues, [task.id]: e.target.value })}
-                            placeholder="0"
-                            className="flex-1 px-[10px] py-[6px] rounded-[8px] text-[13px] font-semibold text-center"
-                            style={{
-                              border: '1px solid var(--warm-progress-primary)',
-                              color: 'var(--warm-progress-secondary)',
-                              width: '70px'
-                            }}
-                          />
-                          <button
-                            onClick={() => {
-                              const value = progressValues[task.id];
-                              if (!value || parseInt(value, 10) <= 0) {
-                                toast({ title: 'Error', description: 'Please enter a value', variant: 'destructive' });
-                                return;
-                              }
-                              handleCompleteWithAnimation(task.id, value);
-                              setProgressValues({ ...progressValues, [task.id]: '' });
-                            }}
-                            disabled={completeMutation.isPending}
-                            className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95"
-                            style={{
-                              border: '1px solid var(--warm-progress-primary)',
-                              color: 'var(--warm-progress-secondary)'
-                            }}
-                          >
-                            Add
-                          </button>
-                          <div className="text-[13px] font-semibold min-w-[70px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
-                            {task.summedValue || task.totalValue || 0} {task.unit}
-                          </div>
-                        </div>
-
-                        {/* Goal Badges */}
-                        {activeGoals.filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id)).length > 0 && (
-                          <div className="flex flex-wrap gap-2 ml-8">
+                            <div className="text-[13px] font-semibold" style={{ color: 'var(--warm-progress-primary)' }}>
+                              {task.completionCount || 0}x
+                            </div>
+                            {/* Goal Badges */}
                             {activeGoals
-                              .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                              .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === taskId))
                               .map((goal: any) => (
                                 <div
                                   key={goal.id}
@@ -598,10 +499,150 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                                 </div>
                               ))
                             }
+                            <button
+                              onClick={() => {
+                                console.log('🔵 [Multi Task] Button clicked:', { taskId, taskName });
+                                handleCompleteWithAnimation(taskId);
+                              }}
+                              disabled={completeMutation.isPending}
+                              className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95 ml-auto"
+                              style={{
+                                border: '1px solid var(--warm-progress-primary)',
+                                color: 'var(--warm-progress-secondary)'
+                              }}
+                            >
+                              +1
+                            </button>
                           </div>
-                        )}
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Progress Tasks Section */}
+              {progressTasks.length > 0 && (
+                <div className="mb-5">
+                  <h3 className="text-[12px] font-bold uppercase mb-3" style={{
+                    color: '#374151',
+                    letterSpacing: '0.5px'
+                  }}>
+                    PROGRESS ({progressTasks.length})
+                  </h3>
+                  <div className="space-y-[10px]">
+                    {progressTasks.map((task) => {
+                      // Capture task data in block scope to prevent closure issues
+                      const taskId = task.id;
+                      const taskName = task.name;
+                      const taskUnit = task.unit;
+
+                      return (
+                        <div
+                          key={taskId}
+                          className="rounded-[14px] p-[14px_16px] transition-all duration-1000"
+                          style={{
+                            background: animatingTasks.has(taskId) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
+                          }}
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-[20px] flex-shrink-0">📊</span>
+                            <div className="flex-1 min-w-0">
+                              <div
+                                className="font-semibold"
+                                style={{
+                                  fontSize: taskName.length > 16 ? `${15 * (16 / taskName.length)}px` : '15px',
+                                  color: 'var(--warm-progress-secondary)'
+                                }}
+                              >
+                                {taskName}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <input
+                              type="number"
+                              min="1"
+                              max="999"
+                              value={progressValues[taskId] || ''}
+                              onChange={(e) => {
+                                console.log('📊 [Progress Task] Input changed:', { taskId, taskName, value: e.target.value });
+                                setProgressValues(prev => ({ ...prev, [taskId]: e.target.value }));
+                              }}
+                              placeholder="0"
+                              className="flex-1 px-[10px] py-[6px] rounded-[8px] text-[13px] font-semibold text-center"
+                              style={{
+                                border: '1px solid var(--warm-progress-primary)',
+                                color: 'var(--warm-progress-secondary)',
+                                width: '70px'
+                              }}
+                            />
+                            <button
+                              onClick={() => {
+                                const value = progressValues[taskId];
+                                console.log('📊 [Progress Task] Button clicked:', {
+                                  taskId,
+                                  taskName,
+                                  value,
+                                  allProgressValues: progressValues
+                                });
+                                if (!value || parseInt(value, 10) <= 0) {
+                                  toast({ title: 'Error', description: 'Please enter a value', variant: 'destructive' });
+                                  return;
+                                }
+                                handleCompleteWithAnimation(taskId, value);
+                                setProgressValues(prev => {
+                                  const newValues = { ...prev };
+                                  delete newValues[taskId];
+                                  return newValues;
+                                });
+                              }}
+                              disabled={completeMutation.isPending}
+                              className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95"
+                              style={{
+                                border: '1px solid var(--warm-progress-primary)',
+                                color: 'var(--warm-progress-secondary)'
+                              }}
+                            >
+                              Add
+                            </button>
+                            <div className="text-[13px] font-semibold min-w-[70px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
+                              {task.summedValue || task.totalValue || 0} {taskUnit}
+                            </div>
+                          </div>
+
+                          {/* Goal Badges */}
+                          {activeGoals.filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === taskId)).length > 0 && (
+                            <div className="flex flex-wrap gap-2 ml-8">
+                              {activeGoals
+                                .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === taskId))
+                                .map((goal: any) => (
+                                  <div
+                                    key={goal.id}
+                                    className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap overflow-hidden"
+                                    style={{
+                                      background: '#D7CCC8',
+                                      color: 'white'
+                                    }}
+                                  >
+                                    {/* Progress fill */}
+                                    <div
+                                      className="absolute inset-0 transition-all duration-300"
+                                      style={{
+                                        width: `${goal.progress?.percentage || 0}%`,
+                                        background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
+                                      }}
+                                    />
+                                    {/* Content */}
+                                    <span className="relative z-10">🎯 {goal.name}</span>
+                                  </div>
+                                ))
+                              }
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
