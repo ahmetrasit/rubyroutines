@@ -741,7 +741,7 @@ export default function KioskModePage() {
                               <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
                                 📊 Record Progress
                               </h2>
-                              <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-3 content-start">
+                              <div className="flex-1 overflow-y-auto space-y-3">
                                 {recordProgressTasks.map((task) => {
                                   const isMulti = task.type === TaskType.MULTIPLE_CHECKIN;
                                   const isProgress = task.type === TaskType.PROGRESS;
