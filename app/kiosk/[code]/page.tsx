@@ -737,9 +737,9 @@ export default function KioskModePage() {
                                   </div>
                                 )}
 
-                                {/* Progress tasks - 2 per row */}
+                                {/* Progress tasks - 1 per row */}
                                 {progressTasks.length > 0 && (
-                                  <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-3">
                                     {progressTasks.map((task) => (
                                       <div
                                         key={task.id}
