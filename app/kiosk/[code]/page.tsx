@@ -802,11 +802,11 @@ export default function KioskModePage() {
                                             {task.name}
                                           </div>
                                           <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
-                                            {task.summedValue || task.totalValue || 0} {task.unit} so far
+                                            {task.summedValue || task.totalValue || 0} {task.unit}
                                           </div>
                                         </div>
 
-                                        {/* Progress: Input + Button + Total */}
+                                        {/* Progress: Input + Button */}
                                         <input
                                           type="number"
                                           min="1"
@@ -842,9 +842,6 @@ export default function KioskModePage() {
                                         >
                                           Add
                                         </button>
-                                        <div className="text-[22px] font-semibold min-w-[80px] text-right" style={{ color: '#607D8B' }}>
-                                          {task.summedValue || task.totalValue || 0} {task.unit}
-                                        </div>
                                       </div>
                                     ))}
                                   </div>
