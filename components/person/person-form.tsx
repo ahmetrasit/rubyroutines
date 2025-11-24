@@ -160,6 +160,8 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
       listKey: [
         ['person', 'list', { roleId: roleId! }],
         ['person', 'list', { roleId: roleId!, includeInactive: true }],
+        // CRITICAL: Also update the query that PersonList actually uses!
+        ['personSharing', 'getAccessiblePersons', { roleId: roleId! }],
       ],
       createItem: (input, tempId) => ({
         id: tempId,
@@ -175,8 +177,9 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         groupMembers: [],
         assignments: [],
       }),
-      // Add invalidation for the query that PersonList actually uses
+      // These will be invalidated after success to ensure consistency
       invalidateKeys: [
+        ['person', 'list', { roleId: roleId! }],
         ['personSharing', 'getAccessiblePersons', { roleId: roleId! }],
       ],
       closeDialog: onClose,
@@ -207,6 +210,8 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
       listKey: [
         ['person', 'list', { roleId: person?.roleId! }],
         ['person', 'list', { roleId: person?.roleId!, includeInactive: true }],
+        // CRITICAL: Also update the query that PersonList actually uses!
+        ['personSharing', 'getAccessiblePersons', { roleId: person?.roleId! }],
       ],
       itemKey: person?.id ? ['person', 'getById', { id: person.id }] : undefined,
       getId: (input) => input.id,
@@ -217,6 +222,7 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         updatedAt: new Date(),
       }),
       invalidateKeys: [
+        ['person', 'list', { roleId: person?.roleId! }],
         ['personSharing', 'getAccessiblePersons', { roleId: person?.roleId! }],
       ],
       closeDialog: onClose,
