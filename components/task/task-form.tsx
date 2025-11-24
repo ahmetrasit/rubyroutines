@@ -4,6 +4,7 @@ import { TaskType, EntityStatus } from '@/lib/types/prisma-enums';
 import type { Task } from "@/lib/types/task";
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
+import { getQueryKey } from '@trpc/react-query';
 import { useToast } from '@/components/ui/toast';
 import { useOptimisticCreate, useOptimisticUpdate } from '@/lib/hooks';
 import {
@@ -54,10 +55,10 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
   const canAddSmartTask = currentSmartTaskCount < smartTaskLimit;
 
   // Get the actual tRPC query keys that match what useQuery generates
-  const taskListQueryKey = routineId ? utils.task.list.getQueryKey({ routineId }) : [];
-  const taskListQueryKeyForUpdate = task?.routineId ? utils.task.list.getQueryKey({ routineId: task.routineId }) : [];
-  const routineQueryKey = routineId ? utils.routine.getById.getQueryKey({ id: routineId }) : [];
-  const routineQueryKeyForUpdate = task?.routineId ? utils.routine.getById.getQueryKey({ id: task.routineId }) : [];
+  const taskListQueryKey = routineId ? getQueryKey(trpc.task.list, { routineId }, 'query') : [];
+  const taskListQueryKeyForUpdate = task?.routineId ? getQueryKey(trpc.task.list, { routineId: task.routineId }, 'query') : [];
+  const routineQueryKey = routineId ? getQueryKey(trpc.routine.getById, { id: routineId }, 'query') : [];
+  const routineQueryKeyForUpdate = task?.routineId ? getQueryKey(trpc.routine.getById, { id: task.routineId }, 'query') : [];
 
   const createMutationBase = trpc.task.create.useMutation();
   const createMutation = useOptimisticCreate(createMutationBase, {
