@@ -204,12 +204,12 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    maxLength={16}
+                    maxLength={30}
                     placeholder="Brush teeth"
                     className="flex-1"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{name.length}/16 characters</p>
+                <p className="text-xs text-gray-500 mt-1">{name.length}/30 characters</p>
               </div>
             </>
           )}

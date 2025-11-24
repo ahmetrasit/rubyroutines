@@ -421,8 +421,11 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
                               <div
-                                className="text-[16px] font-semibold mb-0.5 leading-[1.3]"
-                                style={{ color: task.isComplete ? 'var(--warm-complete-secondary)' : 'var(--warm-incomplete-secondary)' }}
+                                className="font-semibold mb-0.5 leading-[1.3]"
+                                style={{
+                                  fontSize: task.name.length > 16 ? `${16 * (16 / task.name.length)}px` : '16px',
+                                  color: task.isComplete ? 'var(--warm-complete-secondary)' : 'var(--warm-incomplete-secondary)'
+                                }}
                               >
                                 {task.name}
                               </div>
@@ -464,7 +467,13 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                         <div className="flex items-center gap-3 mb-2">
                           <span className="text-[20px] flex-shrink-0">✔️</span>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[15px] font-semibold" style={{ color: 'var(--warm-progress-secondary)' }}>
+                            <div
+                              className="font-semibold"
+                              style={{
+                                fontSize: task.name.length > 16 ? `${15 * (16 / task.name.length)}px` : '15px',
+                                color: 'var(--warm-progress-secondary)'
+                              }}
+                            >
                               {task.name}
                             </div>
                           </div>
@@ -540,7 +549,13 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                         <div className="flex items-center gap-3 mb-2">
                           <span className="text-[20px] flex-shrink-0">📊</span>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[15px] font-semibold" style={{ color: 'var(--warm-progress-secondary)' }}>
+                            <div
+                              className="font-semibold"
+                              style={{
+                                fontSize: task.name.length > 16 ? `${15 * (16 / task.name.length)}px` : '15px',
+                                color: 'var(--warm-progress-secondary)'
+                              }}
+                            >
                               {task.name}
                             </div>
                           </div>

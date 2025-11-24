@@ -662,8 +662,9 @@ export default function KioskModePage() {
                                       <div className="flex items-center justify-between gap-3">
                                         <div className="flex items-center gap-2 flex-wrap flex-1">
                                           <span
-                                            className="text-[28px] font-semibold leading-tight"
+                                            className="font-semibold leading-tight"
                                             style={{
+                                              fontSize: task.name.length > 16 ? `${28 * (16 / task.name.length)}px` : '28px',
                                               color: task.isComplete ? 'var(--warm-complete-secondary)' : '#37474F',
                                               textDecoration: task.isComplete ? 'line-through' : 'none'
                                             }}
@@ -711,7 +712,13 @@ export default function KioskModePage() {
                                       >
                                         {/* Task Name */}
                                         <div className="flex-1 min-w-0">
-                                          <div className="text-[28px] font-semibold leading-tight" style={{ color: '#37474F' }}>
+                                          <div
+                                            className="font-semibold leading-tight"
+                                            style={{
+                                              fontSize: task.name.length > 16 ? `${28 * (16 / task.name.length)}px` : '28px',
+                                              color: '#37474F'
+                                            }}
+                                          >
                                             {task.name}
                                           </div>
                                           <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
@@ -778,7 +785,13 @@ export default function KioskModePage() {
                                       >
                                         {/* Task Name */}
                                         <div className="flex-1 min-w-0">
-                                          <div className="text-[28px] font-semibold leading-tight" style={{ color: '#37474F' }}>
+                                          <div
+                                            className="font-semibold leading-tight"
+                                            style={{
+                                              fontSize: task.name.length > 16 ? `${28 * (16 / task.name.length)}px` : '28px',
+                                              color: '#37474F'
+                                            }}
+                                          >
                                             {task.name}
                                           </div>
                                           <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
