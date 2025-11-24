@@ -801,11 +801,9 @@ export default function KioskModePage() {
                                           <div className="text-[28px] font-semibold leading-tight" style={{ color: '#37474F' }}>
                                             {task.name}
                                           </div>
-                                          {task.description && (
-                                            <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
-                                              {task.description}
-                                            </div>
-                                          )}
+                                          <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
+                                            {task.summedValue || task.totalValue || 0} {task.unit} so far
+                                          </div>
                                         </div>
 
                                         {/* Progress: Input + Button + Total */}
