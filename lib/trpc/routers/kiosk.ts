@@ -265,13 +265,15 @@ export const kioskRouter = router({
           const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
           return {
             ...task,
+            routine: assignment.routine,
             routineName: assignment.routine.name,
             isComplete,
             isCompleted: periodCompletions.length > 0,
             completionCount: periodCompletions.length,
             lastCompletedAt: lastCompletion?.completedAt,
             entryNumber: lastCompletion?.entryNumber,
-            summedValue: lastCompletion?.summedValue
+            summedValue: lastCompletion?.summedValue,
+            totalValue: lastCompletion?.summedValue
           };
         })
       );
