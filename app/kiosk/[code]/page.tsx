@@ -721,12 +721,12 @@ export default function KioskModePage() {
                                           >
                                             {task.name}
                                           </div>
-                                          <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
-                                            {task.completionCount || 0}x
-                                          </div>
 
-                                          {/* Goal Badges */}
-                                          <div className="flex flex-wrap gap-2 mt-2">
+                                          {/* Subtitle and Goal Badges */}
+                                          <div className="flex items-center flex-wrap gap-2 mt-1">
+                                            <div className="text-[22px] leading-tight" style={{ color: '#607D8B' }}>
+                                              {task.completionCount || 0}x
+                                            </div>
                                             {activeGoals
                                               .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
                                               .map((goal: any) => (
@@ -794,12 +794,12 @@ export default function KioskModePage() {
                                           >
                                             {task.name}
                                           </div>
-                                          <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
-                                            {task.summedValue || task.totalValue || 0} {task.unit}
-                                          </div>
 
-                                          {/* Goal Badges */}
-                                          <div className="flex flex-wrap gap-2 mt-2">
+                                          {/* Subtitle and Goal Badges */}
+                                          <div className="flex items-center flex-wrap gap-2 mt-1">
+                                            <div className="text-[22px] leading-tight" style={{ color: '#607D8B' }}>
+                                              {task.summedValue || task.totalValue || 0} {task.unit}
+                                            </div>
                                             {activeGoals
                                               .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
                                               .map((goal: any) => (

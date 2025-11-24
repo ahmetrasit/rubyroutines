@@ -464,26 +464,49 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                           background: animatingTasks.has(task.id) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
                         }}
                       >
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center flex-wrap gap-2">
                           <span className="text-[20px] flex-shrink-0">✔️</span>
-                          <div className="flex-1 min-w-0">
-                            <div
-                              className="font-semibold"
-                              style={{
-                                fontSize: task.name.length > 16 ? `${15 * (16 / task.name.length)}px` : '15px',
-                                color: 'var(--warm-progress-secondary)'
-                              }}
-                            >
-                              {task.name}
-                            </div>
+                          <div
+                            className="font-semibold"
+                            style={{
+                              fontSize: task.name.length > 16 ? `${15 * (16 / task.name.length)}px` : '15px',
+                              color: 'var(--warm-progress-secondary)'
+                            }}
+                          >
+                            {task.name}
                           </div>
-                          <div className="text-[13px] font-semibold min-w-[32px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
+                          <div className="text-[13px] font-semibold" style={{ color: 'var(--warm-progress-primary)' }}>
                             {task.completionCount || 0}x
                           </div>
+                          {/* Goal Badges */}
+                          {activeGoals
+                            .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
+                            .map((goal: any) => (
+                              <div
+                                key={goal.id}
+                                className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap overflow-hidden"
+                                style={{
+                                  background: '#D7CCC8',
+                                  color: 'white'
+                                }}
+                              >
+                                {/* Progress fill */}
+                                <div
+                                  className="absolute inset-0 transition-all duration-300"
+                                  style={{
+                                    width: `${goal.progress?.percentage || 0}%`,
+                                    background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
+                                  }}
+                                />
+                                {/* Content */}
+                                <span className="relative z-10">🎯 {goal.name}</span>
+                              </div>
+                            ))
+                          }
                           <button
                             onClick={() => handleCompleteWithAnimation(task.id)}
                             disabled={completeMutation.isPending}
-                            className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95"
+                            className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95 ml-auto"
                             style={{
                               border: '1px solid var(--warm-progress-primary)',
                               color: 'var(--warm-progress-secondary)'
@@ -492,36 +515,6 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                             +1
                           </button>
                         </div>
-
-                        {/* Goal Badges */}
-                        {activeGoals.filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id)).length > 0 && (
-                          <div className="flex flex-wrap gap-2 ml-8">
-                            {activeGoals
-                              .filter((goal: any) => goal.taskLinks?.some((link: any) => link.taskId === task.id))
-                              .map((goal: any) => (
-                                <div
-                                  key={goal.id}
-                                  className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[12px] font-semibold whitespace-nowrap overflow-hidden"
-                                  style={{
-                                    background: '#D7CCC8',
-                                    color: 'white'
-                                  }}
-                                >
-                                  {/* Progress fill */}
-                                  <div
-                                    className="absolute inset-0 transition-all duration-300"
-                                    style={{
-                                      width: `${goal.progress?.percentage || 0}%`,
-                                      background: 'linear-gradient(90deg, var(--warm-complete-primary), var(--warm-complete-secondary))'
-                                    }}
-                                  />
-                                  {/* Content */}
-                                  <span className="relative z-10">🎯 {goal.name}</span>
-                                </div>
-                              ))
-                            }
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
