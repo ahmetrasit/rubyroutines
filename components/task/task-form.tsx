@@ -78,6 +78,8 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
     closeDialog: onClose,
     invalidateKeys: [
       [['person', 'getById'], { type: 'query' }],
+      // Also invalidate routine.getById to ensure it refetches with the new task
+      [['routine', 'getById'], { input: { id: routineId! }, type: 'query' }],
     ],
   });
 
@@ -96,6 +98,8 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
     closeDialog: onClose,
     invalidateKeys: [
       [['person', 'getById'], { type: 'query' }],
+      // Also invalidate routine.getById to ensure it refetches with the updated task
+      [['routine', 'getById'], { input: { id: task?.routineId! }, type: 'query' }],
     ],
   });
 
