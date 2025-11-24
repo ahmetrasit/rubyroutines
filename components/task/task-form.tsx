@@ -60,13 +60,6 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
   const routineQueryKey = routineId ? getQueryKey(trpc.routine.getById, { id: routineId }, 'query') : [];
   const routineQueryKeyForUpdate = task?.routineId ? getQueryKey(trpc.routine.getById, { id: task.routineId }, 'query') : [];
 
-  // Debug: log what query key we generated
-  if (routineId) {
-    console.log('🔑 Generated taskListQueryKey:', JSON.stringify(taskListQueryKey));
-    console.log('🔑 Query key type:', Array.isArray(taskListQueryKey) ? 'array' : typeof taskListQueryKey);
-    console.log('🔑 Query key length:', taskListQueryKey.length);
-  }
-
   const createMutationBase = trpc.task.create.useMutation();
   const createMutation = useOptimisticCreate(createMutationBase, {
     entityName: 'Task',
@@ -129,11 +122,6 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
       });
     } else if (routineId) {
       // When creating, all fields are available
-      console.log('🚀 CREATE TASK TRIGGERED');
-      console.log('  routineId:', routineId);
-      console.log('  name:', name);
-      console.log('  type:', type);
-
       const taskData = {
         name,
         description: '-', // Set to '-' to disable descriptions

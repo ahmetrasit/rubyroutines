@@ -80,10 +80,6 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
     invalidateKeys: [...listKeys, ...invalidateKeys],
 
     onMutate: async (variables: TCreateInput) => {
-      console.log('🔍 useOptimisticCreate.onMutate called');
-      console.log('  listKeys:', JSON.stringify(listKeys, null, 2));
-      console.log('  variables:', variables);
-
       // Cancel any outgoing refetches for all list keys
       for (const key of listKeys) {
         await queryClient.cancelQueries({ queryKey: key });
@@ -91,11 +87,9 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
 
       // Generate temporary ID
       const tempId = generateTempId(entityName.toLowerCase());
-      console.log('  tempId:', tempId);
 
       // Create optimistic item
       const optimisticItem = createItem(variables, tempId);
-      console.log('  optimisticItem:', optimisticItem);
 
       // Snapshot previous values for all keys
       const previousDataMap = new Map<unknown[], TItem[]>();
@@ -116,38 +110,26 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
           // tRPC v11 format: [['personSharing', 'getAccessiblePersons'], ...]
           (Array.isArray(key[0]) && key[0][0] === 'personSharing' && key[0][1] === 'getAccessiblePersons');
 
-        console.log('  Processing key:', JSON.stringify(key));
-        console.log('  Is personSharing query:', isPersonSharingQuery);
-
-        const currentData = queryClient.getQueryData(key);
-        console.log('  Current data for key:', currentData);
-
         if (isPersonSharingQuery) {
           // Handle the special structure of getAccessiblePersons
           queryClient.setQueryData(key, (old: any) => {
-            console.log('    Old personSharing data:', old);
             if (!old) return {
               ownedPersons: [optimisticItem],
               sharedPersons: [],
               allPersons: [optimisticItem]
             };
 
-            const newData = {
+            return {
               ...old,
               ownedPersons: [...(old.ownedPersons || []), optimisticItem],
               allPersons: [...(old.allPersons || []), optimisticItem]
             };
-            console.log('    New personSharing data:', newData);
-            return newData;
           });
         } else {
           // Handle regular array queries
           queryClient.setQueryData<TItem[]>(key, (old) => {
-            console.log('    Old array data:', old);
             if (!old) return [optimisticItem];
-            const newData = [...old, optimisticItem];
-            console.log('    New array data:', newData);
-            return newData;
+            return [...old, optimisticItem];
           });
         }
       }
