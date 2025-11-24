@@ -757,17 +757,12 @@ export default function KioskModePage() {
                                           <div className="text-[28px] font-semibold leading-tight" style={{ color: '#37474F' }}>
                                             {task.name}
                                           </div>
-                                          {task.description && (
-                                            <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
-                                              {task.description}
-                                            </div>
-                                          )}
+                                          <div className="text-[22px] leading-tight mt-1" style={{ color: '#607D8B' }}>
+                                            {task.completionCount || 0}x
+                                          </div>
                                         </div>
 
-                                        {/* Multi-checkin: Counter + Button */}
-                                        <div className="text-[24px] font-semibold min-w-[48px] text-right" style={{ color: '#607D8B' }}>
-                                          {task.completionCount || 0}x
-                                        </div>
+                                        {/* Multi-checkin: Button */}
                                         <button
                                           onClick={() => handleCompleteWithAnimation(task.id)}
                                           disabled={completeMutation.isPending}
