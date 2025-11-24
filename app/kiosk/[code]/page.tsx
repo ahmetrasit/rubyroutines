@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { SessionTimeout } from '@/components/kiosk/session-timeout';
 import { TaskColumn } from '@/components/kiosk/task-column';
@@ -65,6 +65,14 @@ export default function KioskModePage() {
   const [progressValues, setProgressValues] = useState<Record<string, string>>({});
   const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
   const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
+
+  // Dynamic layout state
+  const [simpleTasksColumns, setSimpleTasksColumns] = useState<1 | 2>(2); // 1 or 2 columns for simple tasks
+  const [multiTasksColumns, setMultiTasksColumns] = useState<1 | 2>(2); // 1 or 2 columns for multi tasks
+
+  // Refs for measuring container heights
+  const checklistContainerRef = useRef<HTMLDivElement>(null);
+  const recordProgressContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Verify session from localStorage
@@ -325,6 +333,57 @@ export default function KioskModePage() {
     }, 1000);
 
     return () => clearInterval(interval);
+  }, [tasks, selectedPersonId]);
+
+  // Calculate dynamic layout based on available space
+  useEffect(() => {
+    if (!selectedPersonId || !tasks.length) return;
+
+    // Calculate after a short delay to ensure DOM is rendered
+    const timeoutId = setTimeout(() => {
+      // Calculate simple tasks layout
+      if (checklistContainerRef.current) {
+        const container = checklistContainerRef.current;
+        const availableHeight = container.clientHeight;
+
+        // Count simple tasks
+        const simpleTaskCount = tasks.filter((t: Task) => t.type === TaskType.SIMPLE).length;
+
+        // Estimate height per task (card height + gap)
+        // Card: ~120px, gap: 12px
+        const estimatedTaskHeight = 132;
+        const totalHeightNeeded = simpleTaskCount * estimatedTaskHeight;
+
+        // If all tasks fit in available height, use 1 column, otherwise 2
+        setSimpleTasksColumns(totalHeightNeeded <= availableHeight ? 1 : 2);
+      }
+
+      // Calculate multi tasks layout
+      if (recordProgressContainerRef.current) {
+        const container = recordProgressContainerRef.current;
+        const availableHeight = container.clientHeight;
+
+        // Count multi and progress tasks
+        const multiTaskCount = tasks.filter((t: Task) => t.type === TaskType.MULTIPLE_CHECKIN).length;
+        const progressTaskCount = tasks.filter((t: Task) => t.type === TaskType.PROGRESS).length;
+
+        // Estimate heights
+        const multiTaskHeight = 120; // Approximate height of multi task card
+        const progressTaskHeight = 120; // Approximate height of progress task card
+        const gapHeight = 12;
+        const sectionGap = 16; // Gap between multi and progress sections
+
+        // Calculate total height if multi tasks are 1 per row
+        const multiTasksHeightSingleColumn = multiTaskCount * (multiTaskHeight + gapHeight);
+        const progressTasksHeight = progressTaskCount * (progressTaskHeight + gapHeight);
+        const totalHeightNeeded = multiTasksHeightSingleColumn + progressTasksHeight + (multiTaskCount > 0 && progressTaskCount > 0 ? sectionGap : 0);
+
+        // If all tasks fit in available height with multi at 1 per row, use 1 column for multi, otherwise 2
+        setMultiTasksColumns(totalHeightNeeded <= availableHeight ? 1 : 2);
+      }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [tasks, selectedPersonId]);
 
   const handleDone = () => {
@@ -623,7 +682,10 @@ export default function KioskModePage() {
                           <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
                             🌍 Checklist
                           </h2>
-                          <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-3 content-start">
+                          <div
+                            ref={checklistContainerRef}
+                            className={`flex-1 overflow-y-auto gap-3 content-start ${simpleTasksColumns === 1 ? 'space-y-3' : 'grid grid-cols-2'}`}
+                          >
                             {simpleTasks.map((task) => {
                               const undoTime = undoTimers[task.id];
                               const canUndo = task.isComplete && undoTime !== undefined && undoTime > 0;
@@ -698,10 +760,13 @@ export default function KioskModePage() {
                               <h2 className="text-[36px] font-bold mb-4" style={{ color: '#37474F' }}>
                                 📊 Record Progress
                               </h2>
-                              <div className="flex-1 overflow-y-auto space-y-4">
-                                {/* Multi tasks - 2 per row */}
+                              <div
+                                ref={recordProgressContainerRef}
+                                className="flex-1 overflow-y-auto space-y-4"
+                              >
+                                {/* Multi tasks - dynamic layout */}
                                 {multiTasks.length > 0 && (
-                                  <div className="grid grid-cols-2 gap-3">
+                                  <div className={multiTasksColumns === 1 ? 'space-y-3' : 'grid grid-cols-2 gap-3'}>
                                     {multiTasks.map((task) => (
                                       <div
                                         key={task.id}
