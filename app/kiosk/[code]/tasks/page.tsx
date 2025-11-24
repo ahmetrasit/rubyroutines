@@ -8,7 +8,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Loader2 } from 'lucide-react';
 import { usePageVisibility } from '@/hooks/use-page-visibility';
-import { useOptimisticCheckin, useOptimisticUndo } from '@/lib/hooks/useOptimisticCheckin';
+import { useOptimisticKioskCheckin, useOptimisticKioskUndo } from '@/lib/hooks/useOptimisticKioskCheckin';
 
 export default function KioskTasksPage() {
   const router = useRouter();
@@ -101,9 +101,9 @@ export default function KioskTasksPage() {
 
   // Use optimistic mutations for instant UI feedback
   const baseCompleteMutation = trpc.kiosk.completeTask.useMutation();
-  const completeMutation = useOptimisticCheckin(baseCompleteMutation, {
+  const completeMutation = useOptimisticKioskCheckin(baseCompleteMutation, {
+    kioskCodeId: sessionData?.codeId!,
     personId: personId!,
-    personKey: ['kiosk', 'getPersonTasks', { kioskCodeId: sessionData?.codeId!, personId: personId! }],
     onSuccess: async () => {
       // Invalidate goal queries for real-time progress updates
       await utils.goal.list.invalidate();
@@ -117,7 +117,8 @@ export default function KioskTasksPage() {
   });
 
   const baseUndoMutation = trpc.kiosk.undoCompletion.useMutation();
-  const undoMutation = useOptimisticUndo(baseUndoMutation, {
+  const undoMutation = useOptimisticKioskUndo(baseUndoMutation, {
+    kioskCodeId: sessionData?.codeId!,
     personId: personId!,
     messages: {
       success: 'Task completion undone',

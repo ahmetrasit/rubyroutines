@@ -40,7 +40,7 @@ interface Task {
 interface CheckinInput {
   taskId: string;
   personId: string;
-  value?: number;
+  value?: string;
 }
 
 interface OptimisticCheckinOptions {
@@ -106,7 +106,7 @@ export function useOptimisticCheckin(
           taskId: variables.taskId,
           personId: variables.personId,
           completedAt: new Date(),
-          value: variables.value || null,
+          value: variables.value ? parseInt(variables.value, 10) : null,
           summedValue: null,
           entryNumber: null,
         };
@@ -125,7 +125,7 @@ export function useOptimisticCheckin(
                   updatedTask.isComplete = true;
                   updatedTask.completionCount = 1;
                   updatedTask.completions = [tempCompletion];
-                } else if (task.type === TaskType.MULTI) {
+                } else if (task.type === TaskType.MULTIPLE_CHECKIN) {
                   const currentCount = task.completionCount || 0;
                   updatedTask.completionCount = currentCount + 1;
                   updatedTask.isComplete = task.targetValue
@@ -137,7 +137,7 @@ export function useOptimisticCheckin(
                   ];
                 } else if (task.type === TaskType.PROGRESS) {
                   const currentTotal = task.totalValue || 0;
-                  const newTotal = currentTotal + (variables.value || 0);
+                  const newTotal = currentTotal + (variables.value ? parseInt(variables.value, 10) : 0);
                   updatedTask.totalValue = newTotal;
                   updatedTask.progress = task.targetValue
                     ? (newTotal / task.targetValue) * 100
@@ -299,7 +299,7 @@ export function useOptimisticUndo(
                 if (task.type === TaskType.SIMPLE) {
                   updatedTask.isComplete = false;
                   updatedTask.completionCount = 0;
-                } else if (task.type === TaskType.MULTI) {
+                } else if (task.type === TaskType.MULTIPLE_CHECKIN) {
                   updatedTask.completionCount = Math.max(0, (task.completionCount || 1) - 1);
                   updatedTask.isComplete = false;
                 } else if (task.type === TaskType.PROGRESS && completionToRemove?.value) {

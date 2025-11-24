@@ -117,7 +117,12 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const createMutationBase = trpc.routine.create.useMutation();
   const createMutation = useOptimisticCreate(createMutationBase, {
     entityName: 'Routine',
-    listKey: ['routine', 'list', { roleId: roleId! }],
+    listKey: personIds?.[0]
+      ? [
+          ['routine', 'list', { roleId: roleId!, personId: personIds[0] }],
+          ['routine', 'list', { roleId: roleId! }],
+        ]
+      : ['routine', 'list', { roleId: roleId! }],
     createItem: (input, tempId) => ({
       id: tempId,
       name: input.name,
@@ -150,7 +155,10 @@ export function RoutineForm({ routine, roleId, personIds = [], onClose }: Routin
   const updateMutationBase = trpc.routine.update.useMutation();
   const updateMutation = useOptimisticUpdate(updateMutationBase, {
     entityName: 'Routine',
-    listKey: ['routine', 'list', { roleId: routine?.roleId! }],
+    listKey: [
+      ['routine', 'list', { roleId: routine?.roleId! }],
+      ['routine', 'list', { roleId: routine?.roleId!, personId: undefined }],
+    ],
     itemKey: routine?.id ? ['routine', 'getById', { id: routine.id }] : undefined,
     getId: (input) => input.id,
     updateItem: (item, input) => ({

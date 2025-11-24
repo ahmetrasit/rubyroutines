@@ -12,8 +12,8 @@ import { useOptimisticMutation } from './useOptimisticMutation';
 import type { UseTRPCMutationResult } from '@trpc/react-query/shared';
 
 interface OptimisticUpdateOptions<TItem, TUpdateInput> {
-  // Query keys to update
-  listKey?: unknown[];
+  // Query keys to update - can be single key or array of keys
+  listKey?: unknown[] | unknown[][];
   itemKey?: unknown[];
 
   // Get item ID from update input
@@ -65,8 +65,13 @@ export function useOptimisticUpdate<TItem = any, TUpdateInput = any>(
     closeDialog,
   } = options;
 
+  // Normalize listKey to always be an array of keys
+  const listKeys = listKey
+    ? (Array.isArray(listKey[0]) ? listKey as unknown[][] : [listKey as unknown[]])
+    : [];
+
   const allInvalidateKeys = [
-    ...(listKey ? [listKey] : []),
+    ...listKeys,
     ...(itemKey ? [itemKey] : []),
     ...invalidateKeys,
   ];
@@ -82,17 +87,25 @@ export function useOptimisticUpdate<TItem = any, TUpdateInput = any>(
 
     onMutate: async (variables: TUpdateInput) => {
       // Cancel any outgoing refetches
-      if (listKey) await queryClient.cancelQueries({ queryKey: listKey });
+      for (const key of listKeys) {
+        await queryClient.cancelQueries({ queryKey: key });
+      }
       if (itemKey) await queryClient.cancelQueries({ queryKey: itemKey });
 
       const itemId = getId(variables);
-      const previousData: any = {};
+      const previousData: any = {
+        lists: new Map<unknown[], TItem[]>(),
+        item: undefined,
+      };
 
-      // Update in list
-      if (listKey) {
-        previousData.list = queryClient.getQueryData<TItem[]>(listKey);
+      // Update in all lists
+      for (const key of listKeys) {
+        const data = queryClient.getQueryData<TItem[]>(key);
+        if (data) {
+          previousData.lists.set(key, data);
+        }
 
-        queryClient.setQueryData<TItem[]>(listKey, (old) => {
+        queryClient.setQueryData<TItem[]>(key, (old) => {
           if (!old) return old;
 
           return old.map((item: any) => {
@@ -121,8 +134,9 @@ export function useOptimisticUpdate<TItem = any, TUpdateInput = any>(
       // Update cache with server response
       const itemId = getId(variables);
 
-      if (listKey) {
-        queryClient.setQueryData<TItem[]>(listKey, (old) => {
+      // Update all lists with server response
+      for (const key of listKeys) {
+        queryClient.setQueryData<TItem[]>(key, (old) => {
           if (!old) return old;
 
           return old.map((item: any) => {
@@ -150,9 +164,11 @@ export function useOptimisticUpdate<TItem = any, TUpdateInput = any>(
     },
 
     onError: async (error: Error, variables: TUpdateInput, context: any) => {
-      // Rollback optimistic updates
-      if (context?.list !== undefined && listKey) {
-        queryClient.setQueryData(listKey, context.list);
+      // Rollback optimistic updates for all lists
+      if (context?.lists) {
+        for (const [key, data] of context.lists.entries()) {
+          queryClient.setQueryData(key, data);
+        }
       }
 
       if (context?.item !== undefined && itemKey) {

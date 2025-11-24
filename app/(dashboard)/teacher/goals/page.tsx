@@ -8,12 +8,12 @@ import { GoalFormWithTemplates } from '@/components/goal/goal-form-with-template
 import { ClassroomGoalOverview } from '@/components/goal/classroom-goal-overview';
 import { AssignGoalToClass } from '@/components/goal/assign-goal-to-class';
 import { GoalAnalyticsChart } from '@/components/goal/goal-analytics-chart';
-import { useRole } from '@/lib/hooks/use-role';
+import { useActiveRole } from '@/lib/hooks/useActiveRole';
 import { trpc } from '@/lib/trpc/client';
 import { Plus, Users, Target, TrendingUp, Award } from 'lucide-react';
 
 export default function TeacherGoalsPage() {
-  const { roleId } = useRole();
+  const { roleId } = useActiveRole();
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [selectedTab, setSelectedTab] = useState('overview');

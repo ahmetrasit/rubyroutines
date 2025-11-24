@@ -12,8 +12,8 @@ import { useOptimisticMutation, generateTempId, isTempId } from './useOptimistic
 import type { UseTRPCMutationResult } from '@trpc/react-query/shared';
 
 interface OptimisticCreateOptions<TItem, TCreateInput> {
-  // Query key for the list to update
-  listKey: unknown[];
+  // Query key(s) for the list(s) to update - can be a single key or array of keys
+  listKey: unknown[] | unknown[][];
 
   // Transform create input to item shape for cache
   createItem: (input: TCreateInput, tempId: string) => TItem;
@@ -67,6 +67,9 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
     closeDialog,
   } = options;
 
+  // Normalize listKey to always be an array of keys
+  const listKeys = Array.isArray(listKey[0]) ? listKey as unknown[][] : [listKey as unknown[]];
+
   return useOptimisticMutation(mutation, {
     messages: {
       loading: messages.loading,
@@ -74,11 +77,13 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
       error: messages.error || `Failed to create ${entityName.toLowerCase()}`,
     },
 
-    invalidateKeys: [listKey, ...invalidateKeys],
+    invalidateKeys: [...listKeys, ...invalidateKeys],
 
     onMutate: async (variables: TCreateInput) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: listKey });
+      // Cancel any outgoing refetches for all list keys
+      for (const key of listKeys) {
+        await queryClient.cancelQueries({ queryKey: key });
+      }
 
       // Generate temporary ID
       const tempId = generateTempId(entityName.toLowerCase());
@@ -86,33 +91,43 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
       // Create optimistic item
       const optimisticItem = createItem(variables, tempId);
 
-      // Snapshot previous value
-      const previousData = queryClient.getQueryData<TItem[]>(listKey);
+      // Snapshot previous values for all keys
+      const previousDataMap = new Map<unknown[], TItem[]>();
+      for (const key of listKeys) {
+        const data = queryClient.getQueryData<TItem[]>(key);
+        if (data) {
+          previousDataMap.set(key, data);
+        }
+      }
 
-      // Optimistically update list
-      queryClient.setQueryData<TItem[]>(listKey, (old) => {
-        if (!old) return [optimisticItem];
-        return [...old, optimisticItem];
-      });
+      // Optimistically update all lists
+      for (const key of listKeys) {
+        queryClient.setQueryData<TItem[]>(key, (old) => {
+          if (!old) return [optimisticItem];
+          return [...old, optimisticItem];
+        });
+      }
 
       // Return context for rollback
-      return { previousData, tempId, optimisticItem };
+      return { previousDataMap, tempId, optimisticItem };
     },
 
     onSuccess: async (data: TItem, variables: TCreateInput, context: any) => {
       if (context?.tempId) {
-        // Replace temporary item with server response
-        queryClient.setQueryData<TItem[]>(listKey, (old) => {
-          if (!old) return [data];
+        // Replace temporary item with server response in all lists
+        for (const key of listKeys) {
+          queryClient.setQueryData<TItem[]>(key, (old) => {
+            if (!old) return [data];
 
-          return old.map((item) => {
-            const itemId = getId(item);
-            if (itemId === context.tempId) {
-              return replaceItem(item, data);
-            }
-            return item;
+            return old.map((item) => {
+              const itemId = getId(item);
+              if (itemId === context.tempId) {
+                return replaceItem(item, data);
+              }
+              return item;
+            });
           });
-        });
+        }
       }
 
       // Call user's onSuccess
@@ -127,9 +142,11 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
     },
 
     onError: async (error: Error, variables: TCreateInput, context: any) => {
-      // Rollback optimistic update
-      if (context?.previousData !== undefined) {
-        queryClient.setQueryData(listKey, context.previousData);
+      // Rollback optimistic updates for all keys
+      if (context?.previousDataMap) {
+        for (const [key, data] of context.previousDataMap.entries()) {
+          queryClient.setQueryData(key, data);
+        }
       }
 
       // Call user's onError
