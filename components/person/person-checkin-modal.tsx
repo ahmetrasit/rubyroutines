@@ -101,7 +101,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   const baseMutation = trpc.task.complete.useMutation();
   const completeMutation = useOptimisticCheckin(baseMutation, {
     personId,
-    personKey: ['person', 'getById', { id: personId }],
+    personKey: [['person', 'getById'], { input: { id: personId }, type: 'query' }],
     onSuccess: async () => {
       // Invalidate goal queries to update progress bars
       await utils.goal.list.invalidate();

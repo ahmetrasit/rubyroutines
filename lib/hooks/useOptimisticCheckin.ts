@@ -76,7 +76,7 @@ export function useOptimisticCheckin(
 
   const {
     personId,
-    personKey = ['person', 'getById', { id: personId }],
+    personKey = [['person', 'getById'], { input: { id: personId }, type: 'query' }],
     messages = {},
     onSuccess,
     onError,
@@ -96,10 +96,15 @@ export function useOptimisticCheckin(
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: personKey });
 
+      // Debug logging
+      console.log('🔍 [useOptimisticCheckin] Cache key being used:', personKey);
+
       // Get current person data
       const previousData = queryClient.getQueryData<any>(personKey);
+      console.log('🔍 [useOptimisticCheckin] Current cache data exists:', !!previousData);
 
       if (previousData) {
+        console.log('🎯 [useOptimisticCheckin] Applying optimistic update for task:', variables.taskId);
         // Create optimistic completion
         const tempCompletion: TaskCompletion = {
           id: generateTempId('completion'),
@@ -183,6 +188,7 @@ export function useOptimisticCheckin(
     },
 
     onSuccess: async (data: TaskCompletion, variables: CheckinInput) => {
+      console.log('✅ [useOptimisticCheckin] Mutation successful, updating with real data:', data.id);
       // Replace temp completion with real one
       queryClient.setQueryData(personKey, (old: any) => {
         if (!old) return old;
@@ -256,7 +262,7 @@ export function useOptimisticUndo(
 ) {
   const queryClient = useQueryClient();
   const { personId, messages = {} } = options;
-  const personKey = ['person', 'getById', { id: personId }];
+  const personKey = [['person', 'getById'], { input: { id: personId }, type: 'query' }];
 
   return useOptimisticMutation(mutation, {
     messages: {

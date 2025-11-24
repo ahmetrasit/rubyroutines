@@ -81,7 +81,7 @@ export function useOptimisticKioskCheckin(
   const {
     kioskCodeId,
     personId,
-    kioskTasksKey = ['kiosk', 'getPersonTasks', { kioskCodeId, personId }],
+    kioskTasksKey = [['kiosk', 'getPersonTasks'], { input: { kioskCodeId, personId }, type: 'query' }],
     messages = {},
     onSuccess,
     onError,
@@ -101,8 +101,12 @@ export function useOptimisticKioskCheckin(
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: kioskTasksKey });
 
+      // Debug logging
+      console.log('🔍 [useOptimisticKioskCheckin] Cache key being used:', kioskTasksKey);
+
       // Get current kiosk tasks data
       const previousData = queryClient.getQueryData<any>(kioskTasksKey);
+      console.log('🔍 [useOptimisticKioskCheckin] Current cache data exists:', !!previousData);
 
       if (previousData) {
         // Create optimistic completion
@@ -243,7 +247,7 @@ export function useOptimisticKioskUndo(
 ) {
   const queryClient = useQueryClient();
   const { kioskCodeId, personId, messages = {} } = options;
-  const kioskTasksKey = ['kiosk', 'getPersonTasks', { kioskCodeId, personId }];
+  const kioskTasksKey = [['kiosk', 'getPersonTasks'], { input: { kioskCodeId, personId }, type: 'query' }];
 
   return useOptimisticMutation(mutation, {
     messages: {
