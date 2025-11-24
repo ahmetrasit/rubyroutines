@@ -131,7 +131,7 @@ export default function KioskModePage() {
     { kioskCodeId: sessionData?.codeId!, personId: selectedPersonId! },
     {
       enabled: !!sessionData && !!selectedPersonId,
-      refetchInterval: false, // Disable auto refetch, will use optimized polling
+      refetchInterval: 10000, // Auto refetch every 10 seconds
     }
   );
 
