@@ -82,6 +82,26 @@ export default function KioskTasksPage() {
     ? getQueryKey(trpc.kiosk.getPersonTasks, { kioskCodeId: sessionData.codeId, personId }, 'query')
     : undefined;
 
+  // Debug: Log query key and inspect cache
+  useEffect(() => {
+    if (kioskTasksQueryKey) {
+      console.log('🔑 [Kiosk Page] Generated query key:', JSON.stringify(kioskTasksQueryKey));
+
+      // Inspect all kiosk-related queries in cache
+      const cache = utils.client.getQueryCache();
+      const allQueries = cache.getAll();
+      console.log('📦 [Kiosk Page] All cache queries:', allQueries.length);
+
+      allQueries.forEach(query => {
+        const keyStr = JSON.stringify(query.queryKey);
+        if (keyStr.includes('kiosk')) {
+          console.log('  Found kiosk query:', keyStr);
+          console.log('  Has data:', !!query.state.data);
+        }
+      });
+    }
+  }, [kioskTasksQueryKey, utils]);
+
   // Optimized polling: check for updates every 15 seconds, pause when page not visible
   useEffect(() => {
     if (!sessionData?.codeId || !personId || !isPageVisible) return;
@@ -133,8 +153,21 @@ export default function KioskTasksPage() {
   });
 
   const handleComplete = (taskId: string, value?: string) => {
+    console.log('🎯 [Kiosk Page] handleComplete called:', { taskId, value });
+    console.log('🎯 [Kiosk Page] mutation pending?', completeMutation.isPending);
+
     // Prevent double submissions during mutation
-    if (completeMutation.isPending) return;
+    if (completeMutation.isPending) {
+      console.log('⚠️ [Kiosk Page] Mutation already pending, skipping');
+      return;
+    }
+
+    console.log('🚀 [Kiosk Page] Calling mutation with:', {
+      kioskCodeId: sessionData!.codeId,
+      taskId,
+      personId: personId!,
+      value,
+    });
 
     completeMutation.mutate({
       kioskCodeId: sessionData!.codeId,
