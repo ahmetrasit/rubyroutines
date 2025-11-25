@@ -1,8 +1,8 @@
 import { TaskType } from '@/lib/types/prisma-enums';
 import { differenceInMinutes } from 'date-fns';
 
-// Admin-configurable undo window in minutes
-const UNDO_WINDOW_MINUTES = 5;
+// Admin-configurable undo window in minutes (10 seconds = 0.1667 minutes)
+const UNDO_WINDOW_MINUTES = 10 / 60;
 
 /**
  * Check if a completion can be undone based on the undo window

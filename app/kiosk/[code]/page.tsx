@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { SessionTimeout } from '@/components/kiosk/session-timeout';
 import { TaskColumn } from '@/components/kiosk/task-column';
 import { trpc } from '@/lib/trpc/client';
+import { getQueryKey } from '@trpc/react-query';
 import { useToast } from '@/components/ui/toast';
 import { Loader2, LogOut, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Progress } from '@/components/ui/progress';
 import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
+import { useOptimisticKioskCheckin, useOptimisticKioskUndo } from '@/lib/hooks/useOptimisticKioskCheckin';
 
 interface Task {
   id: string;
@@ -200,38 +202,32 @@ export default function KioskModePage() {
     return () => clearInterval(interval);
   }, [sessionData?.codeId, lastCheckedAt, utils, isPageVisible]);
 
-  const completeMutation = trpc.kiosk.completeTask.useMutation({
-    onSuccess: () => {
-      utils.kiosk.getPersonTasks.invalidate();
-      setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
+  // Get the actual tRPC query key for kiosk tasks
+  const kioskTasksQueryKey = sessionData?.codeId && selectedPersonId
+    ? getQueryKey(trpc.kiosk.getPersonTasks, { kioskCodeId: sessionData.codeId, personId: selectedPersonId }, 'query')
+    : undefined;
+
+  // Use optimistic mutations for instant UI feedback
+  const baseCompleteMutation = trpc.kiosk.completeTask.useMutation();
+  const completeMutation = useOptimisticKioskCheckin(baseCompleteMutation, {
+    kioskCodeId: sessionData?.codeId!,
+    personId: selectedPersonId!,
+    kioskTasksKey: kioskTasksQueryKey,
+    onSuccess: async () => {
+      await utils.goal.list.invalidate();
+      await utils.goal.getGoalsForTask.invalidate();
+      await utils.goal.getGoalsForRoutine.invalidate();
+      setLastCheckedAt(new Date());
       resetInactivityTimer();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
     },
   });
 
-  const undoMutation = trpc.kiosk.undoCompletion.useMutation({
-    onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Task completion undone',
-        variant: 'success',
-      });
-      utils.kiosk.getPersonTasks.invalidate();
-      setLastCheckedAt(new Date()); // Update timestamp to prevent redundant refetch
-      resetInactivityTimer();
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+  const baseUndoMutation = trpc.kiosk.undoCompletion.useMutation();
+  const undoMutation = useOptimisticKioskUndo(baseUndoMutation, {
+    kioskCodeId: sessionData?.codeId!,
+    personId: selectedPersonId!,
+    messages: {
+      success: 'Task completion undone',
     },
   });
 

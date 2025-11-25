@@ -101,13 +101,8 @@ export function useOptimisticKioskCheckin(
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: kioskTasksKey });
 
-      // Debug logging
-      console.log('🔍 [Kiosk] Cache key:', JSON.stringify(kioskTasksKey));
-
       // Get current kiosk tasks data
       const previousData = queryClient.getQueryData<any>(kioskTasksKey);
-      console.log('🔍 [Kiosk] Cache data found:', !!previousData);
-      console.log('🔍 [Kiosk] Cache data structure:', previousData);
 
       if (previousData) {
         // Create optimistic completion
