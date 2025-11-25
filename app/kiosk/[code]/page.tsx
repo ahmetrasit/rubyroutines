@@ -194,7 +194,14 @@ export default function KioskModePage() {
   let activePersons: Person[] = [];
   if (isIndividualCode) {
     // Individual code: only show the specific person
-    activePersons = rolePersons.filter((p: Person) => p.id === kioskData.personId && p.status === 'ACTIVE');
+    // Special case: if the person is an account owner, show error message
+    const individualPerson = rolePersons.find((p: Person) => p.id === kioskData.personId && p.status === 'ACTIVE');
+    if (individualPerson?.isAccountOwner) {
+      // This is a kiosk code for the account owner - invalid for kiosk use
+      activePersons = [];
+    } else if (individualPerson) {
+      activePersons = [individualPerson];
+    }
   } else if (groups.length > 0) {
     // Group code: use members from groups (classroom/family members)
     const allMembers = groups.flatMap((g: any) => g.members || []);
@@ -582,6 +589,19 @@ export default function KioskModePage() {
                   <LogOut className="h-5 w-5" aria-hidden="true" />
                 </Button>
               </div>
+              {activePersons.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="text-6xl mb-4">⚠️</div>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No Students or Kids Available</h3>
+                  <p className="text-gray-600 text-center max-w-md">
+                    This kiosk requires students or kids to be added to the account.
+                    Please ask your teacher or parent to add students/kids first.
+                  </p>
+                  <Button variant="outline" onClick={handleExit} size="lg" className="mt-6">
+                    Exit Kiosk Mode
+                  </Button>
+                </div>
+              ) : (
               <div className={`grid gap-3 ${selectedPersonId ? 'grid-cols-2' : 'grid-cols-4'} transition-all`}>
                 {activePersons.map((person: Person) => {
                   const { avatarColor, avatarEmoji } = getAvatarData(person.avatar);
@@ -639,6 +659,7 @@ export default function KioskModePage() {
                   );
                 })}
               </div>
+              )}
             </div>
           )}
 
@@ -667,6 +688,16 @@ export default function KioskModePage() {
                       <h2 className="text-2xl font-bold text-gray-900">{selectedPerson.name}</h2>
                     </div>
                   </div>
+                ) : activePersons.length === 0 ? (
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-3xl">
+                      ⚠️
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-500">No Students/Kids Available</h2>
+                      <p className="text-gray-500">Please add students or kids to use kiosk mode</p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-3xl">
@@ -674,7 +705,7 @@ export default function KioskModePage() {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-500">No person selected</h2>
-                      <p className="text-gray-500">No person available</p>
+                      <p className="text-gray-500">Select a person to continue</p>
                     </div>
                   </div>
                 )}
