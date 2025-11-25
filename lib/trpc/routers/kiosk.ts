@@ -9,12 +9,17 @@ import {
   validateKioskSession
 } from '@/lib/services/kiosk-code';
 import {
-  calculateEntryNumber,
-  isWithinEntryLimit,
-  calculateSummedValue,
-  validateProgressValue
-} from '@/lib/services/task-completion';
+  createKioskSession,
+  terminateSession,
+  terminateAllSessionsForCode,
+  getActiveSessionsForRole,
+  updateSessionActivity,
+  validateSession,
+  getActiveSessionCountForCode,
+  canCreateMoreSessions
+} from '@/lib/services/kiosk-session';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
+import { completeTaskCoordinated } from '@/lib/services/task-completion-coordinated';
 import { TRPCError } from '@trpc/server';
 import { kioskRateLimitedProcedure } from '../middleware/ratelimit';
 
@@ -48,7 +53,8 @@ export const kioskRouter = router({
       userName: z.string(),
       classroomName: z.string().optional(),
       wordCount: z.enum(['2', '3']).optional(),
-      expiresInHours: z.number().min(1).max(168).optional() // Max 1 week
+      expiresInMinutes: z.number().min(1).max(10080).optional(), // Max 1 week (10080 minutes)
+      sessionDurationDays: z.number().min(1).max(365).optional() // Max 1 year
     }))
     .mutation(async ({ ctx, input }) => {
       // Verify user owns this role
@@ -78,7 +84,8 @@ export const kioskRouter = router({
         userName: input.userName,
         classroomName: input.classroomName,
         wordCount: input.wordCount === '3' ? 3 : 2,
-        expiresInHours: input.expiresInHours
+        expiresInMinutes: input.expiresInMinutes,
+        sessionDurationDays: input.sessionDurationDays
       });
 
       return code;
@@ -363,132 +370,44 @@ export const kioskRouter = router({
           message: validation.error || 'Invalid kiosk session'
         });
       }
-      const task = await ctx.prisma.task.findUnique({
+
+      // Get task to calculate reset date
+      const task = await ctx.prisma.task.findUniqueOrThrow({
         where: { id: input.taskId },
         include: {
           routine: {
-            select: {
-              resetPeriod: true,
-              resetDay: true
-            }
-          },
-          completions: {
-            where: { personId: input.personId },
-            orderBy: { completedAt: 'desc' }
+            select: { resetPeriod: true, resetDay: true }
           }
         }
       });
-
-      if (!task) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Task not found'
-        });
-      }
-
-      // Validate value for PROGRESS tasks
-      if (task.type === 'PROGRESS') {
-        if (!input.value) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Progress value required'
-          });
-        }
-
-        const validation = validateProgressValue(input.value);
-        if (!validation.valid) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: validation.error || 'Invalid progress value'
-          });
-        }
-      }
-
-      // Get person to access roleId for timestamp update
-      const person = await ctx.prisma.person.findUnique({
-        where: { id: input.personId },
-        select: { roleId: true }
-      });
-
-      if (!person) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Person not found'
-        });
-      }
 
       // Calculate reset date for current period
       const resetDate = getResetPeriodStart(task.routine.resetPeriod, task.routine.resetDay);
 
-      // Calculate entry number for this completion
-      const entryNumber = calculateEntryNumber(task.completions, resetDate, task.type as any);
+      // Get session info for tracking
+      const session = await ctx.prisma.kioskSession.findFirst({
+        where: {
+          code: { id: input.kioskCodeId },
+          endedAt: null
+        },
+        select: { id: true, deviceId: true }
+      });
 
-      // Check entry limits
-      if (!isWithinEntryLimit(entryNumber, task.type as any)) {
-        const maxEntries = task.type === 'MULTIPLE_CHECKIN' ? 9 : 20;
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: `Maximum ${maxEntries} check-ins reached for this period`
-        });
-      }
+      // Use coordinated service to prevent race conditions
+      const result = await completeTaskCoordinated(ctx.prisma, {
+        taskId: input.taskId,
+        personId: input.personId,
+        value: input.value,
+        notes: input.notes,
+        resetDate,
+        deviceId: session?.deviceId,
+        sessionId: session?.id
+      });
 
-      // For SIMPLE tasks, check if already completed today to prevent race conditions
-      if (task.type === 'SIMPLE') {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const existingCompletion = await ctx.prisma.taskCompletion.findFirst({
-          where: {
-            taskId: input.taskId,
-            personId: input.personId,
-            completedAt: {
-              gte: today,
-              lt: tomorrow
-            }
-          }
-        });
-
-        if (existingCompletion) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Task already completed today'
-          });
-        }
-      }
-
-      // Calculate summed value for PROGRESS tasks
-      let summedValue: number | undefined = undefined;
-      if (task.type === 'PROGRESS' && input.value) {
-        summedValue = calculateSummedValue(task.completions, resetDate, input.value);
-      }
-
-      // Create completion and update role + person timestamps in a transaction
-      const now = new Date();
-      const [completion] = await ctx.prisma.$transaction([
-        ctx.prisma.taskCompletion.create({
-          data: {
-            taskId: input.taskId,
-            personId: input.personId,
-            completedAt: now,
-            value: input.value,
-            notes: input.notes,
-            entryNumber,
-            summedValue
-          }
-        }),
-        ctx.prisma.role.update({
-          where: { id: person.roleId },
-          data: { kioskLastUpdatedAt: now }
-        }),
-        ctx.prisma.person.update({
-          where: { id: input.personId },
-          data: { kioskLastUpdatedAt: now }
-        })
-      ]);
-
-      return completion;
+      return {
+        ...result.completion,
+        wasCached: result.wasCached
+      };
     }),
 
   /**
@@ -635,5 +554,176 @@ export const kioskRouter = router({
         hasUpdates,
         lastUpdatedAt: mostRecentUpdate
       };
+    }),
+
+  /**
+   * Create kiosk session when code is used (public)
+   */
+  createSession: publicProcedure
+    .input(z.object({
+      codeId: z.string().cuid(),
+      deviceId: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Validate code first
+      const code = await ctx.prisma.code.findUnique({
+        where: { id: input.codeId },
+        select: {
+          id: true,
+          status: true,
+          expiresAt: true,
+          sessionDurationDays: true
+        }
+      });
+
+      if (!code || code.status !== 'ACTIVE') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Invalid or inactive code'
+        });
+      }
+
+      if (code.expiresAt < new Date()) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Code has expired'
+        });
+      }
+
+      // Create session
+      const session = await createKioskSession({
+        codeId: input.codeId,
+        deviceId: input.deviceId,
+        ipAddress: ctx.ipAddress,
+        userAgent: ctx.userAgent,
+        durationDays: code.sessionDurationDays
+      });
+
+      return session;
+    }),
+
+  /**
+   * Update session activity (heartbeat) (public)
+   */
+  updateSessionActivity: publicProcedure
+    .input(z.object({
+      sessionId: z.string().cuid()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await updateSessionActivity(input.sessionId);
+      return { success: true };
+    }),
+
+  /**
+   * Validate session (public)
+   */
+  validateSession: publicProcedure
+    .input(z.object({
+      sessionId: z.string().cuid()
+    }))
+    .query(async ({ ctx, input }) => {
+      const result = await validateSession(input.sessionId);
+
+      if (!result.valid) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: result.error || 'Invalid session'
+        });
+      }
+
+      return result.session;
+    }),
+
+  /**
+   * Get active sessions for a role (protected)
+   */
+  getActiveSessions: authorizedProcedure
+    .input(z.object({
+      roleId: z.string().uuid()
+    }))
+    .query(async ({ ctx, input }) => {
+      // Verify user owns this role
+      const role = await ctx.prisma.role.findUnique({
+        where: { id: input.roleId }
+      });
+
+      if (!role || role.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      const sessions = await getActiveSessionsForRole(input.roleId);
+      return sessions;
+    }),
+
+  /**
+   * Get active session count for a code (protected)
+   */
+  getSessionCount: authorizedProcedure
+    .input(z.object({
+      codeId: z.string().cuid()
+    }))
+    .query(async ({ ctx, input }) => {
+      // Verify user owns this code's role
+      const code = await ctx.prisma.code.findUnique({
+        where: { id: input.codeId },
+        include: { role: true }
+      });
+
+      if (!code || code.role.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      const count = await getActiveSessionCountForCode(input.codeId);
+      return { count };
+    }),
+
+  /**
+   * Terminate a specific session (protected)
+   */
+  terminateSession: authorizedProcedure
+    .input(z.object({
+      sessionId: z.string().cuid(),
+      reason: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify user owns the session's code
+      const session = await ctx.prisma.kioskSession.findUnique({
+        where: { id: input.sessionId },
+        include: {
+          code: {
+            include: { role: true }
+          }
+        }
+      });
+
+      if (!session || session.code.role.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      await terminateSession(input.sessionId, ctx.user.id, input.reason);
+      return { success: true };
+    }),
+
+  /**
+   * Terminate all sessions for a code (protected)
+   */
+  terminateAllSessions: authorizedProcedure
+    .input(z.object({
+      codeId: z.string().cuid(),
+      reason: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify user owns this code's role
+      const code = await ctx.prisma.code.findUnique({
+        where: { id: input.codeId },
+        include: { role: true }
+      });
+
+      if (!code || code.role.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      const count = await terminateAllSessionsForCode(input.codeId, ctx.user.id, input.reason);
+      return { count };
     })
 });

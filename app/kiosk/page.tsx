@@ -16,14 +16,22 @@ export default function KioskPage() {
     setIsLoading(true);
 
     try {
+      // Validate the code first
       const data = await utils.kiosk.validateCode.fetch({ code });
       if (data) {
-        // Store session in localStorage
+        // Create a kiosk session in the database
+        const session = await utils.kiosk.createSession.fetch({
+          code,
+          deviceId: `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        });
+
+        // Store session info in localStorage
         const sessionData = {
           code,
           codeId: data.codeId,
           roleId: data.roleId,
-          expiresAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(), // 3 hours from now
+          sessionId: session.id,
+          expiresAt: session.expiresAt
         };
         localStorage.setItem('kiosk_session', JSON.stringify(sessionData));
 

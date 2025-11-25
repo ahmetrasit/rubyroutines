@@ -16,6 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { useOptimisticKioskCheckin, useOptimisticKioskUndo } from '@/lib/hooks/useOptimisticKioskCheckin';
+import { useKioskRealtime } from '@/lib/hooks/useKioskRealtime';
 
 interface Task {
   id: string;
@@ -57,6 +58,23 @@ export default function KioskModePage() {
   const utils = trpc.useUtils();
   const isPageVisible = usePageVisibility();
 
+  // Enable realtime updates for instant cross-device sync
+  useKioskRealtime({
+    personId: selectedPersonId,
+    sessionId: sessionData?.sessionId,
+    onSessionTerminated: () => {
+      if (!sessionTerminatedRef.current) {
+        sessionTerminatedRef.current = true;
+        toast({
+          title: 'Session Ended',
+          description: 'This kiosk session has been terminated remotely.',
+          variant: 'destructive',
+        });
+      }
+    },
+    enabled: !!selectedPersonId && !!sessionData?.sessionId,
+  });
+
   // State for collapsible sections (not used in Warm Earth kiosk)
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [simpleOpen, setSimpleOpen] = useState(false);
@@ -75,6 +93,16 @@ export default function KioskModePage() {
   // Refs for measuring container heights
   const checklistContainerRef = useRef<HTMLDivElement>(null);
   const recordProgressContainerRef = useRef<HTMLDivElement>(null);
+
+  // Track if session termination has been handled to prevent duplicate toasts
+  const sessionTerminatedRef = useRef(false);
+
+  // Reset session terminated flag when new session starts
+  useEffect(() => {
+    if (sessionData?.sessionId) {
+      sessionTerminatedRef.current = false;
+    }
+  }, [sessionData?.sessionId]);
 
   useEffect(() => {
     // Verify session from localStorage
@@ -104,6 +132,49 @@ export default function KioskModePage() {
       router.push('/kiosk');
     }
   }, [code, router]);
+
+  // Validate session with server (check if remotely terminated)
+  // Realtime handles instant updates, this is just a fallback
+  const { data: sessionValidation, error: sessionError } = trpc.kiosk.validateSession.useQuery(
+    { sessionId: sessionData?.sessionId || '' },
+    {
+      enabled: !!sessionData?.sessionId,
+      refetchInterval: 60000, // Fallback check every 60 seconds (realtime handles instant updates)
+    }
+  );
+
+  // Handle remote session termination
+  useEffect(() => {
+    if (sessionError || (sessionValidation && !sessionValidation.isValid)) {
+      if (!sessionTerminatedRef.current) {
+        sessionTerminatedRef.current = true;
+        toast({
+          title: 'Session Ended',
+          description: 'This kiosk session has been terminated remotely.',
+          variant: 'destructive',
+        });
+      }
+      localStorage.removeItem('kiosk_session');
+      router.push('/kiosk');
+    }
+  }, [sessionValidation, sessionError, router, toast]);
+
+  // Heartbeat: Update session activity every 30 seconds
+  const updateActivityMutation = trpc.kiosk.updateSessionActivity.useMutation();
+
+  useEffect(() => {
+    if (!sessionData?.sessionId) return;
+
+    // Initial heartbeat
+    updateActivityMutation.mutate({ sessionId: sessionData.sessionId });
+
+    // Set up interval for heartbeat
+    const heartbeatInterval = setInterval(() => {
+      updateActivityMutation.mutate({ sessionId: sessionData.sessionId });
+    }, 30000); // Every 30 seconds
+
+    return () => clearInterval(heartbeatInterval);
+  }, [sessionData?.sessionId]);
 
   const { data: kioskData, isLoading: kioskLoading } = trpc.kiosk.validateCode.useQuery(
     { code },
@@ -141,7 +212,7 @@ export default function KioskModePage() {
     { kioskCodeId: sessionData?.codeId!, personId: selectedPersonId! },
     {
       enabled: !!sessionData && !!selectedPersonId,
-      refetchInterval: 10000, // Auto refetch every 10 seconds
+      refetchInterval: 60000, // Fallback check every 60 seconds (realtime handles instant updates)
     }
   );
 
@@ -213,12 +284,36 @@ export default function KioskModePage() {
     kioskCodeId: sessionData?.codeId!,
     personId: selectedPersonId!,
     kioskTasksKey: kioskTasksQueryKey,
-    onSuccess: async () => {
+    onSuccess: async (data: any) => {
+      // Skip toast for cached completions - UI already shows completion state
+      // This prevents redundant notifications when user double-clicks
+
       await utils.goal.list.invalidate();
       await utils.goal.getGoalsForTask.invalidate();
       await utils.goal.getGoalsForRoutine.invalidate();
       setLastCheckedAt(new Date());
       resetInactivityTimer();
+    },
+    onError: async (error: any) => {
+      // Handle CONFLICT errors - use neutral tone for better UX
+      if (error.data?.code === 'CONFLICT') {
+        // Distinguish between duplicate requests and true conflicts
+        const isLockTimeout = error.message?.includes('another device');
+        toast({
+          title: isLockTimeout ? 'Task unavailable' : 'Already completed',
+          description: isLockTimeout
+            ? 'Another device is completing this task'
+            : 'This task has been completed',
+          variant: 'default', // Use default variant, not destructive
+        });
+      } else if (error.data?.code === 'BAD_REQUEST') {
+        // Handle max entries and validation errors
+        toast({
+          title: 'Unable to complete',
+          description: error.message || 'Maximum entries reached for this period',
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -892,7 +987,7 @@ export default function KioskModePage() {
                                         <input
                                           type="number"
                                           min="1"
-                                          max="99"
+                                          max="999"
                                           value={progressValues[task.id] || ''}
                                           onChange={(e) => setProgressValues({ ...progressValues, [task.id]: e.target.value })}
                                           placeholder="0"
@@ -900,7 +995,7 @@ export default function KioskModePage() {
                                           style={{
                                             border: '2px solid #D7CCC8',
                                             color: '#37474F',
-                                            width: '70px',
+                                            width: '90px',
                                             minHeight: '48px'
                                           }}
                                         />

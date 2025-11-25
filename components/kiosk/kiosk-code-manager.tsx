@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
+import { SessionIndicator } from './session-indicator';
 
 interface KioskCodeManagerProps {
   roleId: string;
@@ -25,6 +26,21 @@ export function KioskCodeManager({ roleId, userName, classroomId, classroomName 
     {
       enabled: !!roleId && roleId.length > 0,
       retry: false,
+    }
+  );
+
+  // Filter codes to get only family/classroom codes (not individual person codes)
+  const currentCode = codes?.find(c =>
+    c.personId === null &&
+    (classroomId ? c.groupId === classroomId : c.groupId === null)
+  );
+
+  // Get session count for this code
+  const { data: sessionCount } = trpc.kiosk.getSessionCount.useQuery(
+    { codeId: currentCode?.id || '' },
+    {
+      enabled: !!currentCode?.id,
+      refetchInterval: 10000, // Refresh every 10 seconds
     }
   );
 
@@ -83,7 +99,8 @@ export function KioskCodeManager({ roleId, userName, classroomId, classroomName 
           userName,
           classroomName,
           wordCount: '3',
-          expiresInHours: 168
+          expiresInMinutes: 10,
+          sessionDurationDays: 90
         });
       }
     }
@@ -95,14 +112,15 @@ export function KioskCodeManager({ roleId, userName, classroomId, classroomName 
       if (currentCode) {
         revokeMutation.mutate({ codeId: currentCode.id });
       }
-      // Generate new code with 1 week expiration (max allowed)
+      // Generate new code with 10-minute expiration
       generateMutation.mutate({
         roleId,
         groupId: classroomId, // Pass classroomId for classroom-specific codes
         userName,
         classroomName,
         wordCount: '3',
-        expiresInHours: 168
+        expiresInMinutes: 10,
+        sessionDurationDays: 90
       });
     }
   };
@@ -112,13 +130,6 @@ export function KioskCodeManager({ roleId, userName, classroomId, classroomName 
       await refetch();
     },
   });
-
-  // Filter codes to get only family/classroom codes (not individual person codes)
-  // Family codes have personId === null, classroom codes have groupId === classroomId
-  const currentCode = codes?.find(c =>
-    c.personId === null &&
-    (classroomId ? c.groupId === classroomId : c.groupId === null)
-  );
 
   if (!roleId || roleId.length === 0) {
     return <div className="text-center py-4 text-gray-500">Loading role...</div>;
@@ -140,7 +151,10 @@ export function KioskCodeManager({ roleId, userName, classroomId, classroomName 
     <div className="py-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          <div className="text-sm font-medium text-gray-700 mb-2">Current Code</div>
+          <div className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+            Current Code
+            <SessionIndicator count={sessionCount?.count || 0} />
+          </div>
           <div className="font-mono text-2xl font-bold text-gray-900">
             {currentCode ? (isRevealed ? currentCode.code : '••••••') : 'Generating...'}
           </div>
@@ -178,7 +192,7 @@ export function KioskCodeManager({ roleId, userName, classroomId, classroomName 
             ) : (
               <>
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Generate New
+                Generate Code and Initiate Session
               </>
             )}
           </Button>

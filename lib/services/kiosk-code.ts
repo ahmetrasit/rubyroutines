@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { getRandomSafeWords } from './safe-words';
-import { addHours } from 'date-fns';
+import { addHours, addMinutes } from 'date-fns';
 
 export interface GenerateCodeOptions {
   roleId: string;
@@ -9,7 +9,8 @@ export interface GenerateCodeOptions {
   userName: string; // User's first name
   classroomName?: string; // Optional classroom name for teacher mode (for code generation)
   wordCount?: 2 | 3; // 2 words = ~4M combinations, 3 words = ~8B combinations
-  expiresInHours?: number; // Default 24 hours
+  expiresInMinutes?: number; // Default 10 minutes for code expiration
+  sessionDurationDays?: number; // Default 90 days for session duration
 }
 
 export interface KioskCode {
@@ -35,7 +36,7 @@ export interface KioskCode {
 export async function generateKioskCode(
   options: GenerateCodeOptions
 ): Promise<KioskCode> {
-  const { roleId, groupId, personId, userName, classroomName, wordCount = 2, expiresInHours = 24 } = options;
+  const { roleId, groupId, personId, userName, classroomName, wordCount = 2, expiresInMinutes = 10, sessionDurationDays = 90 } = options;
 
   // Verify role exists and user has permission
   const role = await prisma.role.findUnique({
@@ -74,8 +75,8 @@ export async function generateKioskCode(
     });
 
     if (!existing) {
-      // Create code
-      const expiresAt = addHours(new Date(), expiresInHours);
+      // Create code with 10-minute expiration (for code entry)
+      const expiresAt = addMinutes(new Date(), expiresInMinutes);
 
       const kioskCode = await prisma.code.create({
         data: {
@@ -85,6 +86,7 @@ export async function generateKioskCode(
           personId, // Store personId if provided (for individual codes)
           type: 'KIOSK',
           expiresAt,
+          sessionDurationDays, // Store session duration (default 90 days)
           status: 'ACTIVE'
         }
       });

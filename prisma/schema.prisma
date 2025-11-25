@@ -301,6 +301,7 @@ model Task {
   color                   String?      // Hex color code for task styling
   status                  EntityStatus @default(ACTIVE)
   archivedAt              DateTime?
+  version                 Int          @default(0) // For optimistic locking
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
 
@@ -318,6 +319,7 @@ model Task {
   @@index([status])
   @@index([routineId, status]) // Composite index for active tasks in routines
   @@index([routineId, order]) // Composite index for ordered task retrieval
+  @@index([id, version]) // For optimistic locking queries
   @@map("tasks")
 }
 
@@ -328,24 +330,34 @@ enum TaskType {
 }
 
 model TaskCompletion {
-  id          String   @id @default(cuid())
-  taskId      String
-  personId    String
-  completedAt DateTime @default(now())
-  value       String?  // For PROGRESS type - stores integer as string
-  notes       String?
-  entryNumber Int      @default(1) // Sequential number within period (1-9 for MULTI, 1-99 for PROGRESS)
-  summedValue Float?   // Cumulative sum for PROGRESS type within period
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  taskId         String
+  personId       String
+  completedAt    DateTime @default(now())
+  value          String?  // For PROGRESS type - stores integer as string
+  notes          String?
+  entryNumber    Int      @default(1) // Sequential number within period (1-9 for MULTI, 1-20 for PROGRESS)
+  summedValue    Float?   // Cumulative sum for PROGRESS type within period
+
+  // Coordination fields
+  idempotencyKey String?  @unique // Prevent duplicate submissions
+  deviceId       String?  // Track which device created this
+  sessionId      String?  // Link to KioskSession
+  version        Int      @default(1) // Completion version
+
+  createdAt      DateTime @default(now())
 
   // Relations
-  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  task    Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  person  Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
+  session KioskSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 
   @@index([taskId])
   @@index([personId])
   @@index([completedAt])
   @@index([taskId, personId, completedAt]) // Composite index for period queries
+  @@index([idempotencyKey])
+  @@index([sessionId])
   @@map("task_completions")
 }
 
@@ -583,21 +595,23 @@ model VisibilityOverride {
 // ============================================================================
 
 model Code {
-  id         String     @id @default(cuid())
-  code       String     @unique
-  roleId     String
-  groupId    String?    // Optional: links kiosk code to specific classroom/group
-  personId   String?    // Optional: links kiosk code to specific person (individual code)
-  type       CodeType   @default(KIOSK)
-  expiresAt  DateTime
-  usedAt     DateTime?
-  status     CodeStatus @default(ACTIVE)
-  createdAt  DateTime   @default(now())
+  id                  String         @id @default(cuid())
+  code                String         @unique
+  roleId              String
+  groupId             String?        // Optional: links kiosk code to specific classroom/group
+  personId            String?        // Optional: links kiosk code to specific person (individual code)
+  type                CodeType       @default(KIOSK)
+  expiresAt           DateTime
+  usedAt              DateTime?
+  status              CodeStatus     @default(ACTIVE)
+  sessionDurationDays Int            @default(90) // Default session duration in days
+  createdAt           DateTime       @default(now())
 
   // Relations
-  role   Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  group  Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  person Person? @relation(fields: [personId], references: [id], onDelete: Cascade)
+  role     Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  group    Group?         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  person   Person?        @relation(fields: [personId], references: [id], onDelete: Cascade)
+  sessions KioskSession[]
 
   @@index([code])
   @@index([roleId])
@@ -620,6 +634,33 @@ enum CodeStatus {
   USED
   EXPIRED
   REVOKED
+}
+
+model KioskSession {
+  id                String    @id @default(cuid())
+  codeId            String
+  deviceId          String    // Unique device identifier
+  startedAt         DateTime  @default(now())
+  lastActiveAt      DateTime  @default(now())
+  expiresAt         DateTime
+  endedAt           DateTime?
+  ipAddress         String?
+  userAgent         String?
+  terminatedBy      String?   // User ID who terminated the session
+  terminatedAt      DateTime?
+  terminationReason String?
+
+  // Relations
+  code              Code             @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  completions       TaskCompletion[] // Track completions per session
+
+  @@index([codeId])
+  @@index([deviceId])
+  @@index([endedAt])
+  @@index([expiresAt])
+  @@index([ipAddress])
+  @@index([codeId, endedAt]) // Composite index for active sessions per code
+  @@map("kiosk_sessions")
 }
 
 model ConnectionCode {

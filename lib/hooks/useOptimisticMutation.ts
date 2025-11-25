@@ -74,7 +74,7 @@ export function useOptimisticMutation<
 
     try {
       // Show loading toast if provided
-      const loadingToastId = messages.loading
+      const loadingToast = messages.loading
         ? toast({
             title: 'Loading',
             description: messages.loading,
@@ -86,8 +86,8 @@ export function useOptimisticMutation<
         const result = await mutation.mutateAsync(variables);
 
         // Dismiss loading toast
-        if (loadingToastId) {
-          toast.dismiss(loadingToastId);
+        if (loadingToast) {
+          loadingToast.dismiss();
         }
 
         // Show success toast
@@ -127,8 +127,8 @@ export function useOptimisticMutation<
       const result = await mutation.mutateAsync(variables);
 
       // 4. Dismiss loading toast
-      if (loadingToastId) {
-        toast.dismiss(loadingToastId);
+      if (loadingToast) {
+        loadingToast.dismiss();
       }
 
       // 5. Show success toast

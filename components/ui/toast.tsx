@@ -11,7 +11,7 @@ interface Toast {
 
 interface ToasterContextValue {
   toasts: Toast[]
-  toast: (props: Omit<Toast, 'id'>) => void
+  toast: (props: Omit<Toast, 'id'>) => { id: string; dismiss: () => void }
   dismiss: (id: string) => void
 }
 
@@ -19,19 +19,55 @@ const ToasterContext = React.createContext<ToasterContextValue | null>(null)
 
 export function ToasterProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<Toast[]>([])
+  const timeoutsRef = React.useRef<Map<string, NodeJS.Timeout>>(new Map())
 
   const toast = React.useCallback((props: Omit<Toast, 'id'>) => {
     const id = Math.random().toString(36).substring(7)
     setToasts((prev) => [...prev, { ...props, id }])
 
-    // Auto dismiss after 1 second
-    setTimeout(() => {
+    // Auto dismiss with variant-specific duration
+    const duration = props.variant === 'destructive' ? 4000 : props.variant === 'success' ? 2000 : 3000
+    const timeoutId = setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
-    }, 1000)
+      timeoutsRef.current.delete(id)
+    }, duration)
+
+    // Store timeout reference for cleanup
+    timeoutsRef.current.set(id, timeoutId)
+
+    // Return API for programmatic control
+    return {
+      id,
+      dismiss: () => {
+        const timeoutId = timeoutsRef.current.get(id)
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutsRef.current.delete(id)
+        }
+        setToasts((prev) => prev.filter((t) => t.id !== id))
+      }
+    }
   }, [])
 
   const dismiss = React.useCallback((id: string) => {
+    // Clear the timeout to prevent memory leak
+    const timeoutId = timeoutsRef.current.get(id)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+      timeoutsRef.current.delete(id)
+    }
+
     setToasts((prev) => prev.filter((t) => t.id !== id))
+  }, [])
+
+  // Cleanup all pending timeouts on unmount
+  React.useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach((timeoutId) => {
+        clearTimeout(timeoutId)
+      })
+      timeoutsRef.current.clear()
+    }
   }, [])
 
   return (
@@ -54,8 +90,25 @@ function Toaster() {
   const { toasts, dismiss } = useToast()
 
   return (
-    <div className="fixed bottom-0 right-0 z-50 flex max-h-screen w-full flex-col-reverse gap-2 p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]">
-      {toasts.map((toast) => (
+    <>
+      {/* Screen reader announcements */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {toasts.map((toast) => (
+          <div key={`sr-${toast.id}`}>
+            {toast.title && <span>{toast.title}. </span>}
+            {toast.description && <span>{toast.description}</span>}
+          </div>
+        ))}
+      </div>
+
+      {/* Visual toasts */}
+      <div className="fixed bottom-0 right-0 z-50 flex max-h-screen w-full flex-col-reverse gap-2 p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]">
+        {toasts.map((toast) => (
         <div
           key={toast.id}
           className={`group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all ${
@@ -95,6 +148,7 @@ function Toaster() {
           </button>
         </div>
       ))}
-    </div>
+      </div>
+    </>
   )
 }

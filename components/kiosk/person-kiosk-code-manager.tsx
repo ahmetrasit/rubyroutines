@@ -6,6 +6,7 @@ import { Eye, EyeOff, RefreshCw, ChevronDown } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { SessionIndicator } from './session-indicator';
 
 interface PersonKioskCodeManagerProps {
   roleId: string;
@@ -26,6 +27,18 @@ export function PersonKioskCodeManager({ roleId, personId, personName }: PersonK
     {
       enabled: !!roleId && roleId.length > 0,
       retry: false,
+    }
+  );
+
+  // Filter codes to get only this person's individual code
+  const currentCode = codes?.find(c => c.personId === personId);
+
+  // Get session count for this code
+  const { data: sessionCount } = trpc.kiosk.getSessionCount.useQuery(
+    { codeId: currentCode?.id || '' },
+    {
+      enabled: !!currentCode?.id,
+      refetchInterval: 10000, // Refresh every 10 seconds
     }
   );
 
@@ -79,7 +92,8 @@ export function PersonKioskCodeManager({ roleId, personId, personName }: PersonK
         personId, // Pass personId for individual code
         userName: personName,
         wordCount: '3',
-        expiresInHours: 168
+        expiresInMinutes: 10,
+        sessionDurationDays: 90
       });
     }
   }, [isLoading, error, roleId, personId, codes, generateMutation.isPending, personName]);
@@ -90,13 +104,14 @@ export function PersonKioskCodeManager({ roleId, personId, personName }: PersonK
       if (currentCode) {
         revokeMutation.mutate({ codeId: currentCode.id });
       }
-      // Generate new code with 1 week expiration (max allowed)
+      // Generate new code with 10-minute expiration
       generateMutation.mutate({
         roleId,
         personId, // Pass personId for individual code
         userName: personName,
         wordCount: '3',
-        expiresInHours: 168
+        expiresInMinutes: 10,
+        sessionDurationDays: 90
       });
     }
   };
@@ -106,9 +121,6 @@ export function PersonKioskCodeManager({ roleId, personId, personName }: PersonK
       await refetch();
     },
   });
-
-  // Filter codes to get only this person's individual code
-  const currentCode = codes?.find(c => c.personId === personId);
 
   if (!roleId || roleId.length === 0 || !personId || personId.length === 0) {
     return null;
@@ -134,7 +146,10 @@ export function PersonKioskCodeManager({ roleId, personId, personName }: PersonK
           size="sm"
           className="w-full flex items-center justify-between py-3 px-0 hover:bg-transparent"
         >
-          <span className="text-xs font-medium text-gray-600">Individual Kiosk Code</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-600">Individual Kiosk Code</span>
+            <SessionIndicator count={sessionCount?.count || 0} />
+          </div>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
@@ -181,7 +196,7 @@ export function PersonKioskCodeManager({ roleId, personId, personName }: PersonK
               ) : (
                 <>
                   <RefreshCw className="h-3 w-3 mr-1" />
-                  New
+                  Generate Code and Initiate Session
                 </>
               )}
             </Button>
