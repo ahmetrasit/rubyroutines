@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { TaskList } from '@/components/kiosk/task-list';
 import { SessionTimeout } from '@/components/kiosk/session-timeout';
 import { trpc } from '@/lib/trpc/client';
+import { getQueryKey } from '@trpc/react-query';
 import { useToast } from '@/components/ui/toast';
 import { Loader2 } from 'lucide-react';
 import { usePageVisibility } from '@/hooks/use-page-visibility';
@@ -76,6 +77,11 @@ export default function KioskTasksPage() {
 
   const tasks = personTasksData?.tasks || [];
 
+  // Get the actual tRPC query key for kiosk tasks
+  const kioskTasksQueryKey = sessionData?.codeId && personId
+    ? getQueryKey(trpc.kiosk.getPersonTasks, { kioskCodeId: sessionData.codeId, personId }, 'query')
+    : undefined;
+
   // Optimized polling: check for updates every 15 seconds, pause when page not visible
   useEffect(() => {
     if (!sessionData?.codeId || !personId || !isPageVisible) return;
@@ -104,6 +110,7 @@ export default function KioskTasksPage() {
   const completeMutation = useOptimisticKioskCheckin(baseCompleteMutation, {
     kioskCodeId: sessionData?.codeId!,
     personId: personId!,
+    kioskTasksKey: kioskTasksQueryKey,
     onSuccess: async () => {
       // Invalidate goal queries for real-time progress updates
       await utils.goal.list.invalidate();
