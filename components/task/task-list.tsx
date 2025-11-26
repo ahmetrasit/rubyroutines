@@ -7,6 +7,7 @@ import { TaskForm } from './task-form';
 import { useToast } from '@/components/ui/toast';
 import { Plus } from 'lucide-react';
 import { getTierLimit, ComponentTierLimits } from '@/lib/services/tier-limits';
+import { useDashboardRealtime } from '@/lib/hooks/useDashboardRealtime';
 
 interface TaskListProps {
   routineId: string;
@@ -18,6 +19,12 @@ export const TaskList = memo(function TaskList({ routineId, personId = '', effec
   const [showForm, setShowForm] = useState(false);
   const { toast } = useToast();
   const utils = trpc.useUtils();
+
+  // Enable realtime updates for this person's task completions
+  useDashboardRealtime({
+    personIds: personId ? [personId] : [],
+    enabled: !!personId
+  });
 
   const { data: tasks, isLoading } = trpc.task.list.useQuery(
     {

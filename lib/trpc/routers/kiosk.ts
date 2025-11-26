@@ -631,7 +631,10 @@ export const kioskRouter = router({
         });
       }
 
-      return result.session;
+      return {
+        isValid: true,
+        session: result.session
+      };
     }),
 
   /**

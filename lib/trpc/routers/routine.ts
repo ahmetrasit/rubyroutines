@@ -169,16 +169,24 @@ export const routineRouter = router({
     // Verify routine ownership
     await verifyRoutineOwnership(ctx.user.id, id, ctx.prisma);
 
-    // Check if this is the "Daily Routine"
+    // Check if this is a protected routine
     const existingRoutine = await ctx.prisma.routine.findUnique({
       where: { id },
+      select: { isProtected: true, name: true },
     });
 
-    if (existingRoutine?.name?.includes('Daily Routine') && data.name && !data.name.includes('Daily Routine')) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Cannot rename the Daily Routine',
-      });
+    if (existingRoutine?.isProtected) {
+      // Protected routines can only have color and description changed
+      const allowedFields = ['color', 'description'];
+      const attemptedFields = Object.keys(data);
+      const disallowedFields = attemptedFields.filter(field => !allowedFields.includes(field));
+
+      if (disallowedFields.length > 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: `Cannot modify protected routine "${existingRoutine.name}". Only color and description can be changed.`,
+        });
+      }
     }
 
     const routine = await ctx.prisma.routine.update({
@@ -193,15 +201,16 @@ export const routineRouter = router({
     // Verify routine ownership
     await verifyRoutineOwnership(ctx.user.id, input.id, ctx.prisma);
 
-    // Check if this is the "Daily Routine"
+    // Check if this is a protected routine
     const existingRoutine = await ctx.prisma.routine.findUnique({
       where: { id: input.id },
+      select: { isProtected: true, name: true },
     });
 
-    if (existingRoutine?.name?.includes('Daily Routine')) {
+    if (existingRoutine?.isProtected) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
-        message: 'Cannot delete the Daily Routine',
+        message: `Cannot delete protected routine "${existingRoutine.name}". This routine is required for all persons.`,
       });
     }
 

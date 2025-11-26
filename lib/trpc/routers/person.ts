@@ -395,6 +395,7 @@ export const personRouter = router({
           description: 'Default routine for daily tasks',
           resetPeriod: 'DAILY',
           color: '#3B82F6',
+          isProtected: true, // Cannot be deleted or renamed
           status: EntityStatus.ACTIVE,
           assignments: {
             create: {

@@ -85,10 +85,10 @@ async function completeSimpleTaskAtomic(
       // Check for existing completion in period using SELECT FOR UPDATE NOWAIT
       // NOWAIT fails immediately if row is locked, providing better UX
       const existing = await tx.$queryRaw<Array<{ id: string }>>`
-        SELECT id FROM task_completions
-        WHERE task_id = ${input.taskId}
-          AND person_id = ${input.personId}
-          AND completed_at >= ${input.resetDate}
+        SELECT id FROM "task_completions"
+        WHERE "taskId" = ${input.taskId}
+          AND "personId" = ${input.personId}
+          AND "completedAt" >= ${input.resetDate}
         FOR UPDATE NOWAIT
         LIMIT 1
       `;
@@ -165,17 +165,18 @@ async function completeMultipleCheckinTaskAtomic(
 ) {
   try {
     return await prisma.$transaction(async (tx) => {
-      // Lock and count completions with NOWAIT for immediate feedback
-      const result = await tx.$queryRaw<Array<{ count: bigint }>>`
-        SELECT COUNT(*) as count
-        FROM task_completions
-        WHERE task_id = ${input.taskId}
-          AND person_id = ${input.personId}
-          AND completed_at >= ${input.resetDate}
+      // Lock all matching rows with NOWAIT for immediate feedback
+      // Then count them in application code (can't use COUNT with FOR UPDATE)
+      const existingCompletions = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id
+        FROM "task_completions"
+        WHERE "taskId" = ${input.taskId}
+          AND "personId" = ${input.personId}
+          AND "completedAt" >= ${input.resetDate}
         FOR UPDATE NOWAIT
       `;
 
-    const count = Number(result[0].count);
+    const count = existingCompletions.length;
 
     if (count >= 9) {
       throw new TRPCError({
@@ -265,23 +266,25 @@ async function completeProgressTaskAtomic(
 
   try {
     return await prisma.$transaction(async (tx) => {
-      // Lock and aggregate with NOWAIT for immediate feedback
-      const result = await tx.$queryRaw<Array<{
-        count: bigint;
-        total: number;
+      // Lock all matching rows with NOWAIT for immediate feedback
+      // Then count/sum in application code (can't use aggregates with FOR UPDATE)
+      const existingCompletions = await tx.$queryRaw<Array<{
+        id: string;
+        value: string | null;
       }>>`
-        SELECT
-          COUNT(*) as count,
-          COALESCE(SUM(CAST(value AS DECIMAL)), 0) as total
-        FROM task_completions
-        WHERE task_id = ${input.taskId}
-          AND person_id = ${input.personId}
-          AND completed_at >= ${input.resetDate}
+        SELECT id, value
+        FROM "task_completions"
+        WHERE "taskId" = ${input.taskId}
+          AND "personId" = ${input.personId}
+          AND "completedAt" >= ${input.resetDate}
         FOR UPDATE NOWAIT
       `;
 
-    const count = Number(result[0].count);
-    const currentTotal = Number(result[0].total);
+    const count = existingCompletions.length;
+    const currentTotal = existingCompletions.reduce((sum, completion) => {
+      const val = completion.value ? parseInt(completion.value, 10) : 0;
+      return sum + (isNaN(val) ? 0 : val);
+    }, 0);
 
     if (count >= 20) {
       throw new TRPCError({

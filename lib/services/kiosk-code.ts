@@ -265,18 +265,20 @@ export async function validateKioskSession(
     return { valid: false, error: 'Invalid kiosk session' };
   }
 
-  // Check if code is still active
+  // Check if code is still active or used
   if (kioskCode.status !== 'ACTIVE' && kioskCode.status !== 'USED') {
     return { valid: false, error: 'Kiosk session expired or revoked' };
   }
 
-  // Check if code is expired
-  if (kioskCode.expiresAt < new Date()) {
+  // Only check code expiration if it hasn't been used yet
+  // Once a code is used and a session is created, the code expiration doesn't matter
+  // The session has its own expiration (90 days)
+  if (kioskCode.status === 'ACTIVE' && kioskCode.expiresAt < new Date()) {
     await prisma.code.update({
       where: { id: kioskCodeId },
       data: { status: 'EXPIRED' }
     });
-    return { valid: false, error: 'Kiosk session expired' };
+    return { valid: false, error: 'Kiosk code expired (10 minute limit for entering code)' };
   }
 
   // Check if person belongs to this role

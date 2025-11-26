@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/toast';
 import { TaskType } from '@/lib/types/prisma-enums';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { GRAY_SCALE } from '@/lib/constants/theme';
+import { useDashboardRealtime } from '@/lib/hooks/useDashboardRealtime';
 
 interface TeacherBulkCheckinProps {
   classroomId: string;
@@ -69,6 +70,13 @@ export function TeacherBulkCheckin({
     !p.isAccountOwner &&
     classroom?.members?.some((m: any) => m.personId === p.id)
   ) || [];
+
+  // Enable realtime updates for all students in this classroom
+  // This keeps the teacher's bulk checkin view in sync when tasks are completed in kiosk mode
+  useDashboardRealtime({
+    personIds: students.map(s => s.id),
+    enabled: isOpen && students.length > 0
+  });
 
   // State to track which students' tasks are loaded
   const [studentTasks, setStudentTasks] = useState<StudentTask[]>([]);

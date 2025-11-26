@@ -43,14 +43,31 @@ export async function createKioskSession(
 
   const expiresAt = addDays(new Date(), durationDays || code.sessionDurationDays);
 
-  const session = await prisma.kioskSession.create({
-    data: {
-      codeId,
-      deviceId,
-      expiresAt,
-      ipAddress,
-      userAgent
-    }
+  // Create session and mark code as USED in a transaction
+  // This prevents the code from expiring after its 10-minute window
+  const session = await prisma.$transaction(async (tx) => {
+    // Create the session
+    const newSession = await tx.kioskSession.create({
+      data: {
+        codeId,
+        deviceId,
+        expiresAt,
+        ipAddress,
+        userAgent
+      }
+    });
+
+    // Mark code as USED so it doesn't expire after 10 minutes
+    // The session itself has its own expiration (90 days by default)
+    await tx.code.update({
+      where: { id: codeId },
+      data: {
+        status: 'USED',
+        usedAt: new Date()
+      }
+    });
+
+    return newSession;
   });
 
   return {

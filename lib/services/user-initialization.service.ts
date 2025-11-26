@@ -46,6 +46,7 @@ async function createDefaultRoutine(
       description: 'Default routine for daily tasks',
       resetPeriod: 'DAILY',
       color: '#3B82F6', // Blue color for routine
+      isProtected: true, // Cannot be deleted or renamed
       status: 'ACTIVE',
       assignments: {
         create: {

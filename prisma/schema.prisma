@@ -224,6 +224,7 @@ model Routine {
   endTime                 String?        // For limited daily routines (HH:MM format)
   color                   String?        // Hex color for routine border
   isTeacherOnly           Boolean        @default(false) // Teacher-only routines: visible only to teacher/co-teacher, not to students or in kiosk
+  isProtected             Boolean        @default(false) // Protected routines cannot be deleted or renamed (e.g., default "Daily Routine")
   status                  EntityStatus   @default(ACTIVE)
   archivedAt              DateTime?
   sourceMarketplaceItemId String?

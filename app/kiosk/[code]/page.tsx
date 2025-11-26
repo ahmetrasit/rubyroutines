@@ -190,6 +190,8 @@ export default function KioskModePage() {
   const groups = kioskData?.groups || [];
   const rolePersons = kioskData?.persons || [];
   const isIndividualCode = !!kioskData?.personId; // Check if this is an individual code
+  const isGroupCode = !!kioskData?.groupId; // Check if this is a group code
+
 
   let activePersons: Person[] = [];
   if (isIndividualCode) {
@@ -202,15 +204,30 @@ export default function KioskModePage() {
     } else if (individualPerson) {
       activePersons = [individualPerson];
     }
-  } else if (groups.length > 0) {
+  } else if (isGroupCode && groups.length > 0) {
     // Group code: use members from groups (classroom/family members)
+    // NOTE: When persons (kids/students) are created, they are NOT automatically added to groups.
+    // They must be explicitly added via the addMember mutation.
+    // To prevent empty kiosk displays, we fallback to all role persons if no group members exist.
     const allMembers = groups.flatMap((g: any) => g.members || []);
+
+
+    // First try to get persons from group members
     activePersons = allMembers
       .map((m: any) => m.person)
       .filter((p: Person) => p && p.status === 'ACTIVE' && !p.isAccountOwner);
+
+    // FALLBACK: If no group members (besides account owner), use all role persons
+    // This handles the case where kids exist but haven't been added to the group yet
+    // This is a common scenario since persons are not automatically added to groups when created
+    if (activePersons.length === 0) {
+      activePersons = rolePersons.filter((p: Person) => p.status === 'ACTIVE' && !p.isAccountOwner);
+    }
   } else {
-    // Role code: use persons from role (fallback)
+    // Role code or fallback: use persons from role directly
+    // For family/parent roles, show all non-account-owner persons
     activePersons = rolePersons.filter((p: Person) => p.status === 'ACTIVE' && !p.isAccountOwner);
+
   }
 
   const selectedPerson = activePersons.find((p: Person) => p.id === selectedPersonId);
@@ -338,7 +355,7 @@ export default function KioskModePage() {
     setLastActivityTime(Date.now());
   }, []);
 
-  const isGroupScope = !isIndividualCode && activePersons.length > 1;
+  const isGroupScope = !isIndividualCode && activePersons.length >= 1;
 
   useEffect(() => {
     if (!selectedPersonId || !isGroupScope) return;
@@ -593,10 +610,18 @@ export default function KioskModePage() {
                 <div className="flex flex-col items-center justify-center py-12">
                   <div className="text-6xl mb-4">⚠️</div>
                   <h3 className="text-xl font-semibold text-gray-700 mb-2">No Students or Kids Available</h3>
-                  <p className="text-gray-600 text-center max-w-md">
+                  <p className="text-gray-600 text-center max-w-md mb-3">
                     This kiosk requires students or kids to be added to the account.
-                    Please ask your teacher or parent to add students/kids first.
                   </p>
+                  <div className="text-left text-sm text-gray-500 max-w-md space-y-2">
+                    <p><strong>For Parents:</strong> Please add your children from the main app first.</p>
+                    <p><strong>For Teachers:</strong> Please add students to your classroom first.</p>
+                    {isGroupCode && (
+                      <p className="mt-2 text-xs italic">
+                        Note: If you've already added kids/students, they may need to be added to this specific group/classroom.
+                      </p>
+                    )}
+                  </div>
                   <Button variant="outline" onClick={handleExit} size="lg" className="mt-6">
                     Exit Kiosk Mode
                   </Button>

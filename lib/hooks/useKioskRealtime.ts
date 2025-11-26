@@ -54,17 +54,24 @@ export function useKioskRealtime(options: UseKioskRealtimeOptions) {
   // Store timeout for cleanup
   const invalidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Store current personId in ref to avoid stale closure
+  // Store current values in refs to avoid stale closures and keep callbacks stable
   const personIdRef = useRef(personId);
+  const sessionIdRef = useRef(sessionId);
+  const utilsRef = useRef(utils);
+  const onTaskCompletedRef = useRef(onTaskCompleted);
+  const onSessionTerminatedRef = useRef(onSessionTerminated);
+
   personIdRef.current = personId;
+  sessionIdRef.current = sessionId;
+  utilsRef.current = utils;
+  onTaskCompletedRef.current = onTaskCompleted;
+  onSessionTerminatedRef.current = onSessionTerminated;
 
   /**
    * Handle task completion events from Realtime
    */
   const handleTaskCompletion = useCallback(
     (payload: any) => {
-      console.log('[useKioskRealtime] Task completion event:', payload);
-
       // Clear any pending timeout
       if (invalidationTimeoutRef.current) {
         clearTimeout(invalidationTimeoutRef.current);
@@ -73,62 +80,61 @@ export function useKioskRealtime(options: UseKioskRealtimeOptions) {
       // Add small delay to let optimistic updates complete first
       // This prevents UI flicker when optimistic state is replaced with server data
       invalidationTimeoutRef.current = setTimeout(() => {
-        // Use ref to get current personId (avoids stale closure)
+        // Use refs to get current values (avoids stale closures)
         const currentPersonId = personIdRef.current;
+        const currentUtils = utilsRef.current;
 
         // Invalidate queries to refetch latest data
         if (currentPersonId) {
           // Invalidate person tasks query
-          utils.kiosk.getPersonTasks.invalidate({ personId: currentPersonId });
+          currentUtils.kiosk.getPersonTasks.invalidate({ personId: currentPersonId });
 
           // Invalidate person query (for updated timestamps)
-          utils.kiosk.getPerson.invalidate({ personId: currentPersonId });
+          currentUtils.kiosk.getPerson.invalidate({ personId: currentPersonId });
         }
 
         // Call custom callback if provided
-        onTaskCompleted?.();
+        onTaskCompletedRef.current?.();
 
         // Clear ref after completion
         invalidationTimeoutRef.current = null;
       }, 200); // 200ms delay allows optimistic updates to settle
     },
-    [utils, onTaskCompleted]
+    [] // No dependencies - all values accessed via refs
   );
 
   /**
    * Handle session termination events from Realtime
    */
   const handleSessionTermination = useCallback(() => {
-    console.log('[useKioskRealtime] Session terminated');
-
     // Clean up local storage
     localStorage.removeItem('kiosk_session');
 
     // Call custom callback if provided
-    onSessionTerminated?.();
+    onSessionTerminatedRef.current?.();
 
     // Redirect to kiosk home
     router.push('/kiosk');
-  }, [router, onSessionTerminated]);
+  }, [router]); // Only router as dependency (stable)
 
   /**
    * Handle session update events from Realtime
    */
   const handleSessionUpdate = useCallback(
     (payload: any) => {
-      console.log('[useKioskRealtime] Session update event:', payload);
-
       // Check if session was terminated
       if (payload.new?.is_active === false || payload.new?.terminated_at) {
         handleSessionTermination();
       }
 
-      // Invalidate session query
-      if (sessionId) {
-        utils.kiosk.verifySession.invalidate({ code: sessionId });
+      // Invalidate session query using ref values
+      const currentSessionId = sessionIdRef.current;
+      const currentUtils = utilsRef.current;
+      if (currentSessionId) {
+        currentUtils.kiosk.verifySession.invalidate({ code: currentSessionId });
       }
     },
-    [sessionId, utils, handleSessionTermination]
+    [handleSessionTermination] // Only handleSessionTermination (now stable)
   );
 
   /**
@@ -140,7 +146,7 @@ export function useKioskRealtime(options: UseKioskRealtimeOptions) {
 
     // Fall back to polling if realtime fails
     // The existing refetchInterval will handle this automatically
-  }, []);
+  }, []); // No dependencies
 
   /**
    * Subscribe to realtime events
@@ -150,8 +156,6 @@ export function useKioskRealtime(options: UseKioskRealtimeOptions) {
     if (!enabled || !personId) {
       return;
     }
-
-    console.log('[useKioskRealtime] Setting up realtime subscriptions for person:', personId);
 
     // Subscribe to task completions
     const taskChannel = subscribeToTaskCompletions(
@@ -176,8 +180,6 @@ export function useKioskRealtime(options: UseKioskRealtimeOptions) {
 
     // Cleanup subscriptions on unmount or dependency change
     return () => {
-      console.log('[useKioskRealtime] Cleaning up realtime subscriptions');
-
       // Clear pending invalidation timeout
       if (invalidationTimeoutRef.current) {
         clearTimeout(invalidationTimeoutRef.current);

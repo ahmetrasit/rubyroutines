@@ -15,6 +15,7 @@ import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
 import { useOptimisticCheckin, useOptimisticUndo } from '@/lib/hooks/useOptimisticCheckin';
 import { NetworkStatusBadge } from '@/components/ui/network-status-indicator';
+import { useDashboardRealtime } from '@/lib/hooks/useDashboardRealtime';
 
 interface Task {
   id: string;
@@ -49,6 +50,13 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const { data: session } = trpc.auth.getSession.useQuery();
+
+  // Enable realtime updates for this person's task completions
+  // This keeps the dashboard in sync when tasks are completed in kiosk mode
+  useDashboardRealtime({
+    personIds: personId ? [personId] : [],
+    enabled: isOpen && !!personId
+  });
 
   // Fetch person details with routines and tasks
   const { data: person, isLoading: tasksLoading } = trpc.person.getById.useQuery(

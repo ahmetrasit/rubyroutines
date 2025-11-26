@@ -10,6 +10,7 @@ export default function KioskPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const utils = trpc.useUtils();
+  const createSessionMutation = trpc.kiosk.createSession.useMutation();
 
   const handleSubmit = async (code: string) => {
     setError('');
@@ -20,8 +21,8 @@ export default function KioskPage() {
       const data = await utils.kiosk.validateCode.fetch({ code });
       if (data) {
         // Create a kiosk session in the database
-        const session = await utils.kiosk.createSession.fetch({
-          code,
+        const session = await createSessionMutation.mutateAsync({
+          codeId: data.codeId,
           deviceId: `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         });
 

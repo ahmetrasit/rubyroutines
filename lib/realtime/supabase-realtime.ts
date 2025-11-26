@@ -32,30 +32,32 @@ export function subscribeToTaskCompletions(
 ): RealtimeChannel {
   const channel = supabase
     .channel(`task_completions:${personId}`)
+    // DEBUG: Subscribe to ALL task completions first to see if events fire
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
-        table: 'task_completions',
-        filter: `person_id=eq.${personId}`
+        table: 'task_completions'
+        // No filter - receive ALL events to debug
       },
       (payload) => {
-        console.log('[Realtime] Task completion received:', payload);
-        onInsert(payload);
+        // Check if this completion is for our person
+        const record = payload.new || {};
+
+        // Call handler for all events (we'll filter client-side for now)
+        if (record.personId === personId || record.person_id === personId) {
+          onInsert(payload);
+        }
       }
     )
     .subscribe((status, error) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('[Realtime] Subscribed to task completions for person:', personId);
-      } else if (status === 'CHANNEL_ERROR') {
+      if (status === 'CHANNEL_ERROR') {
         console.error('[Realtime] Channel error:', error);
         onError?.(new Error('Failed to subscribe to task completions'));
       } else if (status === 'TIMED_OUT') {
         console.error('[Realtime] Subscription timed out');
         onError?.(new Error('Subscription timed out'));
-      } else if (status === 'CLOSED') {
-        console.log('[Realtime] Channel closed');
       }
     });
 
@@ -83,7 +85,6 @@ export function subscribeToKioskSession(
         filter: `id=eq.${sessionId}`
       },
       (payload) => {
-        console.log('[Realtime] Kiosk session updated:', payload);
         onUpdate(payload);
       }
     )
@@ -96,21 +97,16 @@ export function subscribeToKioskSession(
         filter: `id=eq.${sessionId}`
       },
       (payload) => {
-        console.log('[Realtime] Kiosk session deleted:', payload);
         onDelete(payload);
       }
     )
     .subscribe((status, error) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('[Realtime] Subscribed to kiosk session:', sessionId);
-      } else if (status === 'CHANNEL_ERROR') {
+      if (status === 'CHANNEL_ERROR') {
         console.error('[Realtime] Channel error:', error);
         onError?.(new Error('Failed to subscribe to kiosk session'));
       } else if (status === 'TIMED_OUT') {
         console.error('[Realtime] Subscription timed out');
         onError?.(new Error('Subscription timed out'));
-      } else if (status === 'CLOSED') {
-        console.log('[Realtime] Channel closed');
       }
     });
 
@@ -137,7 +133,6 @@ export function subscribeToRoleUpdates(
         filter: `id=eq.${roleId}`
       },
       (payload) => {
-        console.log('[Realtime] Role updated:', payload);
         onUpdate(payload);
       }
     )
@@ -147,17 +142,14 @@ export function subscribeToRoleUpdates(
         event: 'UPDATE',
         schema: 'public',
         table: 'people',
-        filter: `role_id=eq.${roleId}`
+        filter: `roleId=eq.${roleId}`
       },
       (payload) => {
-        console.log('[Realtime] Person in role updated:', payload);
         onUpdate(payload);
       }
     )
     .subscribe((status, error) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('[Realtime] Subscribed to role updates:', roleId);
-      } else if (status === 'CHANNEL_ERROR') {
+      if (status === 'CHANNEL_ERROR') {
         console.error('[Realtime] Channel error:', error);
         onError?.(new Error('Failed to subscribe to role updates'));
       } else if (status === 'TIMED_OUT') {
@@ -177,7 +169,6 @@ export function unsubscribe(channel: RealtimeChannel): void {
   // removeChannel returns a promise but we don't need to await it
   // Supabase handles cleanup internally
   supabase.removeChannel(channel);
-  console.log('[Realtime] Unsubscribed from channel');
 }
 
 /**
