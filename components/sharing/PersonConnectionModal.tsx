@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/toast';
 import { trpc } from '@/lib/trpc/client';
 import {
   Share2,
@@ -361,7 +361,12 @@ function ClaimTab({
   const [claimCode, setClaimCode] = useState('');
   const [step, setStep] = useState<'enter_code' | 'confirm' | 'success'>('enter_code');
   const [inviteDetails, setInviteDetails] = useState<any>(null);
+  const [matchingOption, setMatchingOption] = useState<'existing' | 'new'>('new');
+  const [selectedPersonId, setSelectedPersonId] = useState<string>('');
   const { toast } = useToast();
+
+  // Get list of persons for matching (always fetch, only use when needed)
+  const { data: myPersons } = trpc.person.list.useQuery({ roleId });
 
   const validateMutation = trpc.personSharing.validateInvite.useMutation({
     onSuccess: (data) => {
@@ -472,12 +477,6 @@ function ClaimTab({
   }
 
   if (step === 'confirm' && inviteDetails) {
-    const [matchingOption, setMatchingOption] = React.useState<'existing' | 'new'>('new');
-    const [selectedPersonId, setSelectedPersonId] = React.useState<string>('');
-
-    // Get list of persons for matching
-    const { data: myPersons } = trpc.person.list.useQuery({ roleId });
-
     const handleClaimWithMatching = () => {
       claimMutation.mutate({
         inviteCode: claimCode.trim().toLowerCase(),
