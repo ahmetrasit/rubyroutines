@@ -10,6 +10,7 @@ export enum SettingCategory {
   SECURITY = 'security',
   BILLING = 'billing',
   MARKETPLACE = 'marketplace',
+  RATE_LIMITS = 'rate_limits',
 }
 
 export interface SystemSetting {
@@ -468,6 +469,86 @@ export async function getEffectiveTierLimits(roleId: string) {
 }
 
 /**
+ * Get kiosk rate limits (system-level)
+ */
+export async function getKioskRateLimits() {
+  const MS_PER_HOUR = 60 * 60 * 1000;
+
+  const defaultLimits = {
+    SESSION: {
+      limit: 100,
+      windowMs: 1 * MS_PER_HOUR,
+      description: 'Most permissive - session already validated',
+    },
+    CODE: {
+      limit: 50,
+      windowMs: 1 * MS_PER_HOUR,
+      description: 'Moderate - for code validation and session creation',
+    },
+    IP: {
+      limit: 20,
+      windowMs: 1 * MS_PER_HOUR,
+      description: 'Most restrictive - fallback for unknown sources',
+    },
+  };
+
+  try {
+    const setting = await getSetting('kiosk_rate_limits');
+
+    if (!setting) {
+      return defaultLimits;
+    }
+
+    return setting;
+  } catch (error) {
+    logger.error('Error fetching kiosk rate limits from database:', error);
+    return defaultLimits;
+  }
+}
+
+/**
+ * Update kiosk rate limits (system-level)
+ */
+export async function updateKioskRateLimits(
+  limits: {
+    SESSION: { limit: number; windowMs: number; description: string };
+    CODE: { limit: number; windowMs: number; description: string };
+    IP: { limit: number; windowMs: number; description: string };
+  },
+  updatedByAdminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  const oldLimits = await getKioskRateLimits();
+
+  await setSetting(
+    {
+      key: 'kiosk_rate_limits',
+      value: limits,
+      category: SettingCategory.RATE_LIMITS,
+      description: 'Session-based rate limits for kiosk endpoints',
+    },
+    updatedByAdminId,
+    ipAddress,
+    userAgent
+  );
+
+  await createAuditLog({
+    userId: updatedByAdminId,
+    action: AdminAction.SETTINGS_CHANGED,
+    entityType: 'SystemSettings',
+    entityId: 'kiosk_rate_limits',
+    changes: {
+      limits: { before: oldLimits, after: limits },
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  logger.info(`Kiosk rate limits updated by admin ${updatedByAdminId}`);
+}
+
+/**
  * Initialize default system settings
  */
 export async function initializeDefaultSettings() {
@@ -483,6 +564,12 @@ export async function initializeDefaultSettings() {
       value: await getTierPrices(),
       category: SettingCategory.TIERS,
       description: 'System-wide tier prices (in cents)',
+    },
+    {
+      key: 'kiosk_rate_limits',
+      value: await getKioskRateLimits(),
+      category: SettingCategory.RATE_LIMITS,
+      description: 'Session-based rate limits for kiosk endpoints',
     },
     {
       key: 'maintenance_mode',

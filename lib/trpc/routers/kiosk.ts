@@ -21,13 +21,14 @@ import {
 import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { completeTaskCoordinated } from '@/lib/services/task-completion-coordinated';
 import { TRPCError } from '@trpc/server';
-import { kioskRateLimitedProcedure } from '../middleware/ratelimit';
+import { kioskSessionRateLimitedProcedure } from '../middleware/ratelimit';
 
 export const kioskRouter = router({
   /**
    * Get kiosk settings (public - no auth required)
+   * Rate limited by IP address (fallback)
    */
-  getSettings: publicProcedure.query(async ({ ctx }) => {
+  getSettings: kioskSessionRateLimitedProcedure.query(async ({ ctx }) => {
     // Get inactivity timeout from system settings, default to 60 seconds
     const timeoutSetting = await ctx.prisma.systemSettings.findUnique({
       where: { key: 'kiosk_inactivity_timeout' }
@@ -141,8 +142,9 @@ export const kioskRouter = router({
 
   /**
    * Validate code and get role/persons data (public - no auth required)
+   * Rate limited by kiosk code
    */
-  validateCode: kioskRateLimitedProcedure
+  validateCode: kioskSessionRateLimitedProcedure
     .input(z.object({
       code: z.string().min(1)
     }))
@@ -195,8 +197,9 @@ export const kioskRouter = router({
 
   /**
    * Get tasks for person in kiosk mode (public)
+   * Rate limited by kiosk code
    */
-  getPersonTasks: publicProcedure
+  getPersonTasks: kioskSessionRateLimitedProcedure
     .input(z.object({
       kioskCodeId: z.string().cuid(),
       personId: z.string().cuid(),
@@ -293,8 +296,9 @@ export const kioskRouter = router({
 
   /**
    * Get goals for person in kiosk mode (public)
+   * Rate limited by kiosk code
    */
-  getPersonGoals: publicProcedure
+  getPersonGoals: kioskSessionRateLimitedProcedure
     .input(z.object({
       kioskCodeId: z.string().cuid(),
       personId: z.string().cuid(),
@@ -352,8 +356,9 @@ export const kioskRouter = router({
 
   /**
    * Complete task in kiosk mode (public)
+   * Rate limited by kiosk code
    */
-  completeTask: publicProcedure
+  completeTask: kioskSessionRateLimitedProcedure
     .input(z.object({
       kioskCodeId: z.string().cuid(),
       taskId: z.string().cuid(),
@@ -412,8 +417,9 @@ export const kioskRouter = router({
 
   /**
    * Undo task completion (if completed within last 5 minutes) (public)
+   * Rate limited by kiosk code
    */
-  undoCompletion: publicProcedure
+  undoCompletion: kioskSessionRateLimitedProcedure
     .input(z.object({
       kioskCodeId: z.string().cuid(),
       completionId: z.string().cuid()
@@ -482,8 +488,9 @@ export const kioskRouter = router({
 
   /**
    * Mark kiosk code as used after session starts (public)
+   * Rate limited by kiosk code
    */
-  markCodeUsed: publicProcedure
+  markCodeUsed: kioskSessionRateLimitedProcedure
     .input(z.object({
       codeId: z.string().cuid()
     }))
@@ -494,8 +501,9 @@ export const kioskRouter = router({
 
   /**
    * Check if role/group/person has updates since a given timestamp (public - for optimized kiosk polling)
+   * Rate limited by kiosk code
    */
-  checkRoleUpdates: publicProcedure
+  checkRoleUpdates: kioskSessionRateLimitedProcedure
     .input(z.object({
       kioskCodeId: z.string().cuid(),
       lastCheckedAt: z.date()
@@ -558,8 +566,9 @@ export const kioskRouter = router({
 
   /**
    * Create kiosk session when code is used (public)
+   * Rate limited by kiosk code
    */
-  createSession: publicProcedure
+  createSession: kioskSessionRateLimitedProcedure
     .input(z.object({
       codeId: z.string().cuid(),
       deviceId: z.string()
@@ -604,8 +613,9 @@ export const kioskRouter = router({
 
   /**
    * Update session activity (heartbeat) (public)
+   * Rate limited by session ID
    */
-  updateSessionActivity: publicProcedure
+  updateSessionActivity: kioskSessionRateLimitedProcedure
     .input(z.object({
       sessionId: z.string().cuid()
     }))
@@ -616,8 +626,9 @@ export const kioskRouter = router({
 
   /**
    * Validate session (public)
+   * Rate limited by session ID
    */
-  validateSession: publicProcedure
+  validateSession: kioskSessionRateLimitedProcedure
     .input(z.object({
       sessionId: z.string().cuid()
     }))

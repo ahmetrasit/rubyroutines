@@ -252,6 +252,37 @@ export const RATE_LIMITS = {
 } as const;
 
 // ============================================================================
+// Kiosk-Specific Rate Limits (Session-Based with Fallback)
+// ============================================================================
+// These limits apply based on the identifier type used:
+// - SESSION: Rate limit per kiosk session (most permissive)
+// - CODE: Rate limit per kiosk code (moderate)
+// - IP: Rate limit per IP address (most restrictive, fallback)
+
+export const KIOSK_RATE_LIMITS = {
+  // Session-based: Applied when sessionId is available
+  // Most permissive since sessions are already validated
+  SESSION: {
+    limit: 100,
+    windowMs: 1 * MS_PER_HOUR,
+  },
+
+  // Code-based: Applied when kioskCodeId is available but no session
+  // Moderate limit for code validation and session creation
+  CODE: {
+    limit: 50,
+    windowMs: 1 * MS_PER_HOUR,
+  },
+
+  // IP-based: Applied when neither sessionId nor kioskCodeId available
+  // Most restrictive to prevent abuse from unknown sources
+  IP: {
+    limit: 20,
+    windowMs: 1 * MS_PER_HOUR,
+  },
+} as const;
+
+// ============================================================================
 // Feature Flags
 // ============================================================================
 

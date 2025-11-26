@@ -7,6 +7,8 @@ import {
   setSetting,
   deleteSetting,
   SettingCategory,
+  getKioskRateLimits,
+  updateKioskRateLimits,
 } from '@/lib/services/admin/system-settings.service';
 import { RoleType } from '@/lib/types/prisma-enums';
 
@@ -137,6 +139,43 @@ export const adminSettingsRouter = router({
         where: { type: input.roleType },
         data: { color: input.color },
       });
+
+      return { success: true };
+    }),
+
+  // Get kiosk rate limits
+  getKioskRateLimits: adminProcedure.query(async () => {
+    return await getKioskRateLimits();
+  }),
+
+  // Update kiosk rate limits
+  updateKioskRateLimits: adminProcedure
+    .input(
+      z.object({
+        SESSION: z.object({
+          limit: z.number().min(1).max(1000),
+          windowMs: z.number().min(60000).max(86400000), // 1 min to 24 hours
+          description: z.string(),
+        }),
+        CODE: z.object({
+          limit: z.number().min(1).max(1000),
+          windowMs: z.number().min(60000).max(86400000),
+          description: z.string(),
+        }),
+        IP: z.object({
+          limit: z.number().min(1).max(1000),
+          windowMs: z.number().min(60000).max(86400000),
+          description: z.string(),
+        }),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await updateKioskRateLimits(
+        input,
+        ctx.user.id,
+        undefined,
+        undefined
+      );
 
       return { success: true };
     }),
