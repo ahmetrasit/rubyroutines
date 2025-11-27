@@ -40,7 +40,16 @@ export const routineRouter = router({
     if (input.personId) {
       where.assignments = {
         some: {
-          personId: input.personId,
+          OR: [
+            { personId: input.personId },
+            {
+              group: {
+                members: {
+                  some: { personId: input.personId }
+                }
+              }
+            }
+          ]
         },
       };
     }
@@ -61,15 +70,15 @@ export const routineRouter = router({
                 orderBy: { order: 'asc' },
               },
             }
-          : {
-              _count: {
-                select: {
-                  tasks: {
-                    where: { status: EntityStatus.ACTIVE },
-                  },
-                },
-              },
-            }),
+          : {}),
+        // Always include task count
+        _count: {
+          select: {
+            tasks: {
+              where: { status: EntityStatus.ACTIVE },
+            },
+          },
+        },
       },
       orderBy: { name: 'asc' },
     });
