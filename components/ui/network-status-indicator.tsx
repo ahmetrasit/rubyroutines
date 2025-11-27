@@ -55,6 +55,7 @@ export function NetworkStatusIndicator({
       const timer = setTimeout(() => setIsExpanded(false), 5000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isExpanded]);
 
   if (!isVisible) return null;

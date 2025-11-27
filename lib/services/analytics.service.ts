@@ -295,32 +295,24 @@ export async function getGoalAchievementRate(
       ...(personId && {
         OR: [
           { personIds: { has: personId } },
-          { scope: 'ROLE' }
+          { personIds: { isEmpty: true } } // Role-wide goals have empty personIds
         ]
       }),
       ...(groupId && {
         OR: [
           { groupIds: { has: groupId } },
-          { scope: 'GROUP' }
+          { groupIds: { isEmpty: true } } // Role-wide goals have empty groupIds
         ]
       })
-    },
-    include: {
-      achievements: {
-        where: {
-          achievedAt: { gte: startDate },
-          ...(personId && { personId })
-        }
-      }
     }
   });
 
   const totalGoals = goals.length;
-  const achievedGoals = goals.filter(g => g.achievements.length > 0).length;
+  const achievedGoals = goals.filter(g => g.lastAchievedAt && g.lastAchievedAt >= startDate).length;
   const achievementRate = totalGoals > 0 ? Math.round((achievedGoals / totalGoals) * 100) : 0;
 
-  // Calculate active streaks
-  const activeStreaks = goals.filter(g => g.streakEnabled && g.currentStreak > 0).length;
+  // Calculate active streaks (goals with type STREAK that have active streaks)
+  const activeStreaks = goals.filter(g => g.type === 'STREAK' && g.currentStreak > 0).length;
 
   // Calculate average progress
   const progressValues = await Promise.all(
@@ -342,18 +334,12 @@ export async function getGoalAchievementRate(
       roleId,
       status: 'ACTIVE',
       createdAt: { lte: startDate }
-    },
-    include: {
-      achievements: {
-        where: {
-          achievedAt: { gte: prevStartDate, lt: startDate },
-          ...(personId && { personId })
-        }
-      }
     }
   });
 
-  const prevAchieved = prevGoals.filter(g => g.achievements.length > 0).length;
+  const prevAchieved = prevGoals.filter(g =>
+    g.lastAchievedAt && g.lastAchievedAt >= prevStartDate && g.lastAchievedAt < startDate
+  ).length;
   const prevRate = prevGoals.length > 0 ? (prevAchieved / prevGoals.length) * 100 : 0;
   const trend = achievementRate > prevRate ? 'up' : achievementRate < prevRate ? 'down' : 'stable';
 
@@ -382,13 +368,13 @@ export async function getGoalTypeDistribution(
       ...(personId && {
         OR: [
           { personIds: { has: personId } },
-          { scope: 'ROLE' }
+          { personIds: { isEmpty: true } }
         ]
       }),
       ...(groupId && {
         OR: [
           { groupIds: { has: groupId } },
-          { scope: 'GROUP' }
+          { groupIds: { isEmpty: true } }
         ]
       })
     },
@@ -413,7 +399,7 @@ export async function getStreakLeaderboard(roleId: string, limit: number = 10) {
     where: {
       roleId,
       status: 'ACTIVE',
-      streakEnabled: true,
+      type: 'STREAK', // Goals with streak tracking
       currentStreak: { gt: 0 }
     },
     orderBy: {
@@ -497,13 +483,13 @@ export async function getGoalTrends(
       ...(personId && {
         OR: [
           { personIds: { has: personId } },
-          { scope: 'ROLE' }
+          { personIds: { isEmpty: true } }
         ]
       }),
       ...(groupId && {
         OR: [
           { groupIds: { has: groupId } },
-          { scope: 'GROUP' }
+          { groupIds: { isEmpty: true } }
         ]
       })
     },

@@ -93,9 +93,13 @@ function MarketplaceItemContent({ itemId, roleId, toast, router }: MarketplaceIt
   });
 
   const handleFork = () => {
-    if (confirm(`Fork "${item?.name}" to your collection?`)) {
-      forkMutation.mutate({ itemId, roleId });
-    }
+    // TODO: Add target selection UI - fork mutation now requires targetId and targetType
+    toast({
+      title: 'Feature Coming Soon',
+      description: 'Person/group selection for forking is being updated. Please try again later.',
+      variant: 'default',
+    });
+    // forkMutation.mutate({ itemId, roleId, targetId: '', targetType: 'PERSON' });
   };
 
   if (isLoading) {
@@ -207,7 +211,7 @@ function MarketplaceItemContent({ itemId, roleId, toast, router }: MarketplaceIt
                   <h3 className="font-semibold text-gray-900 mb-2">Rating</h3>
                   <RatingStars
                     itemId={itemId}
-                    averageRating={item.averageRating || 0}
+                    averageRating={item.rating || 0}
                     ratingCount={item.ratingCount || 0}
                     userRating={userRating}
                     interactive={!userRating}

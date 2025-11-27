@@ -15,15 +15,12 @@ export default function ParentGoalsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('all');
 
-  // Get session and parent role
+  // Get session and parent role (cast to include effectiveLimits from auth router)
   const { data: session, isLoading: sessionLoading } = trpc.auth.getSession.useQuery();
-  const parentRole = session?.user?.roles?.find((role: any) => role.type === 'PARENT');
+  const parentRole = session?.user?.roles?.find((role: any) => role.type === 'PARENT') as any;
 
-  // Get tier limits for the parent role
-  const { data: effectiveLimits } = trpc.role.getEffectiveLimits.useQuery(
-    { roleId: parentRole?.id },
-    { enabled: !!parentRole?.id }
-  );
+  // Get tier limits from session - effectiveLimits is added by auth router
+  const effectiveLimits = parentRole?.effectiveLimits;
 
   // Get persons for person-specific goals
   const { data: persons } = trpc.person.list.useQuery(

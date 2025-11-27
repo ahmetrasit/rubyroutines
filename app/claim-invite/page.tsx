@@ -20,7 +20,7 @@ export default function ClaimInvitePage() {
 
   // Get code from URL params
   useEffect(() => {
-    const code = searchParams.get('code');
+    const code = searchParams?.get('code');
     if (code) {
       setInviteCode(code);
       validateCode(code);

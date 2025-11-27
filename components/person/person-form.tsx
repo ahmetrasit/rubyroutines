@@ -154,7 +154,7 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
 
   const createMutationBase = trpc.person.create.useMutation();
   const { mutate: createPerson, isLoading: isCreating } = useOptimisticCreate(
-    createMutationBase,
+    createMutationBase as any,
     {
       entityName: 'Person',
       listKey: [
@@ -205,7 +205,7 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
 
   const updateMutationBase = trpc.person.update.useMutation();
   const { mutate: updatePerson, isLoading: isUpdating } = useOptimisticUpdate(
-    updateMutationBase,
+    updateMutationBase as any,
     {
       entityName: 'Person',
       listKey: [
@@ -444,7 +444,7 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
                       <div className="flex items-center gap-3">
                         <div
                           className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
-                          style={{ backgroundColor: avatar.backgroundColor }}
+                          style={{ backgroundColor: avatar.color }}
                         >
                           {avatar.emoji}
                         </div>

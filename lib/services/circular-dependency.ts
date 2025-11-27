@@ -12,21 +12,26 @@ export interface CircularDependencyResult {
 async function buildDependencyGraph(): Promise<Map<string, Set<string>>> {
   const graph = new Map<string, Set<string>>();
 
-  // Get all conditions
-  const conditions = await prisma.condition.findMany({
+  // Get all condition checks with their targets
+  const conditionChecks = await prisma.conditionCheck.findMany({
     where: {
-      routine: { type: 'SMART', status: 'ACTIVE' }
+      condition: {
+        routine: { type: 'SMART', status: 'ACTIVE' }
+      }
     },
     include: {
-      routine: true,
+      condition: {
+        include: { routine: true }
+      },
       targetTask: { include: { routine: true } },
       targetRoutine: true
     }
   });
 
   // Build graph
-  for (const condition of conditions) {
-    const sourceRoutineId = condition.routineId;
+  for (const check of conditionChecks) {
+    const sourceRoutineId = check.condition?.routineId;
+    if (!sourceRoutineId) continue;
 
     if (!graph.has(sourceRoutineId)) {
       graph.set(sourceRoutineId, new Set());
@@ -35,13 +40,13 @@ async function buildDependencyGraph(): Promise<Map<string, Set<string>>> {
     const deps = graph.get(sourceRoutineId)!;
 
     // Add dependency to target task's routine
-    if (condition.targetTask) {
-      deps.add(condition.targetTask.routine.id);
+    if (check.targetTask) {
+      deps.add(check.targetTask.routine.id);
     }
 
     // Add dependency to target routine
-    if (condition.targetRoutine) {
-      deps.add(condition.targetRoutine.id);
+    if (check.targetRoutine) {
+      deps.add(check.targetRoutine.id);
     }
   }
 
@@ -112,7 +117,7 @@ export async function getDependents(routineId: string): Promise<{
   routines: string[];
   tasks: string[];
 }> {
-  const conditions = await prisma.condition.findMany({
+  const conditionChecks = await prisma.conditionCheck.findMany({
     where: {
       OR: [
         { targetRoutineId: routineId },
@@ -124,7 +129,9 @@ export async function getDependents(routineId: string): Promise<{
       ]
     },
     include: {
-      routine: true,
+      condition: {
+        include: { routine: true }
+      },
       targetTask: true
     }
   });
@@ -132,11 +139,13 @@ export async function getDependents(routineId: string): Promise<{
   const dependentRoutines = new Set<string>();
   const dependentTasks = new Set<string>();
 
-  for (const condition of conditions) {
-    dependentRoutines.add(condition.routineId);
+  for (const check of conditionChecks) {
+    if (check.condition?.routineId) {
+      dependentRoutines.add(check.condition.routineId);
+    }
 
-    if (condition.targetTask) {
-      dependentTasks.add(condition.targetTask.id);
+    if (check.targetTask) {
+      dependentTasks.add(check.targetTask.id);
     }
   }
 

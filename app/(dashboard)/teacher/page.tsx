@@ -32,7 +32,7 @@ export default function TeacherDashboard() {
 
   // Auto-open claim share modal if inviteCode is in URL
   useEffect(() => {
-    const inviteCode = searchParams.get('inviteCode');
+    const inviteCode = searchParams?.get('inviteCode');
     if (inviteCode && session?.user && !hasProcessedInviteCode.current) {
       hasProcessedInviteCode.current = true;
       setInviteCodeFromUrl(inviteCode);

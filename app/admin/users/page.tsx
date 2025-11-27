@@ -377,7 +377,7 @@ function UsersContent() {
                 Cancel
               </Button>
               <Button
-                variant="destructive"
+                variant="danger"
                 onClick={() => {
                   if (!selectedUser?.id) {
                     toast({

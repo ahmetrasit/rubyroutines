@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { Tier } from '@prisma/client';
+import { Tier, Prisma } from '@prisma/client';
 import { createAuditLog, AdminAction } from './audit.service';
 import { logger } from '@/lib/utils/logger';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -421,7 +421,7 @@ export async function removeTierOverride(
 
   await prisma.role.update({
     where: { id: roleId },
-    data: { tierOverride: null },
+    data: { tierOverride: Prisma.JsonNull },
   });
 
   await createAuditLog({
@@ -490,7 +490,7 @@ export async function getSystemStatistics() {
   };
   tierCountsByType.forEach((item) => {
     if (item.type === 'PARENT' || item.type === 'TEACHER') {
-      tierDistributionByType[item.type][item.tier] = item._count;
+      tierDistributionByType[item.type]![item.tier] = item._count;
     }
   });
 

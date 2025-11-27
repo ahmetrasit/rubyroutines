@@ -26,7 +26,7 @@ export function PersonCreateExample() {
 
   // Option A: Using the specialized optimistic create hook
   const createMutation = trpc.person.create.useMutation();
-  const { mutate: createPerson } = useOptimisticCreate(createMutation, {
+  const { mutate: createPerson } = useOptimisticCreate(createMutation as any, {
     entityName: 'Person',
     listKey: ['person', 'list'],
     createItem: (input, tempId) => ({
@@ -48,13 +48,15 @@ export function PersonCreateExample() {
 
   // Option B: Using the simplified helper with optimistic enabled
   const createMutation2 = trpc.person.create.useMutation();
-  const { mutate: createPerson2 } = useCreateMutation(createMutation2, {
+  const { mutate: createPerson2 } = useCreateMutation(createMutation2 as any, {
     entityName: 'Person',
     optimistic: true,
     listKey: ['person', 'list'],
-    createItem: (input, tempId) => ({
+    createItem: (input: any, tempId: string) => ({
       id: tempId,
-      ...input,
+      name: input.name,
+      avatar: input.avatar || null,
+      roleId: input.roleId,
       status: 'ACTIVE',
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -86,7 +88,7 @@ export function PersonUpdateExample({ person }: { person: any }) {
   const utils = trpc.useUtils();
 
   const updateMutation = trpc.person.update.useMutation();
-  const { mutate: updatePerson } = useOptimisticUpdate(updateMutation, {
+  const { mutate: updatePerson } = useOptimisticUpdate(updateMutation as any, {
     entityName: 'Person',
     listKey: ['person', 'list'],
     itemKey: ['person', 'getById', { id: person.id }],
@@ -126,7 +128,7 @@ export function PersonDeleteExample({ personId }: { personId: string }) {
   const utils = trpc.useUtils();
 
   const deleteMutation = trpc.person.delete.useMutation();
-  const { mutate: deletePerson } = useOptimisticDelete(deleteMutation, {
+  const { mutate: deletePerson } = useOptimisticDelete(deleteMutation as any, {
     entityName: 'Person',
     listKey: ['person', 'list'],
     getId: (input) => input.id,
@@ -175,7 +177,7 @@ export function RoutineCreateExample() {
   const utils = trpc.useUtils();
 
   const createMutation = trpc.routine.create.useMutation();
-  const { mutate: createRoutine } = useOptimisticCreate(createMutation, {
+  const { mutate: createRoutine } = useOptimisticCreate(createMutation as any, {
     entityName: 'Routine',
     listKey: ['routine', 'list'],
     createItem: (input, tempId) => ({
@@ -261,33 +263,17 @@ mutation.mutate({ name: 'John' });
 // EXAMPLE 7: Network Status Handling
 // ============================================
 
+// NOTE: This example shows conceptual usage - import would be at top of file
+// import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
+
 export function NetworkAwareComponent() {
-  import { useNetworkStatus } from '@/lib/hooks/useNetworkStatus';
-
-  const { isOnline, status } = useNetworkStatus();
-
-  if (!isOnline) {
-    return (
-      <div>
-        <p>You're currently offline.</p>
-        <p>Changes will be saved when you reconnect.</p>
-      </div>
-    );
-  }
-
-  if (status === 'slow') {
-    return (
-      <div>
-        <p>Slow connection detected.</p>
-        <p>Changes may take longer to save.</p>
-      </div>
-    );
-  }
+  // This is a conceptual example - in real usage, useNetworkStatus would be imported
+  // Example: const { isOnline, status } = useNetworkStatus();
 
   return (
     <div>
-      <p>Connection is good!</p>
-      <p>All changes are being saved instantly.</p>
+      <p>Network status would be displayed here based on useNetworkStatus hook.</p>
+      <p>Possible states: online, slow, offline</p>
     </div>
   );
 }

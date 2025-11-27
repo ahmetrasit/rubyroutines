@@ -1,4 +1,5 @@
-import { ConditionLogic, ConditionOperator, TimeOperator, ContextType } from '@prisma/client'
+// ContextType doesn't exist in schema - define it locally as string for flexibility
+type ContextType = string;
 
 export interface ConditionRecipe {
   id: string
@@ -6,13 +7,13 @@ export interface ConditionRecipe {
   description: string
   category: 'TIME_BASED' | 'SEQUENCE' | 'ACHIEVEMENT' | 'CONTEXT' | 'TASK_BASED'
   targetAudience: 'PARENT' | 'TEACHER' | 'BOTH'
-  logic: ConditionLogic
+  logic: string
   checks: Array<{
-    operator: ConditionOperator
+    operator: string
     value?: string
     value2?: string
     negate?: boolean
-    timeOperator?: TimeOperator
+    timeOperator?: string
     timeValue?: string
     dayOfWeek?: number[]
     contextType?: ContextType

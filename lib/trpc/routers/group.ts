@@ -107,7 +107,7 @@ export const groupRouter = router({
             name: 'Me',
             avatar: defaultAvatar,
             status: EntityStatus.ACTIVE,
-            isProtected: true,
+            isAccountOwner: true,
           },
         });
       }

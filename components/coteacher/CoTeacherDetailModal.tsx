@@ -118,7 +118,13 @@ export function CoTeacherDetailModal({
                 {sharedStudents.map((person: Person) => (
                   <SharedPersonCard
                     key={person.id}
-                    person={person}
+                    person={{
+                      id: person.id,
+                      name: person.name,
+                      avatar: person.avatar ?? undefined,
+                      isShared: true,
+                      permissions: coTeacher.permissions,
+                    }}
                     onClick={() => {
                       // Read-only view - could navigate to person detail in read-only mode
                     }}

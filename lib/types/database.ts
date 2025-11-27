@@ -21,6 +21,21 @@ export type RoleWithUser = Prisma.RoleGetPayload<{
   include: { user: true };
 }>;
 
+// Role with effectiveLimits as returned by auth.getSession
+export type RoleWithEffectiveLimits = Role & {
+  effectiveLimits?: {
+    children_per_family: number;
+    students_per_classroom: number;
+    routines_per_person: number;
+    tasks_per_routine: number;
+    smart_tasks_per_routine: number;
+    goals: number;
+    items_per_goal: number;
+    co_parents: number;
+    co_teachers: number;
+  } | null;
+};
+
 // ============================================================================
 // Person Types
 // ============================================================================
@@ -128,8 +143,12 @@ export type RoutineWithConditions = Prisma.RoutineGetPayload<{
   include: {
     conditions: {
       include: {
-        targetTask: true;
-        targetRoutine: true;
+        checks: {
+          include: {
+            targetTask: true;
+            targetRoutine: true;
+          };
+        };
       };
     };
   };
@@ -212,8 +231,12 @@ export type Condition = Prisma.ConditionGetPayload<object>;
 
 export type ConditionWithTargets = Prisma.ConditionGetPayload<{
   include: {
-    targetTask: true;
-    targetRoutine: true;
+    checks: {
+      include: {
+        targetTask: true;
+        targetRoutine: true;
+      };
+    };
   };
 }>;
 

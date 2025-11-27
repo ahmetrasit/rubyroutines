@@ -156,8 +156,6 @@ export function formatTaskType(taskType: TaskType): string {
       return 'Multiple Check-in';
     case TaskType.PROGRESS:
       return 'Progress Tracker';
-    case TaskType.SMART:
-      return 'Smart Task';
     default:
       return 'Unknown';
   }

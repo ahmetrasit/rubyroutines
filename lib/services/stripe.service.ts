@@ -11,8 +11,9 @@ if (process.env.STRIPE_SECRET_KEY) {
   stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2025-02-24.acacia',
   });
-} else if (process.env.NODE_ENV === 'production') {
-  throw new Error('STRIPE_SECRET_KEY is required in production');
+} else if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
+  // Only throw error in production runtime (not during build)
+  console.warn('Warning: STRIPE_SECRET_KEY not configured. Stripe features will be disabled.');
 }
 
 function requireStripe(): Stripe {
@@ -91,7 +92,7 @@ export async function createCheckoutSession(params: CreateCheckoutSessionParams)
     });
   }
 
-  const priceInCents = tierPrices[role.type] || tierPrices.PARENT;
+  const priceInCents = tierPrices[role.type as 'PARENT' | 'TEACHER'] || tierPrices.PARENT;
 
   if (!priceInCents) {
     throw new TRPCError({

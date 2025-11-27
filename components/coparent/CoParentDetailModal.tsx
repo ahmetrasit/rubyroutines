@@ -101,7 +101,13 @@ export function CoParentDetailModal({
                 {sharedPersons.map((person: Person) => (
                   <SharedPersonCard
                     key={person.id}
-                    person={person}
+                    person={{
+                      id: person.id,
+                      name: person.name,
+                      avatar: person.avatar ?? undefined,
+                      isShared: true,
+                      permissions: coParent.permissions,
+                    }}
                     onClick={() => {
                       // Read-only view - could navigate to person detail in read-only mode
                     }}

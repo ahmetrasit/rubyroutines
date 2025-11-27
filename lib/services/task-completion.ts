@@ -1,4 +1,5 @@
 import { TaskType } from '@/lib/types/prisma-enums';
+import { TaskType as PrismaTaskType } from '@prisma/client';
 import { differenceInMinutes } from 'date-fns';
 
 // Admin-configurable undo window in minutes (10 seconds = 0.1667 minutes)
@@ -9,7 +10,7 @@ const UNDO_WINDOW_MINUTES = 10 / 60;
  */
 export function canUndoCompletion(
   completedAt: Date,
-  taskType: TaskType,
+  taskType: TaskType | PrismaTaskType,
   undoWindowMinutes: number = UNDO_WINDOW_MINUTES
 ): boolean {
   // Only SIMPLE tasks support undo
@@ -60,7 +61,7 @@ export function getCompletionCount(
 export function calculateEntryNumber(
   completions: Array<{ completedAt: Date }>,
   resetDate: Date,
-  taskType: TaskType
+  taskType: TaskType | PrismaTaskType
 ): number {
   const periodCompletions = completions.filter((c) => c.completedAt >= resetDate);
   return periodCompletions.length + 1;
@@ -72,7 +73,7 @@ export function calculateEntryNumber(
  * @param taskType Type of task
  * @returns true if within limits
  */
-export function isWithinEntryLimit(entryNumber: number, taskType: TaskType): boolean {
+export function isWithinEntryLimit(entryNumber: number, taskType: TaskType | PrismaTaskType): boolean {
   if (taskType === TaskType.MULTIPLE_CHECKIN) {
     return entryNumber <= 9;
   }

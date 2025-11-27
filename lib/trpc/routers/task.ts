@@ -57,7 +57,7 @@ export const taskRouter = router({
       });
 
       // Get reset date once for all tasks (assuming same routine)
-      const resetDate = tasks.length > 0
+      const resetDate = tasks.length > 0 && tasks[0]?.routine
         ? getResetPeriodStart(
             tasks[0].routine.resetPeriod,
             tasks[0].routine.resetDay
@@ -87,7 +87,7 @@ export const taskRouter = router({
         if (!acc[completion.taskId]) {
           acc[completion.taskId] = [];
         }
-        acc[completion.taskId].push(completion);
+        acc[completion.taskId]!.push(completion);
         return acc;
       }, {} as Record<string, typeof relevantCompletions>);
 

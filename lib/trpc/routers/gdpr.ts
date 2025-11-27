@@ -28,7 +28,7 @@ export const gdprRouter = router({
                           tasks: {
                             include: {
                               completions: true,
-                              conditions: true,
+                              condition: true,
                             },
                           },
                         },
@@ -52,15 +52,15 @@ export const gdprRouter = router({
                   tasks: {
                     include: {
                       completions: true,
-                      conditions: true,
+                      condition: true,
                     },
                   },
                   assignments: true,
                 },
               },
               codes: true,
-              coParents: true,
-              coParentConnections: true,
+              primaryCoParents: true,
+              coParentRelationships: true,
             },
           },
           verificationCodes: true,

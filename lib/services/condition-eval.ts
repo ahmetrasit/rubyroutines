@@ -19,22 +19,26 @@ export async function evaluateRoutineConditions(
   const conditions = await prisma.condition.findMany({
     where: { routineId },
     include: {
-      targetTask: {
+      checks: {
         include: {
-          routine: true,
-          completions: personId ? {
-            where: { personId }
-          } : undefined
-        }
-      },
-      targetRoutine: {
-        include: {
-          tasks: {
-            where: { status: 'ACTIVE' },
+          targetTask: {
             include: {
+              routine: true,
               completions: personId ? {
                 where: { personId }
               } : undefined
+            }
+          },
+          targetRoutine: {
+            include: {
+              tasks: {
+                where: { status: 'ACTIVE' },
+                include: {
+                  completions: personId ? {
+                    where: { personId }
+                  } : undefined
+                }
+              }
             }
           }
         }

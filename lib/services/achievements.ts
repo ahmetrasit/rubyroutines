@@ -268,8 +268,11 @@ export async function checkAchievements(
 
     let streak = 1;
     for (let i = 0; i < sortedDates.length - 1; i++) {
-      const current = new Date(sortedDates[i]);
-      const next = new Date(sortedDates[i + 1]);
+      const currentDate = sortedDates[i];
+      const nextDate = sortedDates[i + 1];
+      if (!currentDate || !nextDate) continue;
+      const current = new Date(currentDate);
+      const next = new Date(nextDate);
       const dayDiff = Math.floor(
         (current.getTime() - next.getTime()) / (1000 * 60 * 60 * 24)
       );
@@ -407,8 +410,11 @@ export async function getAchievementProgress(
 
     let streak = 1;
     for (let i = 0; i < sortedDates.length - 1; i++) {
-      const current = new Date(sortedDates[i]);
-      const next = new Date(sortedDates[i + 1]);
+      const currentDate = sortedDates[i];
+      const nextDate = sortedDates[i + 1];
+      if (!currentDate || !nextDate) continue;
+      const current = new Date(currentDate);
+      const next = new Date(nextDate);
       const dayDiff = Math.floor(
         (current.getTime() - next.getTime()) / (1000 * 60 * 60 * 24)
       );

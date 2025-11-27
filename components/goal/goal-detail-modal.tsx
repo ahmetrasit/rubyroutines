@@ -240,21 +240,16 @@ export function GoalDetailModal({ goal, onClose, onEdit }: GoalDetailModalProps)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {progressHistory && progressHistory.length > 0 ? (
+                  {progressHistory ? (
                     <div className="space-y-2">
-                      {progressHistory.map((record: any, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between py-2 border-b last:border-0"
-                        >
-                          <span className="text-sm text-muted-foreground">
-                            {format(new Date(record.date), 'MMM d, yyyy')}
-                          </span>
-                          <span className="font-medium">
-                            {formatValue(record.value)}
-                          </span>
-                        </div>
-                      ))}
+                      <div className="flex items-center justify-between py-2 border-b last:border-0">
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(progressHistory.periodStart), 'MMM d, yyyy')} - {format(new Date(progressHistory.periodEnd), 'MMM d, yyyy')}
+                        </span>
+                        <span className="font-medium">
+                          {formatValue(progressHistory.currentValue)}
+                        </span>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground text-center py-4">

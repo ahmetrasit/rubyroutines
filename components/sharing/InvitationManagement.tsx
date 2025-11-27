@@ -121,7 +121,7 @@ export function InvitationManagement({ roleId, roleType }: InvitationManagementP
         <CardContent>
           {ownedConnections && ownedConnections.length > 0 ? (
             <div className="space-y-4">
-              {ownedConnections.map((connection) => (
+              {ownedConnections.map((connection: any) => (
                 <div
                   key={connection.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
@@ -189,7 +189,7 @@ export function InvitationManagement({ roleId, roleType }: InvitationManagementP
         <CardContent>
           {sharedConnections && sharedConnections.length > 0 ? (
             <div className="space-y-4">
-              {sharedConnections.map((connection) => (
+              {sharedConnections.map((connection: any) => (
                 <div
                   key={connection.id}
                   className="flex items-center justify-between p-4 border rounded-lg bg-blue-50 border-blue-200"

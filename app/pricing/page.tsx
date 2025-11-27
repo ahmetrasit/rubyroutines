@@ -124,8 +124,8 @@ export default function PricingPage() {
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
           {tiers.map((tier) => {
-            const features = TIER_FEATURES[tier];
-            const price = TIER_PRICES[tier];
+            const features = TIER_FEATURES[tier]!;
+            const price = TIER_PRICES[tier]!;
             const isPopular = tier === 'GOLD';
 
             return (

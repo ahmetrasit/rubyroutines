@@ -100,11 +100,11 @@ export async function canAccessTeacherOnlyRoutine(
   // Check if user is a co-teacher
   const isCoTeacher = await prisma.coTeacher.findFirst({
     where: {
-      teacherRoleId: routine.roleId,
+      primaryTeacherRoleId: routine.roleId,
       coTeacherRole: {
         userId
       },
-      status: EntityStatus.ACTIVE
+      status: 'ACTIVE'
     }
   });
 

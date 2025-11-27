@@ -15,7 +15,9 @@ export async function createTRPCContext(opts?: {
 
   if (opts?.req) {
     // Try to get IP address from various headers (common proxy headers)
-    ipAddress = opts.req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    const forwardedFor = opts.req.headers.get('x-forwarded-for');
+    const firstIp = forwardedFor?.split(',')[0];
+    ipAddress = firstIp?.trim() ||
                 opts.req.headers.get('x-real-ip') ||
                 opts.req.headers.get('x-client-ip') ||
                 undefined;

@@ -1,4 +1,5 @@
 import { Tier, RoleType } from '@/lib/types/prisma-enums';
+import { RoleType as PrismaRoleType } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 
 export type LimitKey =
@@ -57,22 +58,22 @@ export interface ComponentTierLimits {
  */
 export function mapDatabaseLimitsToComponentFormat(
   dbLimits: DatabaseTierLimits | null | undefined,
-  roleType: RoleType
+  roleType: RoleType | PrismaRoleType
 ): ComponentTierLimits | null {
   if (!dbLimits) return null;
 
   const modeLimits = roleType === 'PARENT' ? dbLimits.parent : dbLimits.teacher;
 
   return {
-    children_per_family: modeLimits.persons || 0,
-    students_per_classroom: modeLimits.studentsPerClassroom || 0,
+    children_per_family: (modeLimits as any).persons || 0,
+    students_per_classroom: (modeLimits as any).studentsPerClassroom || 0,
     routines_per_person: modeLimits.routines || 0,
     tasks_per_routine: modeLimits.tasksPerRoutine || 0,
     smart_tasks_per_routine: modeLimits.smartTasksPerRoutine || 0,
     goals: modeLimits.goals || 0,
     items_per_goal: modeLimits.goals || 0, // Using goals as fallback for items_per_goal
-    co_parents: modeLimits.maxCoParents || 0,
-    co_teachers: modeLimits.maxCoTeachers || 0,
+    co_parents: (modeLimits as any).maxCoParents || 0,
+    co_teachers: (modeLimits as any).maxCoTeachers || 0,
   };
 }
 

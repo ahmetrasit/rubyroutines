@@ -154,9 +154,9 @@ export function SharePersonModal({
                       >
                         <Checkbox
                           checked={selectedPersons.includes(person.id)}
-                          onCheckedChange={(checked) => {
+                          onChange={(e) => {
                             setSelectedPersons((prev) =>
-                              checked
+                              e.target.checked
                                 ? [...prev, person.id]
                                 : prev.filter((id) => id !== person.id)
                             );

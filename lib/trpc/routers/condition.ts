@@ -13,7 +13,6 @@ import {
 } from '@/lib/validation/condition';
 import { evaluateCondition } from '@/lib/services/condition-evaluator.service';
 import { TRPCError } from '@trpc/server';
-import { ConditionOperator, TimeOperator } from '@/lib/types/prisma-enums';
 
 export const conditionRouter = router({
   /**
@@ -40,17 +39,19 @@ export const conditionRouter = router({
       }
 
       // Check for circular dependencies before creating
-      for (const check of checks) {
-        if (check.targetRoutineId) {
-          const hasCycle = await detectCircularDependency(
-            routineId,
-            check.targetRoutineId
-          );
-          if (hasCycle) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: 'Circular dependency detected. This condition would create an infinite loop.',
-            });
+      if (routineId) {
+        for (const check of checks) {
+          if (check.targetRoutineId) {
+            const hasCycle = await detectCircularDependency(
+              routineId,
+              check.targetRoutineId
+            );
+            if (hasCycle) {
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: 'Circular dependency detected. This condition would create an infinite loop.',
+              });
+            }
           }
         }
       }
@@ -106,7 +107,7 @@ export const conditionRouter = router({
         },
       });
 
-      if (!existingCondition || existingCondition.routine.role.userId !== ctx.user.id) {
+      if (!existingCondition || !existingCondition.routine || existingCondition.routine.role.userId !== ctx.user.id) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'You do not have permission to update this condition',
@@ -114,7 +115,7 @@ export const conditionRouter = router({
       }
 
       // Check for circular dependencies if checks are being updated
-      if (checks) {
+      if (checks && existingCondition.routineId) {
         for (const check of checks) {
           if (check.targetRoutineId) {
             const hasCycle = await detectCircularDependency(
@@ -185,7 +186,7 @@ export const conditionRouter = router({
         },
       });
 
-      if (!condition || condition.routine.role.userId !== ctx.user.id) {
+      if (!condition || !condition.routine || condition.routine.role.userId !== ctx.user.id) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'You do not have permission to delete this condition',
@@ -230,7 +231,7 @@ export const conditionRouter = router({
         },
       });
 
-      if (!condition || condition.routine.role.userId !== ctx.user.id) {
+      if (!condition || !condition.routine || condition.routine.role.userId !== ctx.user.id) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'You do not have permission to view this condition',
@@ -307,7 +308,7 @@ export const conditionRouter = router({
         },
       });
 
-      if (!condition || condition.routine.role.userId !== ctx.user.id) {
+      if (!condition || !condition.routine || condition.routine.role.userId !== ctx.user.id) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'You do not have permission to evaluate this condition',
@@ -464,7 +465,7 @@ export const conditionRouter = router({
           let isVisible = false;
           for (const condition of routine.conditions) {
             const evaluation = await evaluateCondition(prisma, condition.id, personId, context);
-            if (evaluation.passed) {
+            if (evaluation.result) {
               isVisible = true;
               break; // At least one condition passed
             }

@@ -91,7 +91,7 @@ export const adminTiersRouter = router({
       // User agent logging disabled - requires Next.js headers
 
       await updateTierPrices(
-        input.prices,
+        input.prices as any,
         ctx.user.id,
         undefined,
         undefined

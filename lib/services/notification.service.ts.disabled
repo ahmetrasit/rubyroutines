@@ -1,5 +1,13 @@
 import { prisma } from '@/lib/prisma';
-import { NotificationType } from '@prisma/client';
+
+type NotificationType =
+  | 'GOAL_ACHIEVED'
+  | 'STREAK_MILESTONE'
+  | 'GOAL_REMINDER'
+  | 'CONDITION_TRIGGERED'
+  | 'DAILY_SUMMARY'
+  | 'STREAK_RISK'
+  | 'ENCOURAGEMENT';
 
 export interface NotificationData {
   goalId?: string;

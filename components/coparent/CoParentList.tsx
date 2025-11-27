@@ -14,7 +14,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { UserX, Edit, Mail } from 'lucide-react';
 
@@ -120,10 +119,10 @@ export function CoParentList({ roleId }: CoParentListProps) {
       TASK_COMPLETION: { label: 'Task Completion', className: 'bg-blue-100 text-blue-800' },
       FULL_EDIT: { label: 'Full Edit', className: 'bg-green-100 text-green-800' },
     };
-    const variant = variants[permission] || variants.READ_ONLY;
+    const variant = variants[permission] ?? variants.READ_ONLY;
     return (
-      <Badge className={variant.className}>
-        {variant.label}
+      <Badge className={variant!.className}>
+        {variant!.label}
       </Badge>
     );
   };
@@ -271,16 +270,16 @@ export function CoParentList({ roleId }: CoParentListProps) {
 
               <div>
                 <Label htmlFor="edit-permissions">Permission Level *</Label>
-                <Select
+                <select
                   id="edit-permissions"
                   value={permissions}
                   onChange={(e) => setPermissions(e.target.value as any)}
-                  className="mt-1"
+                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="READ_ONLY">Read Only - View routines and tasks</option>
                   <option value="TASK_COMPLETION">Task Completion - View and complete tasks</option>
                   <option value="FULL_EDIT">Full Edit - Manage routines and tasks</option>
-                </Select>
+                </select>
               </div>
 
               <div>

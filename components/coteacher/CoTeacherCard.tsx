@@ -19,7 +19,7 @@ export function CoTeacherCard({ coTeacher, onSelect, groupId }: CoTeacherCardPro
 
   const revokeMutation = trpc.coTeacher.revoke.useMutation();
   const { mutate: revokeAccess, isLoading: isRevoking } = useDeleteMutation(
-    revokeMutation,
+    revokeMutation as any,
     {
       entityName: coTeacher.coTeacherRole?.user?.name || 'co-teacher',
       invalidateQueries: [

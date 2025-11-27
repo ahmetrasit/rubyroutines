@@ -3,7 +3,7 @@
  * Evaluates conditions for smart tasks and smart routines
  */
 
-import { ConditionLogic, ConditionOperator, TimeOperator } from '@/lib/types/prisma-enums';
+import { ConditionLogic, ConditionOperator, TimeOperator } from '@prisma/client';
 import { getResetPeriodStart } from './reset-period';
 import type { PrismaClient } from '@prisma/client';
 
@@ -12,7 +12,7 @@ export interface ConditionEvaluation {
   result: boolean;
   checks: {
     checkId: string;
-    operator: ConditionOperator;
+    operator: string; // ConditionOperator value from Prisma
     result: boolean;
     negate: boolean;
     finalResult: boolean;
@@ -151,19 +151,19 @@ async function evaluateTaskCheck(
       return completionCount < parseInt(check.value || '0', 10);
 
     case ConditionOperator.TASK_VALUE_EQUALS: {
-      if (!hasCompletion) return false;
+      if (!hasCompletion || !completions[0]) return false;
       const latestValue = parseFloat(completions[0].value || '0');
       return latestValue === parseFloat(check.value || '0');
     }
 
     case ConditionOperator.TASK_VALUE_GT: {
-      if (!hasCompletion) return false;
+      if (!hasCompletion || !completions[0]) return false;
       const latestValue = parseFloat(completions[0].value || '0');
       return latestValue > parseFloat(check.value || '0');
     }
 
     case ConditionOperator.TASK_VALUE_LT: {
-      if (!hasCompletion) return false;
+      if (!hasCompletion || !completions[0]) return false;
       const latestValue = parseFloat(completions[0].value || '0');
       return latestValue < parseFloat(check.value || '0');
     }

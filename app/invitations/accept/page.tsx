@@ -12,7 +12,7 @@ import { Check, X, Mail, UserPlus, Users, Loader2 } from 'lucide-react';
 export default function AcceptInvitationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams?.get('token');
   const { toast } = useToast();
 
   const [isAccepting, setIsAccepting] = useState(false);
@@ -169,16 +169,16 @@ export default function AcceptInvitationPage() {
         TASK_COMPLETION: { label: 'Task Completion', className: 'bg-blue-100 text-blue-800' },
         FULL_EDIT: { label: 'Full Edit', className: 'bg-green-100 text-green-800' },
       };
-      const variant = variants[permission] || variants.READ_ONLY;
-      return <Badge className={variant.className}>{variant.label}</Badge>;
+      const variant = variants[permission] ?? variants.READ_ONLY;
+      return <Badge className={variant!.className}>{variant!.label}</Badge>;
     } else if (type === 'CO_TEACHER') {
       const variants: Record<string, { label: string; className: string }> = {
         VIEW: { label: 'View Only', className: 'bg-gray-100 text-gray-800' },
         EDIT_TASKS: { label: 'Edit Tasks', className: 'bg-blue-100 text-blue-800' },
         FULL_EDIT: { label: 'Full Edit', className: 'bg-green-100 text-green-800' },
       };
-      const variant = variants[permission] || variants.VIEW;
-      return <Badge className={variant.className}>{variant.label}</Badge>;
+      const variant = variants[permission] ?? variants.VIEW;
+      return <Badge className={variant!.className}>{variant!.label}</Badge>;
     }
     return <Badge>{permission}</Badge>;
   };

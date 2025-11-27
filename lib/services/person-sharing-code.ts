@@ -173,7 +173,7 @@ export async function validatePersonSharingInvite(code: string) {
         },
       },
       ownerPerson: {
-        select: { name: true, avatar: true },
+        select: { id: true, name: true, avatar: true },
       },
     },
   });
@@ -358,9 +358,9 @@ export async function claimPersonSharingInvite(params: ClaimInviteParams) {
         shareType: invite.shareType,
         permissions: invite.permissions,
         contextData: {
-          ...invite.contextData,
-          ...contextData,
-        },
+          ...(invite.contextData as any || {}),
+          ...(contextData || {}),
+        } as any,
         inviteCodeId: invite.id,
         status: 'ACTIVE',
       },

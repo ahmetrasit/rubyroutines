@@ -1,6 +1,5 @@
 'use client';
 
-import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
@@ -32,7 +31,7 @@ export function ConditionRow({
   const handleTypeChange = (type: ConditionType) => {
     onChange({
       type,
-      operator: ConditionOperator.EQUALS,
+      operator: ConditionOperator.TASK_COMPLETED,
       value: undefined,
       targetTaskId: undefined,
       targetRoutineId: undefined,
@@ -59,10 +58,10 @@ export function ConditionRow({
     switch (condition.type) {
       case ConditionType.TASK_COMPLETED:
         return (
-          <Select
+          <select
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm flex-1"
             value={condition.targetTaskId || ''}
             onChange={(e) => handleTargetChange(e.target.value)}
-            className="flex-1"
           >
             <option value="">Select task...</option>
             {availableTasks.map((task) => (
@@ -70,15 +69,15 @@ export function ConditionRow({
                 {task.name}
               </option>
             ))}
-          </Select>
+          </select>
         );
 
       case ConditionType.ROUTINE_COMPLETED:
         return (
-          <Select
+          <select
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm flex-1"
             value={condition.targetRoutineId || ''}
             onChange={(e) => handleTargetChange(e.target.value)}
-            className="flex-1"
           >
             <option value="">Select routine...</option>
             {availableRoutines.map((routine) => (
@@ -86,16 +85,16 @@ export function ConditionRow({
                 {routine.name}
               </option>
             ))}
-          </Select>
+          </select>
         );
 
       case ConditionType.TASK_COUNT:
         return (
           <div className="flex gap-2 flex-1">
-            <Select
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm flex-1"
               value={condition.targetTaskId || ''}
               onChange={(e) => handleTargetChange(e.target.value)}
-              className="flex-1"
             >
               <option value="">Select task...</option>
               {availableTasks.map((task) => (
@@ -103,7 +102,7 @@ export function ConditionRow({
                   {task.name}
                 </option>
               ))}
-            </Select>
+            </select>
             <Input
               type="number"
               min="0"
@@ -117,10 +116,10 @@ export function ConditionRow({
 
       case ConditionType.DAY_OF_WEEK:
         return (
-          <Select
+          <select
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm flex-1"
             value={condition.value || ''}
             onChange={(e) => handleValueChange(e.target.value)}
-            className="flex-1"
           >
             <option value="">Select day...</option>
             <option value="0">Sunday</option>
@@ -130,7 +129,7 @@ export function ConditionRow({
             <option value="4">Thursday</option>
             <option value="5">Friday</option>
             <option value="6">Saturday</option>
-          </Select>
+          </select>
         );
 
       case ConditionType.DATE_RANGE:
@@ -181,29 +180,29 @@ export function ConditionRow({
 
   return (
     <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-      <Select
+      <select
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm w-48"
         value={condition.type}
         onChange={(e) => handleTypeChange(e.target.value as ConditionType)}
-        className="w-48"
       >
         <option value={ConditionType.TASK_COMPLETED}>Task Completed</option>
         <option value={ConditionType.ROUTINE_COMPLETED}>Routine Completed</option>
         <option value={ConditionType.TASK_COUNT}>Task Count</option>
         <option value={ConditionType.DAY_OF_WEEK}>Day of Week</option>
         <option value={ConditionType.DATE_RANGE}>Date</option>
-      </Select>
+      </select>
 
-      <Select
+      <select
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm w-20"
         value={condition.operator}
         onChange={(e) => handleOperatorChange(e.target.value as ConditionOperator)}
-        className="w-20"
       >
         {getOperatorOptions().map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
           </option>
         ))}
-      </Select>
+      </select>
 
       {renderValueInput()}
 

@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Send } from 'lucide-react';
 
@@ -126,16 +125,16 @@ export function InviteModal({ roleId, onClose }: InviteModalProps) {
           {/* Permissions Selector */}
           <div>
             <Label htmlFor="permissions">Permission Level *</Label>
-            <Select
+            <select
               id="permissions"
               value={permissions}
               onChange={(e) => setPermissions(e.target.value as any)}
-              className="mt-1"
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="READ_ONLY">Read Only - View routines and tasks</option>
               <option value="TASK_COMPLETION">Task Completion - View and complete tasks</option>
               <option value="FULL_EDIT">Full Edit - Manage routines and tasks</option>
-            </Select>
+            </select>
             <p className="text-sm text-gray-500 mt-1">
               {permissions === 'READ_ONLY' && 'Can view but not modify anything'}
               {permissions === 'TASK_COMPLETION' && 'Can complete tasks but not edit routines'}

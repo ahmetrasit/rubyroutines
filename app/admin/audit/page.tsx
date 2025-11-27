@@ -33,8 +33,8 @@ function AuditContent() {
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('');
 
   const { data: logs, isLoading } = trpc.adminAudit.getLogs.useQuery({
-    action: actionFilter || undefined,
-    entityType: entityTypeFilter || undefined,
+    action: (actionFilter || undefined) as any,
+    entityType: (entityTypeFilter || undefined) as any,
     limit: 100,
   });
 

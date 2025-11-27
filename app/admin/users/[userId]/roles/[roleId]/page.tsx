@@ -37,8 +37,8 @@ function ManageRoleTierContent() {
   const utils = trpc.useUtils();
 
   // Handle both string and array params from Next.js dynamic routes
-  const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId;
-  const roleId = Array.isArray(params.roleId) ? params.roleId[0] : params.roleId;
+  const userId = Array.isArray(params?.userId) ? params.userId[0] : params?.userId;
+  const roleId = Array.isArray(params?.roleId) ? params.roleId[0] : params?.roleId;
 
   const [selectedTier, setSelectedTier] = useState<Tier | ''>('');
   const [hasChanges, setHasChanges] = useState(false);
@@ -90,7 +90,7 @@ function ManageRoleTierContent() {
   };
 
   const handleSave = () => {
-    if (!selectedTier || selectedTier === '') {
+    if (!selectedTier) {
       toast({
         title: 'Error',
         description: 'Please select a tier',

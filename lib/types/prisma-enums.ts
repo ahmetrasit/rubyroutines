@@ -5,6 +5,7 @@ export enum RoleType {
   PARENT = 'PARENT',
   TEACHER = 'TEACHER',
   PRINCIPAL = 'PRINCIPAL',
+  SUPPORT = 'SUPPORT',
 }
 
 // Note: This file is deprecated. Use Tier from '@prisma/client' instead.
@@ -58,7 +59,24 @@ export enum ConditionLogic {
   OR = 'OR',
 }
 
+export enum ConditionType {
+  TASK_COMPLETED = 'TASK_COMPLETED',
+  ROUTINE_COMPLETED = 'ROUTINE_COMPLETED',
+  TASK_COUNT = 'TASK_COUNT',
+  GOAL_ACHIEVED = 'GOAL_ACHIEVED',
+  DATE_RANGE = 'DATE_RANGE',
+  DAY_OF_WEEK = 'DAY_OF_WEEK',
+}
+
 export enum ConditionOperator {
+  // Comparison operators
+  EQUALS = 'EQUALS',
+  GREATER_THAN = 'GREATER_THAN',
+  LESS_THAN = 'LESS_THAN',
+  GREATER_THAN_OR_EQUAL = 'GREATER_THAN_OR_EQUAL',
+  LESS_THAN_OR_EQUAL = 'LESS_THAN_OR_EQUAL',
+  BETWEEN = 'BETWEEN',
+  // Legacy/task-specific operators
   TASK_COMPLETED = 'TASK_COMPLETED',
   TASK_NOT_COMPLETED = 'TASK_NOT_COMPLETED',
   TASK_COUNT_EQUALS = 'TASK_COUNT_EQUALS',
@@ -128,4 +146,32 @@ export enum PermissionLevel {
   VIEW = 'VIEW',
   EDIT = 'EDIT',
   MANAGE = 'MANAGE',
+}
+
+export enum GoalCategory {
+  EDUCATION = 'EDUCATION',
+  HEALTH = 'HEALTH',
+  CHORES = 'CHORES',
+  BEHAVIOR = 'BEHAVIOR',
+  SOCIAL = 'SOCIAL',
+  CREATIVE = 'CREATIVE',
+  CUSTOM = 'CUSTOM',
+}
+
+export enum GoalScope {
+  INDIVIDUAL = 'INDIVIDUAL',
+  GROUP = 'GROUP',
+  ROLE = 'ROLE',
+}
+
+export enum NotificationType {
+  GOAL_ACHIEVED = 'GOAL_ACHIEVED',
+  STREAK_MILESTONE = 'STREAK_MILESTONE',
+  GOAL_REMINDER = 'GOAL_REMINDER',
+  STREAK_RISK = 'STREAK_RISK',
+  CONDITION_TRIGGERED = 'CONDITION_TRIGGERED',
+  DAILY_SUMMARY = 'DAILY_SUMMARY',
+  ENCOURAGEMENT = 'ENCOURAGEMENT',
+  MILESTONE_REACHED = 'MILESTONE_REACHED',
+  PROGRESS_UPDATE = 'PROGRESS_UPDATE',
 }

@@ -80,7 +80,7 @@ function BillingPageContent({ roleId }: BillingPageContentProps) {
     },
     {
       staleTime: 5 * 60 * 1000, // 5 minutes - billing data rarely changes
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
       refetchOnWindowFocus: false,
     }
   );

@@ -118,7 +118,6 @@ async function serializeContent(type: 'ROUTINE' | 'GOAL', sourceId: string): Pro
         description: task.description,
         type: task.type,
         order: task.order,
-        targetValue: task.targetValue,
         unit: task.unit,
       })),
     });
@@ -305,7 +304,7 @@ export async function forkMarketplaceItem(params: ForkMarketplaceItemParams) {
     }
 
     const dbLimits = await getEffectiveTierLimits(roleId);
-    const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
+    const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type as any);
     const routineName = contentData.name;
     const isDailyRoutine = routineName.toLowerCase() === 'daily routine';
 
@@ -584,7 +583,6 @@ export async function importFromShareCode(params: ImportFromShareCodeParams) {
                 description: task.description,
                 type: task.type || 'SIMPLE',
                 order: lastTaskOrder + index + 1,
-                targetValue: task.targetValue,
                 unit: task.unit,
               },
             })

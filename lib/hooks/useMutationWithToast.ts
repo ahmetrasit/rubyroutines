@@ -125,6 +125,7 @@ export function useMutationWithToast<TData = unknown, TError extends Error = Err
 
               return { previousData };
             }
+            return undefined;
           }
         : undefined,
       onSuccess: async (data: TData, variables: TVariables) => {
@@ -283,7 +284,7 @@ export function useUpdateMutation<TData = unknown, TError extends Error = Error,
       ? {
           listKey: options.listKey,
           updateItem: options.updateItem,
-          getId: options.getId,
+          getId: options.getId as (input: TVariables | TData) => string,
         }
       : undefined,
   });
@@ -313,7 +314,7 @@ export function useDeleteMutation<TData = unknown, TError extends Error = Error,
     optimisticConfig: options.listKey && options.getId
       ? {
           listKey: options.listKey,
-          getId: options.getId,
+          getId: options.getId as (input: TVariables | TData) => string,
         }
       : undefined,
   });

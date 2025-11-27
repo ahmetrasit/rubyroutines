@@ -1,16 +1,18 @@
 import { prisma } from '@/lib/prisma';
-import { ResetPeriod, TaskType } from '@/lib/types/prisma-enums';
+import { TaskType } from '@/lib/types/prisma-enums';
 import { getResetPeriodStart } from './reset-period';
 import { logger } from '@/lib/utils/logger';
 import type { GoalProgress } from '@/lib/types/database';
 
 const serviceLogger = logger;
 
+type ResetPeriodType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
+
 interface GoalWithSimpleConfig {
   id: string;
   type: string;
   target: number;
-  period: ResetPeriod;
+  period: ResetPeriodType;
   resetDay?: number | null;
   simpleCondition?: string | null;
   comparisonOperator?: string | null;
@@ -26,14 +28,14 @@ interface GoalWithSimpleConfig {
         completedAt: Date;
       }>;
       routine: {
-        resetPeriod: ResetPeriod;
+        resetPeriod: ResetPeriodType;
         resetDay?: number | null;
       };
     };
   }>;
   routineLinks: Array<{
     routine: {
-      resetPeriod: ResetPeriod;
+      resetPeriod: ResetPeriodType;
       resetDay?: number | null;
       tasks: Array<{
         completions: Array<{
@@ -94,7 +96,16 @@ export async function calculateGoalProgressEnhanced(
  * Calculate progress for simple goals with conditions
  */
 function calculateSimpleGoalProgress(goal: GoalWithSimpleConfig): GoalProgress {
-  const task = goal.taskLinks[0].task;
+  const taskLink = goal.taskLinks[0];
+  if (!taskLink) {
+    return {
+      current: 0,
+      target: goal.target,
+      percentage: 0,
+      achieved: false,
+    };
+  }
+  const task = taskLink.task;
   const periodStart = getResetPeriodStart(
     task.routine.resetPeriod,
     task.routine.resetDay ?? undefined

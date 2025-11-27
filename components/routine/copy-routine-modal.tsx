@@ -37,7 +37,7 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId }: Co
     // If sourcePersonId is provided, show only that person's routines
     if (sourcePersonId) {
       return routines.filter(r =>
-        r.assignments.some(a => a.person.id === sourcePersonId)
+        r.assignments.some(a => a.person?.id === sourcePersonId)
       );
     }
     return routines;
@@ -196,7 +196,7 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId }: Co
                               {routine.name}
                             </div>
                             <div className="text-xs text-gray-600 mt-1">
-                              {routine._count?.tasks || 0} tasks • {getResetDescription(routine.resetPeriod, routine.resetDay)}
+                              {(routine as any)._count?.tasks || (routine as any).tasks?.length || 0} tasks • {getResetDescription(routine.resetPeriod as any, routine.resetDay)}
                             </div>
                           </div>
                           {selectedRoutineIds.includes(routine.id) && (

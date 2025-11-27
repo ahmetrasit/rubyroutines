@@ -19,7 +19,7 @@ export function CoParentCard({ coParent, onSelect, roleId }: CoParentCardProps) 
 
   const revokeMutation = trpc.coParent.revoke.useMutation();
   const { mutate: revokeAccess, isLoading: isRevoking } = useDeleteMutation(
-    revokeMutation,
+    revokeMutation as any,
     {
       entityName: coParent.coParentUser?.name || 'co-parent',
       invalidateQueries: [

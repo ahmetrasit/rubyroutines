@@ -32,6 +32,7 @@ interface Task {
   summedValue?: number;
   isTeacherOnly?: boolean;
   routineName?: string;
+  order?: number;
   completions?: Array<{
     id: string;
     completedAt: Date;
@@ -107,7 +108,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
 
   // Use optimistic mutations for instant UI feedback
   const baseMutation = trpc.task.complete.useMutation();
-  const completeMutation = useOptimisticCheckin(baseMutation, {
+  const completeMutation = useOptimisticCheckin(baseMutation as any, {
     personId,
     personKey: [['person', 'getById'], { input: { id: personId }, type: 'query' }],
     onSuccess: async () => {
@@ -119,7 +120,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   });
 
   const baseUndoMutation = trpc.task.undoCompletion.useMutation();
-  const undoMutation = useOptimisticUndo(baseUndoMutation, {
+  const undoMutation = useOptimisticUndo(baseUndoMutation as any, {
     personId,
   });
 
@@ -171,7 +172,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
       // First: incomplete tasks on top
       if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
       // Second: group by routine name
-      const routineCompare = (a.routine?.name || '').localeCompare(b.routine?.name || '');
+      const routineCompare = (a.routineName || '').localeCompare(b.routineName || '');
       if (routineCompare !== 0) return routineCompare;
       // Third: by task order within routine
       return (a.order || 0) - (b.order || 0);
@@ -182,7 +183,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     .sort((a, b) => {
       // Multi tasks should maintain their position regardless of completion status
       // First: group by routine name
-      const routineCompare = (a.routine?.name || '').localeCompare(b.routine?.name || '');
+      const routineCompare = (a.routineName || '').localeCompare(b.routineName || '');
       if (routineCompare !== 0) return routineCompare;
       // Second: by task order within routine
       return (a.order || 0) - (b.order || 0);
@@ -193,7 +194,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     .sort((a, b) => {
       // Progress tasks should maintain their position regardless of completion status
       // First: group by routine name
-      const routineCompare = (a.routine?.name || '').localeCompare(b.routine?.name || '');
+      const routineCompare = (a.routineName || '').localeCompare(b.routineName || '');
       if (routineCompare !== 0) return routineCompare;
       // Second: by task order within routine
       return (a.order || 0) - (b.order || 0);

@@ -67,7 +67,7 @@ export default function MarketplacePage() {
   return (
     <MarketplacePageContent
       roleId={activeRole.id}
-      roleType={activeRole.type}
+      roleType={activeRole.type as 'PARENT' | 'TEACHER'}
       dashboardPath={dashboardPath}
       filters={filters}
       setFilters={setFilters}

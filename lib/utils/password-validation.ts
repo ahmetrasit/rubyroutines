@@ -146,7 +146,7 @@ export function containsUserInfo(password: string, userInfo: {
   }
 
   if (userInfo.email) {
-    const emailPrefix = userInfo.email.split('@')[0].toLowerCase();
+    const emailPrefix = userInfo.email.split('@')[0]?.toLowerCase() ?? '';
     if (emailPrefix.length > 3 && lowerPassword.includes(emailPrefix)) {
       return true;
     }

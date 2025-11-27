@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma';
-import { ResetPeriod } from '@/lib/types/prisma-enums';
 import { getResetPeriodStart } from './reset-period';
 import { logger } from '@/lib/utils/logger';
 import type { GoalProgress } from '@/lib/types/database';

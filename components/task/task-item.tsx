@@ -21,6 +21,7 @@ type TaskWithAggregation = Task & {
   completionCount: number;
   progress?: number;
   totalValue?: number;
+  targetValue?: number | null;
   completions: Array<TaskCompletion & { person: Pick<Person, 'id' | 'name' | 'avatar'> }>;
 };
 
@@ -242,7 +243,7 @@ export const TaskItem = memo(function TaskItem({ task, personId }: TaskItemProps
                 Progress Tracking
               </span>
             )}
-            <SmartTaskIndicator isSmart={task.type === TaskType.SMART} />
+            <SmartTaskIndicator isSmart={task.isSmart || false} />
           </div>
 
           {task.description && (

@@ -51,7 +51,7 @@ export const PersonList = memo(function PersonList({
     {
       enabled: !!roleId,
       staleTime: 5 * 60 * 1000, // 5 minutes - person data rarely changes
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
     }
   );
 
@@ -233,7 +233,15 @@ export const PersonList = memo(function PersonList({
           {sharedChildren.map((person) => (
             <SharedPersonCard
               key={person.id}
-              person={person}
+              person={{
+                id: person.id,
+                name: person.name,
+                avatar: person.avatar ?? undefined,
+                isShared: person.isShared,
+                sharedBy: person.sharedBy ?? undefined,
+                sharedByImage: person.sharedByImage ?? undefined,
+                permissions: person.permissions,
+              }}
               onClick={() => onSelectPerson?.(person as Person)}
             />
           ))}
@@ -277,7 +285,11 @@ export const PersonList = memo(function PersonList({
           onClose={handleCloseShareModal}
           roleId={roleId}
           roleType="PARENT"
-          persons={ownedChildren}
+          persons={ownedChildren.map(p => ({
+            id: p.id,
+            name: p.name,
+            avatar: p.avatar ?? undefined,
+          }))}
         />
       )}
 

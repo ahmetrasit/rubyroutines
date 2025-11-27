@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { ConditionOperator, ConditionLogic, ContextType } from '@prisma/client';
+import { ConditionOperator, ConditionLogic } from '@prisma/client';
 import { subDays } from 'date-fns';
 
 interface OptimizationSuggestion {
@@ -34,18 +34,7 @@ export async function analyzeRoutineUsagePatterns(
     include: {
       conditions: {
         include: {
-          checks: true,
-          triggers: {
-            where: {
-              evaluatedAt: {
-                gte: subDays(new Date(), 30)
-              }
-            },
-            orderBy: {
-              evaluatedAt: 'desc'
-            },
-            take: 100
-          }
+          checks: true
         }
       },
       tasks: {
@@ -298,7 +287,9 @@ function checkTimeOverlap(
   end2: string
 ): boolean {
   const toMinutes = (time: string) => {
-    const [hours, minutes] = time.split(':').map(Number);
+    const parts = time.split(':').map(Number);
+    const hours = parts[0] ?? 0;
+    const minutes = parts[1] ?? 0;
     return hours * 60 + minutes;
   };
 
@@ -424,14 +415,7 @@ export async function suggestConditionSimplifications(
   const condition = await prisma.condition.findUnique({
     where: { id: conditionId },
     include: {
-      checks: true,
-      triggers: {
-        where: {
-          evaluatedAt: {
-            gte: subDays(new Date(), 30)
-          }
-        }
-      }
+      checks: true
     }
   });
 
@@ -452,13 +436,8 @@ export async function suggestConditionSimplifications(
     });
   }
 
-  // Check for always-true/false checks
-  if (condition.triggers.length > 10) {
-    for (const check of condition.checks) {
-      // Analyze if this check is always the same
-      // This would require more detailed trigger data
-    }
-  }
+  // Note: triggers analysis would require separate trigger data tracking
+  // which is not yet implemented in the schema
 
   // Suggest combining similar checks
   const taskChecks = condition.checks.filter(c => c.targetTaskId);

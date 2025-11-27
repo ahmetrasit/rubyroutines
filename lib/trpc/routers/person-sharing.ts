@@ -41,8 +41,12 @@ export const personSharingRouter = router({
 
       // Send email if recipient email is provided
       if (input.recipientEmail) {
-        // Get inviter name
-        const inviterName = ctx.user.name || ctx.user.email;
+        // Get inviter name from database
+        const dbUser = await prisma.user.findUnique({
+          where: { id: ctx.user.id },
+          select: { name: true, email: true },
+        });
+        const inviterName = dbUser?.name || dbUser?.email || ctx.user.email || 'A user';
 
         // Get person name if applicable
         let personName: string | undefined;

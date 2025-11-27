@@ -32,7 +32,7 @@ export default function ParentDashboard() {
 
   // Auto-open claim share modal if inviteCode is in URL
   useEffect(() => {
-    const inviteCode = searchParams.get('inviteCode');
+    const inviteCode = searchParams?.get('inviteCode');
     if (inviteCode && session?.user && !hasProcessedInviteCode.current) {
       hasProcessedInviteCode.current = true;
       setInviteCodeFromUrl(inviteCode);
@@ -55,7 +55,8 @@ export default function ParentDashboard() {
   }
 
   // Find parent role
-  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
+  // Cast to include effectiveLimits which is added by auth router
+  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT') as (typeof session.user.roles)[0] & { effectiveLimits?: any } | undefined;
 
   if (!parentRole) {
     return (

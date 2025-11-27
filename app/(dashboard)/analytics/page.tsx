@@ -132,9 +132,10 @@ function AnalyticsPageContent({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Filter by Person
               </label>
-              <Select
+              <select
                 value={selectedPersonId || ''}
                 onChange={(e) => setSelectedPersonId(e.target.value || null)}
+                className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 <option value="">All People</option>
                 {persons?.map((person: any) => (
@@ -142,7 +143,7 @@ function AnalyticsPageContent({
                     {person.name}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
             <ExportButton
               roleId={roleId}

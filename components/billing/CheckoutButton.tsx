@@ -12,7 +12,7 @@ interface CheckoutButtonProps {
   label?: string;
   className?: string;
   variant?: 'default' | 'outline' | 'ghost';
-  size?: 'default' | 'sm' | 'lg';
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export function CheckoutButton({
@@ -21,7 +21,7 @@ export function CheckoutButton({
   label = 'Upgrade',
   className,
   variant = 'default',
-  size = 'default',
+  size = 'md',
 }: CheckoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -47,7 +47,7 @@ export function CheckoutButton({
     const baseUrl = window.location.origin;
     checkoutMutation.mutate({
       roleId,
-      tier,
+      tier: tier as any,
       successUrl: `${baseUrl}/billing?success=true`,
       cancelUrl: `${baseUrl}/billing?canceled=true`,
     });

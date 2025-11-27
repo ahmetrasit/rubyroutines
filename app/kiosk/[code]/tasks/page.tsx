@@ -15,8 +15,8 @@ export default function KioskTasksPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const code = params.code as string;
-  const personId = searchParams.get('personId');
+  const code = params?.code as string;
+  const personId = searchParams?.get('personId');
   const [sessionData, setSessionData] = useState<any>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<Date>(new Date());
   const { toast } = useToast();
@@ -70,7 +70,7 @@ export default function KioskTasksPage() {
       enabled: !!sessionData && !!personId,
       refetchInterval: false, // Disable auto refetch, using optimized polling instead
       staleTime: 30 * 1000, // 30 seconds - kiosk data needs more frequent updates
-      cacheTime: 2 * 60 * 1000, // 2 minutes cache for kiosk
+      gcTime: 2 * 60 * 1000, // 2 minutes cache for kiosk
       refetchOnWindowFocus: false, // Already handled by polling
     }
   );
@@ -107,7 +107,8 @@ export default function KioskTasksPage() {
 
   // Use optimistic mutations for instant UI feedback
   const baseCompleteMutation = trpc.kiosk.completeTask.useMutation();
-  const completeMutation = useOptimisticKioskCheckin(baseCompleteMutation, {
+  // Cast to any to handle type incompatibility between mutation return type and hook interface
+  const completeMutation = useOptimisticKioskCheckin(baseCompleteMutation as any, {
     kioskCodeId: sessionData?.codeId!,
     personId: personId!,
     kioskTasksKey: kioskTasksQueryKey,
@@ -124,7 +125,8 @@ export default function KioskTasksPage() {
   });
 
   const baseUndoMutation = trpc.kiosk.undoCompletion.useMutation();
-  const undoMutation = useOptimisticKioskUndo(baseUndoMutation, {
+  // Cast to any to handle type incompatibility between mutation return type and hook interface
+  const undoMutation = useOptimisticKioskUndo(baseUndoMutation as any, {
     kioskCodeId: sessionData?.codeId!,
     personId: personId!,
     messages: {

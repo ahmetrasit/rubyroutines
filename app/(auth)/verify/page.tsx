@@ -7,7 +7,7 @@ export default function VerifyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const email = searchParams.get('email');
+  const email = searchParams?.get('email');
 
   useEffect(() => {
     if (!email) {

@@ -164,8 +164,8 @@ export function isValidAvatarColor(color: string): boolean {
  * @returns Random avatar data
  */
 export function generateRandomAvatar(): AvatarData {
-  const randomColor = PASTEL_COLORS[Math.floor(Math.random() * PASTEL_COLORS.length)];
-  const randomEmoji = COMMON_EMOJIS[Math.floor(Math.random() * COMMON_EMOJIS.length)];
+  const randomColor = PASTEL_COLORS[Math.floor(Math.random() * PASTEL_COLORS.length)] || '#E3F2FD';
+  const randomEmoji = COMMON_EMOJIS[Math.floor(Math.random() * COMMON_EMOJIS.length)] || { emoji: '😀', name: 'smile', keywords: '' };
 
   return {
     color: randomColor,

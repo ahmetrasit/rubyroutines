@@ -164,9 +164,17 @@ export function decryptTwoFactorData(encryptedData: string, key?: string): strin
     throw new Error('Invalid encrypted data format');
   }
 
-  const iv = Buffer.from(parts[0], 'hex');
-  const authTag = Buffer.from(parts[1], 'hex');
-  const encrypted = parts[2];
+  const ivPart = parts[0];
+  const authTagPart = parts[1];
+  const encryptedPart = parts[2];
+
+  if (!ivPart || !authTagPart || !encryptedPart) {
+    throw new Error('Invalid encrypted data format');
+  }
+
+  const iv = Buffer.from(ivPart, 'hex');
+  const authTag = Buffer.from(authTagPart, 'hex');
+  const encrypted = encryptedPart;
 
   const decipher = crypto.createDecipheriv(
     'aes-256-gcm',

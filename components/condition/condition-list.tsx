@@ -257,12 +257,13 @@ export function ConditionList({ routineId }: ConditionListProps) {
     }
   };
 
-  const handleToggle = (condition: any, enabled: boolean) => {
-    updateMutation.mutate({
-      id: condition.id,
-      enabled,
-    });
-  };
+  // Note: enabled toggle is not currently supported in the API
+  // const handleToggle = (condition: any, enabled: boolean) => {
+  //   updateMutation.mutate({
+  //     id: condition.id,
+  //     enabled,
+  //   });
+  // };
 
   // DnD sensors
   const sensors = useSensors(
@@ -329,7 +330,7 @@ export function ConditionList({ routineId }: ConditionListProps) {
                     condition={condition}
                     onEdit={() => handleEdit(condition)}
                     onDelete={() => handleDelete(condition)}
-                    onToggle={(enabled) => handleToggle(condition, enabled)}
+                    onToggle={() => {/* Toggle not supported */}}
                   />
                 ))}
               </div>

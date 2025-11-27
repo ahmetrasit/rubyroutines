@@ -278,8 +278,8 @@ export function useOptimisticBatchUpdate<TItem = any, TUpdateInput = any>(
 
         return old.map((item: any) => {
           const index = ids.indexOf(item.id);
-          if (index >= 0) {
-            return updateItem(item, variables[index]);
+          if (index >= 0 && variables[index]) {
+            return updateItem(item, variables[index]!);
           }
           return item;
         });

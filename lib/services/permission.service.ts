@@ -66,12 +66,16 @@ export async function hasPermission(
     const routine = await prisma.routine.findUnique({
       where: { id: context.routineId },
       include: {
-        group: {
+        role: {
           include: {
-            coTeachers: {
-              where: {
-                coTeacherRole: { userId },
-                status: 'ACTIVE'
+            groups: {
+              include: {
+                coTeachers: {
+                  where: {
+                    coTeacherRole: { userId },
+                    status: 'ACTIVE'
+                  }
+                }
               }
             }
           }
@@ -79,7 +83,8 @@ export async function hasPermission(
       }
     });
 
-    const coTeacher = routine?.group?.coTeachers[0];
+    const firstGroup = routine?.role?.groups[0];
+    const coTeacher = firstGroup?.coTeachers[0];
     if (coTeacher) {
       return checkCoTeacherPermission(coTeacher.permissions, action);
     }

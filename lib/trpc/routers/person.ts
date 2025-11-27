@@ -193,13 +193,13 @@ export const personRouter = router({
       const personIds = persons.map(p => p.id);
 
       // Batch fetch all co-parent relationships
-      const coParentRelationships = await ctx.prisma.coParentRelationship.findMany({
+      const coParentRelationships = await ctx.prisma.coParent.findMany({
         where: {
           primaryRoleId: { in: roleIds },
           coParentRole: {
             userId: ctx.user.id,
           },
-          status: EntityStatus.ACTIVE,
+          status: 'ACTIVE',
         },
         select: {
           primaryRoleId: true,
@@ -210,21 +210,21 @@ export const personRouter = router({
       const coParentRoleIds = new Set(coParentRelationships.map(r => r.primaryRoleId));
 
       // Batch fetch all teacher connections
-      const teacherConnections = await ctx.prisma.teacherConnection.findMany({
+      const teacherConnections = await ctx.prisma.studentParentConnection.findMany({
         where: {
-          personId: { in: personIds },
+          studentPersonId: { in: personIds },
           parentRole: {
             userId: ctx.user.id,
           },
-          status: EntityStatus.ACTIVE,
+          status: 'ACTIVE',
         },
         select: {
-          personId: true,
+          studentPersonId: true,
         },
       });
 
       // Create a Set of personIds with teacher connection access
-      const teacherConnectedPersonIds = new Set(teacherConnections.map(c => c.personId));
+      const teacherConnectedPersonIds = new Set(teacherConnections.map(c => c.studentPersonId));
 
       // Check that user has access to all requested persons
       for (const person of persons) {

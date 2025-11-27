@@ -28,7 +28,7 @@ export function ConditionBuilder({
   const handleAddCondition = () => {
     const newCondition: ConditionData = {
       type: ConditionType.TASK_COMPLETED,
-      operator: ConditionOperator.EQUALS,
+      operator: ConditionOperator.TASK_COMPLETED,
     };
     const updated = [...localConditions, newCondition];
     setLocalConditions(updated);

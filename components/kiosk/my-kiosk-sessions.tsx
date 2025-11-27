@@ -16,14 +16,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-export function MyKioskSessions() {
+interface MyKioskSessionsProps {
+  roleId: string;
+}
+
+export function MyKioskSessions({ roleId }: MyKioskSessionsProps) {
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const { data: sessions, isLoading, refetch } = trpc.kiosk.getActiveSessions.useQuery(
-    undefined,
+    { roleId },
     {
       refetchInterval: 30000, // Refresh every 30 seconds
+      enabled: !!roleId,
     }
   );
 
@@ -44,7 +49,7 @@ export function MyKioskSessions() {
     }
   });
 
-  const terminateAllMutation = trpc.kiosk.terminateAllSessionsForCode.useMutation({
+  const terminateAllMutation = trpc.kiosk.terminateAllSessions.useMutation({
     onSuccess: (data) => {
       toast({
         title: 'All Sessions Ended',
@@ -195,7 +200,7 @@ export function MyKioskSessions() {
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
-                      variant="destructive"
+                      variant="danger"
                       size="sm"
                       onClick={() => {
                         if (confirm('Disconnect this kiosk? It will be logged out immediately.')) {

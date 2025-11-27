@@ -55,7 +55,7 @@ export const PersonCard = memo(function PersonCard({
 
   const deleteMutation = trpc.person.delete.useMutation();
   const { mutate: deletePerson, isLoading: isDeleting } = useDeleteMutation(
-    deleteMutation,
+    deleteMutation as any,
     {
       entityName: person.name,
       invalidateQueries: [
@@ -67,7 +67,7 @@ export const PersonCard = memo(function PersonCard({
 
   const removeMemberMutation = trpc.group.removeMember.useMutation();
   const { mutate: removeMember, isLoading: isRemoving } = useDeleteMutation(
-    removeMemberMutation,
+    removeMemberMutation as any,
     {
       entityName: person.name,
       invalidateQueries: [

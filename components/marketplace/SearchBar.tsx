@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, X } from 'lucide-react';
@@ -120,35 +119,35 @@ export function SearchBar({ onSearch }: SearchBarProps) {
 
       {/* Filter Controls */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+        <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
           <option value="">All Categories</option>
           {CATEGORIES.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
             </option>
           ))}
-        </Select>
+        </select>
 
-        <Select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
+        <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
           <option value="">All Ages</option>
           {AGE_GROUPS.map((age) => (
             <option key={age} value={age}>
               {age}
             </option>
           ))}
-        </Select>
+        </select>
 
-        <Select value={type} onChange={(e) => setType(e.target.value as any)}>
+        <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={type} onChange={(e) => setType(e.target.value as any)}>
           <option value="">All Types</option>
           <option value="ROUTINE">Routines</option>
           <option value="GOAL">Goals</option>
-        </Select>
+        </select>
 
-        <Select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
+        <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
           <option value="rating">Highest Rated</option>
           <option value="forkCount">Most Popular</option>
           <option value="recent">Most Recent</option>
-        </Select>
+        </select>
       </div>
 
       {/* Tag Chips */}
