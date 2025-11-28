@@ -35,6 +35,7 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
   const { data: routines, isLoading: routinesLoading } = trpc.routine.list.useQuery({
     roleId,
     personId,
+    includeTasks: true,
   });
 
   const { data: goals, isLoading: goalsLoading } = trpc.goal.list.useQuery(
