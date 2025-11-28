@@ -85,8 +85,8 @@ export function useNetworkStatus(options: UseNetworkStatusOptions = {}) {
       // Timeout after slowThreshold
       const timeoutId = setTimeout(() => controller.abort(), slowThreshold);
 
-      // Ping a small resource
-      await fetch('/api/trpc', {
+      // Ping health check endpoint
+      await fetch('/api/health', {
         method: 'HEAD',
         signal: controller.signal,
         cache: 'no-cache',
