@@ -12,7 +12,6 @@ import { coTeacherRouter } from './coteacher';
 import { connectionRouter } from './connection';
 import { personConnectionRouter } from './person-connection';
 import { invitationRouter } from './invitation';
-import { personSharingRouter } from './person-sharing';
 import { analyticsRouter } from './analytics';
 import { marketplaceRouter } from './marketplace';
 import { billingRouter } from './billing';
@@ -43,7 +42,6 @@ export const appRouter = router({
   connection: connectionRouter,
   personConnection: personConnectionRouter,
   invitation: invitationRouter,
-  personSharing: personSharingRouter,
   analytics: analyticsRouter,
   marketplace: marketplaceRouter,
   billing: billingRouter,

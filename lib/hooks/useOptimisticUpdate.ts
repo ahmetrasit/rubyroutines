@@ -100,52 +100,21 @@ export function useOptimisticUpdate<TItem = any, TUpdateInput = any>(
 
       // Update in all lists
       for (const key of listKeys) {
-        // Check if this is the personSharing.getAccessiblePersons query
-        const isPersonSharingQuery = key[0] === 'personSharing' && key[1] === 'getAccessiblePersons';
-
-        if (isPersonSharingQuery) {
-          // Handle the special structure of getAccessiblePersons
-          const data = queryClient.getQueryData<any>(key);
-          if (data) {
-            previousData.lists.set(key, data);
-          }
-
-          queryClient.setQueryData(key, (old: any) => {
-            if (!old) return old;
-
-            const updateList = (list: TItem[]) => {
-              return list.map((item: any) => {
-                if (item.id === itemId) {
-                  return updateItem(item, variables);
-                }
-                return item;
-              });
-            };
-
-            return {
-              ...old,
-              ownedPersons: updateList(old.ownedPersons || []),
-              allPersons: updateList(old.allPersons || [])
-            };
-          });
-        } else {
-          // Handle regular array queries
-          const data = queryClient.getQueryData<TItem[]>(key);
-          if (data) {
-            previousData.lists.set(key, data);
-          }
-
-          queryClient.setQueryData<TItem[]>(key, (old) => {
-            if (!old) return old;
-
-            return old.map((item: any) => {
-              if (item.id === itemId) {
-                return updateItem(item, variables);
-              }
-              return item;
-            });
-          });
+        const data = queryClient.getQueryData<TItem[]>(key);
+        if (data) {
+          previousData.lists.set(key, data);
         }
+
+        queryClient.setQueryData<TItem[]>(key, (old) => {
+          if (!old) return old;
+
+          return old.map((item: any) => {
+            if (item.id === itemId) {
+              return updateItem(item, variables);
+            }
+            return item;
+          });
+        });
       }
 
       // Update single item query
@@ -167,42 +136,16 @@ export function useOptimisticUpdate<TItem = any, TUpdateInput = any>(
 
       // Update all lists with server response
       for (const key of listKeys) {
-        // Check if this is the personSharing.getAccessiblePersons query
-        const isPersonSharingQuery = key[0] === 'personSharing' && key[1] === 'getAccessiblePersons';
+        queryClient.setQueryData<TItem[]>(key, (old) => {
+          if (!old) return old;
 
-        if (isPersonSharingQuery) {
-          // Handle the special structure of getAccessiblePersons
-          queryClient.setQueryData(key, (old: any) => {
-            if (!old) return old;
-
-            const updateList = (list: TItem[]) => {
-              return list.map((item: any) => {
-                if (item.id === itemId) {
-                  return data;
-                }
-                return item;
-              });
-            };
-
-            return {
-              ...old,
-              ownedPersons: updateList(old.ownedPersons || []),
-              allPersons: updateList(old.allPersons || [])
-            };
+          return old.map((item: any) => {
+            if (item.id === itemId) {
+              return data;
+            }
+            return item;
           });
-        } else {
-          // Handle regular array queries
-          queryClient.setQueryData<TItem[]>(key, (old) => {
-            if (!old) return old;
-
-            return old.map((item: any) => {
-              if (item.id === itemId) {
-                return data;
-              }
-              return item;
-            });
-          });
-        }
+        });
       }
 
       if (itemKey) {

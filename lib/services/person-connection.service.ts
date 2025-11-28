@@ -727,19 +727,31 @@ export async function getConnectedPersonData(
       name: r.name,
       description: r.description,
       color: r.color,
-      tasks: r.tasks.map(t => ({
-        id: t.id,
-        name: t.name,
-        type: t.type,
-        emoji: t.emoji,
-        isCompleted: t.completions.length > 0,
-        completions: t.completions.map(c => ({
-          id: c.id,
-          completedAt: c.completedAt,
-          value: c.value,
-          entryNumber: c.entryNumber
-        }))
-      }))
+      tasks: r.tasks.map(t => {
+        // Calculate completion status based on task type
+        const completionCount = t.completions.length;
+        const totalValue = t.completions.reduce((sum, c) => sum + (parseFloat(c.value || '0') || 0), 0);
+
+        return {
+          id: t.id,
+          name: t.name,
+          type: t.type,
+          emoji: t.emoji,
+          unit: t.unit,
+          // For SIMPLE: completed if any completion exists
+          // For MULTIPLE_CHECKIN: show count of completions
+          // For PROGRESS: show total value
+          isCompleted: completionCount > 0,
+          completionCount,
+          totalValue,
+          completions: t.completions.map(c => ({
+            id: c.id,
+            completedAt: c.completedAt,
+            value: c.value,
+            entryNumber: c.entryNumber
+          }))
+        };
+      })
     })),
     goals: goals.map(g => ({
       id: g.id,

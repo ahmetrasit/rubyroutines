@@ -102,36 +102,10 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
 
       // Optimistically update all lists
       for (const key of listKeys) {
-        // Check if this is the personSharing.getAccessiblePersons query
-        // Handle both old format and tRPC v11 format
-        const isPersonSharingQuery =
-          // Old format: ['personSharing', 'getAccessiblePersons', ...]
-          (key[0] === 'personSharing' && key[1] === 'getAccessiblePersons') ||
-          // tRPC v11 format: [['personSharing', 'getAccessiblePersons'], ...]
-          (Array.isArray(key[0]) && key[0][0] === 'personSharing' && key[0][1] === 'getAccessiblePersons');
-
-        if (isPersonSharingQuery) {
-          // Handle the special structure of getAccessiblePersons
-          queryClient.setQueryData(key, (old: any) => {
-            if (!old) return {
-              ownedPersons: [optimisticItem],
-              sharedPersons: [],
-              allPersons: [optimisticItem]
-            };
-
-            return {
-              ...old,
-              ownedPersons: [...(old.ownedPersons || []), optimisticItem],
-              allPersons: [...(old.allPersons || []), optimisticItem]
-            };
-          });
-        } else {
-          // Handle regular array queries
-          queryClient.setQueryData<TItem[]>(key, (old) => {
-            if (!old) return [optimisticItem];
-            return [...old, optimisticItem];
-          });
-        }
+        queryClient.setQueryData<TItem[]>(key, (old) => {
+          if (!old) return [optimisticItem];
+          return [...old, optimisticItem];
+        });
       }
 
       // Return context for rollback
@@ -142,53 +116,17 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
       if (context?.tempId) {
         // Replace temporary item with server response in all lists
         for (const key of listKeys) {
-          // Check if this is the personSharing.getAccessiblePersons query
-          // Handle both old format and tRPC v11 format
-          const isPersonSharingQuery =
-            // Old format: ['personSharing', 'getAccessiblePersons', ...]
-            (key[0] === 'personSharing' && key[1] === 'getAccessiblePersons') ||
-            // tRPC v11 format: [['personSharing', 'getAccessiblePersons'], ...]
-            (Array.isArray(key[0]) && key[0][0] === 'personSharing' && key[0][1] === 'getAccessiblePersons');
+          queryClient.setQueryData<TItem[]>(key, (old) => {
+            if (!old) return [data];
 
-          if (isPersonSharingQuery) {
-            // Handle the special structure of getAccessiblePersons
-            queryClient.setQueryData(key, (old: any) => {
-              if (!old) return {
-                ownedPersons: [data],
-                sharedPersons: [],
-                allPersons: [data]
-              };
-
-              const updateList = (list: TItem[]) => {
-                return list.map((item) => {
-                  const itemId = getId(item);
-                  if (itemId === context.tempId) {
-                    return replaceItem(item, data);
-                  }
-                  return item;
-                });
-              };
-
-              return {
-                ...old,
-                ownedPersons: updateList(old.ownedPersons || []),
-                allPersons: updateList(old.allPersons || [])
-              };
+            return old.map((item) => {
+              const itemId = getId(item);
+              if (itemId === context.tempId) {
+                return replaceItem(item, data);
+              }
+              return item;
             });
-          } else {
-            // Handle regular array queries
-            queryClient.setQueryData<TItem[]>(key, (old) => {
-              if (!old) return [data];
-
-              return old.map((item) => {
-                const itemId = getId(item);
-                if (itemId === context.tempId) {
-                  return replaceItem(item, data);
-                }
-                return item;
-              });
-            });
-          }
+          });
         }
       }
 

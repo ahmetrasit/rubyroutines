@@ -11,6 +11,8 @@ import {
   removeTierOverride,
   getSystemStatistics,
   deleteUserAccount,
+  permanentlyDeleteUserAccount,
+  verifyUserEmail,
 } from '@/lib/services/admin/user-management.service';
 
 // Flexible ID validator that accepts both UUID and CUID formats
@@ -161,7 +163,25 @@ export const adminUsersRouter = router({
       return { success: true };
     }),
 
-  // Delete user account
+  // Verify user email
+  verifyUserEmail: adminProcedure
+    .input(
+      z.object({
+        userId: idValidator,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await verifyUserEmail(
+        input.userId,
+        ctx.user.id,
+        ctx.ipAddress,
+        ctx.userAgent
+      );
+
+      return { success: true };
+    }),
+
+  // Delete user account (soft delete)
   deleteUser: adminProcedure
     .input(
       z.object({
@@ -172,6 +192,26 @@ export const adminUsersRouter = router({
       await deleteUserAccount(
         input.userId,
         ctx.user.id,
+        ctx.ipAddress,
+        ctx.userAgent
+      );
+
+      return { success: true };
+    }),
+
+  // Permanently delete user account (GDPR/COPPA compliance)
+  permanentlyDeleteUser: adminProcedure
+    .input(
+      z.object({
+        userId: idValidator,
+        reason: z.string().min(5, 'Reason must be at least 5 characters').max(500, 'Reason must be at most 500 characters'),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await permanentlyDeleteUserAccount(
+        input.userId,
+        ctx.user.id,
+        input.reason,
         ctx.ipAddress,
         ctx.userAgent
       );

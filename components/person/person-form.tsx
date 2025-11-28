@@ -102,8 +102,6 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         variant: 'success',
       });
       utils.person.list.invalidate();
-      // Invalidate the query that PersonList actually uses
-      utils.personSharing.getAccessiblePersons.invalidate();
       utils.group.getById.invalidate();
       utils.group.list.invalidate();
       onClose();
@@ -139,8 +137,6 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         variant: 'success',
       });
       utils.person.list.invalidate();
-      // Invalidate the query that PersonList actually uses
-      utils.personSharing.getAccessiblePersons.invalidate();
       onClose();
     },
     onError: (error) => {
@@ -161,8 +157,6 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         // tRPC v11 format: [procedurePath, { input, type }]
         [['person', 'list'], { input: { roleId: roleId! }, type: 'query' }],
         [['person', 'list'], { input: { roleId: roleId!, includeInactive: true }, type: 'query' }],
-        // CRITICAL: Also update the query that PersonList actually uses!
-        [['personSharing', 'getAccessiblePersons'], { input: { roleId: roleId! }, type: 'query' }],
       ],
       createItem: (input, tempId) => ({
         id: tempId,
@@ -181,7 +175,6 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
       // These will be invalidated after success to ensure consistency
       invalidateKeys: [
         [['person', 'list'], { input: { roleId: roleId! }, type: 'query' }],
-        [['personSharing', 'getAccessiblePersons'], { input: { roleId: roleId! }, type: 'query' }],
       ],
       closeDialog: onClose,
       onSuccess: async (newPerson) => {
@@ -212,8 +205,6 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
         // tRPC v11 format: [procedurePath, { input, type }]
         [['person', 'list'], { input: { roleId: person?.roleId! }, type: 'query' }],
         [['person', 'list'], { input: { roleId: person?.roleId!, includeInactive: true }, type: 'query' }],
-        // CRITICAL: Also update the query that PersonList actually uses!
-        [['personSharing', 'getAccessiblePersons'], { input: { roleId: person?.roleId! }, type: 'query' }],
       ],
       itemKey: person?.id ? [['person', 'getById'], { input: { id: person.id }, type: 'query' }] : undefined,
       getId: (input) => input.id,
@@ -225,7 +216,6 @@ export function PersonForm({ person, roleId, classroomId, onClose }: PersonFormP
       }),
       invalidateKeys: [
         [['person', 'list'], { input: { roleId: person?.roleId! }, type: 'query' }],
-        [['personSharing', 'getAccessiblePersons'], { input: { roleId: person?.roleId! }, type: 'query' }],
       ],
       closeDialog: onClose,
     }

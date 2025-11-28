@@ -37,8 +37,6 @@ export function CodeEntry({ parentRoleId }: CodeEntryProps) {
   const createPersonMutation = trpc.person.create.useMutation({
     onSuccess: () => {
       utils.person.list.invalidate();
-      // Also invalidate the query that PersonList actually uses
-      utils.personSharing.getAccessiblePersons.invalidate();
     },
     onError: (error) => {
       toast({
