@@ -1007,7 +1007,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                     </div>
                     {selectedTaskIds.length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {selectedTaskIds.length} task{selectedTaskIds.length > 1 ? 's' : ''} selected
+                        {selectedTaskIds.length} {selectedTaskIds.length === 1 ? 'task' : 'tasks'} selected
                       </p>
                     )}
                   </div>

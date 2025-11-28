@@ -211,15 +211,15 @@ export const PersonCard = memo(function PersonCard({
           <div className="flex items-center justify-around text-center">
             <div className="flex-1">
               <div className="text-2xl font-bold text-gray-900">{routineCount}</div>
-              <div className="text-xs text-gray-500">Routines</div>
+              <div className="text-xs text-gray-500">{routineCount === 1 ? 'Routine' : 'Routines'}</div>
             </div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-gray-900">{taskCount}</div>
-              <div className="text-xs text-gray-500">Tasks</div>
+              <div className="text-xs text-gray-500">{taskCount === 1 ? 'Task' : 'Tasks'}</div>
             </div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-gray-900">{goalCount}</div>
-              <div className="text-xs text-gray-500">Goals</div>
+              <div className="text-xs text-gray-500">{goalCount === 1 ? 'Goal' : 'Goals'}</div>
             </div>
           </div>
 

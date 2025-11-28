@@ -196,7 +196,7 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId }: Co
                               {routine.name}
                             </div>
                             <div className="text-xs text-gray-600 mt-1">
-                              {(routine as any)._count?.tasks || (routine as any).tasks?.length || 0} tasks • {getResetDescription(routine.resetPeriod as any, routine.resetDay)}
+                              {((count) => `${count} ${count === 1 ? 'task' : 'tasks'}`)((routine as any)._count?.tasks || (routine as any).tasks?.length || 0)} • {getResetDescription(routine.resetPeriod as any, routine.resetDay)}
                             </div>
                           </div>
                           {selectedRoutineIds.includes(routine.id) && (

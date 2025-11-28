@@ -107,8 +107,8 @@ export function MyKioskSessions({ roleId }: MyKioskSessionsProps) {
         <div>
           <h2 className="text-2xl font-bold">Active Kiosk Sessions</h2>
           <p className="text-gray-600">
-            {sessions.length} active session{sessions.length > 1 ? 's' : ''} across{' '}
-            {Object.keys(sessionsByCode).length} code{Object.keys(sessionsByCode).length > 1 ? 's' : ''}
+            {sessions.length} active {sessions.length === 1 ? 'session' : 'sessions'} across{' '}
+            {Object.keys(sessionsByCode).length} {Object.keys(sessionsByCode).length === 1 ? 'code' : 'codes'}
           </p>
         </div>
       </div>

@@ -114,7 +114,7 @@ export function KioskDesign1GridTiles({
                 <div className="flex items-center gap-3">
                   <Check className="h-8 w-8 text-green-600" />
                   <span className="text-2xl font-bold text-gray-700">
-                    {completedCount} / {totalTasks} Tasks
+                    {completedCount} / {totalTasks} {totalTasks === 1 ? 'Task' : 'Tasks'}
                   </span>
                 </div>
                 {goals.length > 0 && (
@@ -123,7 +123,7 @@ export function KioskDesign1GridTiles({
                     <div className="flex items-center gap-3">
                       <Trophy className="h-8 w-8 text-amber-600" />
                       <span className="text-2xl font-bold text-gray-700">
-                        {completedGoals} / {goals.length} Goals
+                        {completedGoals} / {goals.length} {goals.length === 1 ? 'Goal' : 'Goals'}
                       </span>
                     </div>
                   </>

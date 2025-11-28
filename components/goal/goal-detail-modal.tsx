@@ -279,7 +279,7 @@ export function GoalDetailModal({ goal, onClose, onEdit }: GoalDetailModalProps)
                         >
                           <span className="font-medium">{link.routine.name}</span>
                           <Badge variant="outline">
-                            {link.routine._count?.tasks || 0} tasks
+                            {((count) => `${count} ${count === 1 ? 'task' : 'tasks'}`)(link.routine._count?.tasks || 0)}
                           </Badge>
                         </div>
                       ))}

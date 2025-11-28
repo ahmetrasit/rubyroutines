@@ -328,7 +328,7 @@ export function KioskDesign3TimelineFlow({
                           <div className="inline-flex items-center gap-3 bg-gradient-to-r from-yellow-200 to-orange-200 rounded-full px-8 py-4 border-4 border-yellow-400 shadow-lg">
                             <Trophy className="h-10 w-10 text-orange-600" />
                             <span className="text-2xl font-black text-gray-900">
-                              Milestone Reached! {index + 1} Tasks Done!
+                              Milestone Reached! {index + 1} {index + 1 === 1 ? 'Task' : 'Tasks'} Done!
                             </span>
                           </div>
                         </div>

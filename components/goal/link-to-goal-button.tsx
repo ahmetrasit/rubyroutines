@@ -31,7 +31,7 @@ export function LinkToGoalButton({
         className="flex items-center gap-2"
       >
         <Target className="h-4 w-4" />
-        {currentGoalIds.length > 0 ? `Linked to ${currentGoalIds.length} goal${currentGoalIds.length > 1 ? 's' : ''}` : 'Link to Goal'}
+        {currentGoalIds.length > 0 ? `Linked to ${currentGoalIds.length} ${currentGoalIds.length === 1 ? 'goal' : 'goals'}` : 'Link to Goal'}
       </Button>
 
       <LinkGoalDialog
