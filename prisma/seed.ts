@@ -413,7 +413,7 @@ async function main() {
         ],
       }),
       forkCount: 12,
-      averageRating: 4.5,
+      rating: 4.5,
       ratingCount: 8,
     },
   });
@@ -439,7 +439,7 @@ async function main() {
         ],
       }),
       forkCount: 5,
-      averageRating: 5.0,
+      rating: 5.0,
       ratingCount: 3,
     },
   });
@@ -467,7 +467,7 @@ async function main() {
         ],
       }),
       forkCount: 18,
-      averageRating: 4.7,
+      rating: 4.7,
       ratingCount: 11,
     },
   });

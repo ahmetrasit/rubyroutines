@@ -7,17 +7,27 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { PersonKioskCodeManager } from '@/components/kiosk/person-kiosk-code-manager';
 import { PersonDetailSections } from '@/components/person/person-detail-sections';
+import { PersonConnectionsManager, ConnectedPersonsSection } from '@/components/person-connection';
 
 export default function StudentDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const classroomId = params.classroomId as string;
-  const studentId = params.studentId as string;
+  const classroomId = params?.classroomId as string;
+  const studentId = params?.studentId as string;
 
   const { data: session, isLoading: sessionLoading } = trpc.auth.getSession.useQuery();
   const { data: student, isLoading: studentLoading } = trpc.person.getById.useQuery(
     { id: studentId },
     { enabled: !!studentId }
+  );
+
+  // Get teacher role ID for fetching all persons
+  const teacherRoleId = session?.user?.roles?.find((role: any) => role.type === 'TEACHER')?.id;
+
+  // Fetch all persons for this role (needed for connection claiming)
+  const { data: allPersons } = trpc.person.list.useQuery(
+    { roleId: teacherRoleId! },
+    { enabled: !!teacherRoleId }
   );
 
   useEffect(() => {
@@ -38,7 +48,8 @@ export default function StudentDetailPage() {
     return null;
   }
 
-  const teacherRole = session.user.roles?.find((role: any) => role.type === 'TEACHER');
+  // Cast to include effectiveLimits which is added by auth router
+  const teacherRole = session.user.roles?.find((role: any) => role.type === 'TEACHER') as (typeof session.user.roles)[0] & { effectiveLimits?: any } | undefined;
 
   if (!teacherRole) {
     return (
@@ -123,6 +134,26 @@ export default function StudentDetailPage() {
           effectiveLimits={teacherRole.effectiveLimits}
           onSelectRoutine={handleSelectRoutine}
         />
+
+        {/* Person Connections Section */}
+        <div className="mt-6 space-y-6">
+          {/* Show connected persons (who this student can observe) */}
+          <ConnectedPersonsSection
+            roleId={teacherRole.id}
+            targetPersonId={studentId}
+            roleType="TEACHER"
+          />
+
+          {/* Connection management (generate codes, see who observes this student) */}
+          {allPersons && (
+            <PersonConnectionsManager
+              person={student}
+              roleId={teacherRole.id}
+              roleType="TEACHER"
+              allPersons={allPersons}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

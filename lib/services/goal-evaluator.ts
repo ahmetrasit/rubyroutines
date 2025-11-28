@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-import { Goal, GoalProgress, GoalType, ResetPeriod } from '@/lib/types/prisma-enums';
+import { PrismaClient, ResetPeriod } from '@prisma/client';
 
 /**
  * Goal Evaluator Service - Phase 1
@@ -231,11 +230,12 @@ export class GoalEvaluator {
 
     // Calculate current streak (simplified for Phase 1)
     let currentStreak = 0;
-    if (completions.length > 0) {
+    const firstCompletion = completions[0];
+    if (firstCompletion) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const lastCompletion = new Date(completions[0].completedAt);
+      const lastCompletion = new Date(firstCompletion.completedAt);
       lastCompletion.setHours(0, 0, 0, 0);
 
       const daysDiff = Math.floor((today.getTime() - lastCompletion.getTime()) / (1000 * 60 * 60 * 24));

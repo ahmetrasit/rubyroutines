@@ -1,7 +1,8 @@
-import { ResetPeriod } from '@/lib/types/prisma-enums';
+// Use string type to be compatible with both local and Prisma-generated enums
+type ResetPeriodType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
 
 export function calculateNextReset(
-  period: ResetPeriod,
+  period: ResetPeriodType,
   resetDay?: number | null,
   resetTime: string = '23:55'
 ): Date {
@@ -14,13 +15,13 @@ export function calculateNextReset(
   next.setHours(hours, minutes, 0, 0);
 
   switch (period) {
-    case ResetPeriod.DAILY:
+    case 'DAILY':
       if (next <= now) {
         next.setDate(next.getDate() + 1);
       }
       break;
 
-    case ResetPeriod.WEEKLY:
+    case 'WEEKLY':
       if (resetDay === null || resetDay === undefined) {
         throw new Error('resetDay required for weekly period');
       }
@@ -35,7 +36,7 @@ export function calculateNextReset(
       }
       break;
 
-    case ResetPeriod.MONTHLY:
+    case 'MONTHLY':
       if (resetDay === null || resetDay === undefined) {
         throw new Error('resetDay required for monthly period');
       }
@@ -58,7 +59,7 @@ export function calculateNextReset(
       }
       break;
 
-    case ResetPeriod.CUSTOM:
+    case 'CUSTOM':
       throw new Error('Custom reset period not yet implemented');
   }
 
@@ -66,7 +67,7 @@ export function calculateNextReset(
 }
 
 export function shouldResetNow(routine: {
-  resetPeriod: ResetPeriod;
+  resetPeriod: ResetPeriodType;
   resetDay?: number | null;
   lastResetAt?: Date | null;
 }): boolean {
@@ -79,22 +80,22 @@ export function shouldResetNow(routine: {
   return new Date() >= nextReset;
 }
 
-export function getResetDescription(period: ResetPeriod, resetDay?: number | null): string {
+export function getResetDescription(period: ResetPeriodType, resetDay?: number | null): string {
   switch (period) {
-    case ResetPeriod.DAILY:
+    case 'DAILY':
       return 'Daily at 11:55 PM';
 
-    case ResetPeriod.WEEKLY:
+    case 'WEEKLY':
       if (resetDay === null || resetDay === undefined) return 'Weekly';
       const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       return `Weekly on ${days[resetDay]} at 11:55 PM`;
 
-    case ResetPeriod.MONTHLY:
+    case 'MONTHLY':
       if (resetDay === null || resetDay === undefined) return 'Monthly';
       if (resetDay === 99) return 'Monthly on last day at 11:55 PM';
       return `Monthly on day ${resetDay} at 11:55 PM`;
 
-    case ResetPeriod.CUSTOM:
+    case 'CUSTOM':
       return 'Custom schedule';
 
     default:
@@ -107,7 +108,7 @@ export function getResetDescription(period: ResetPeriod, resetDay?: number | nul
  * Used for filtering completions within the current period
  */
 export function getResetPeriodStart(
-  period: ResetPeriod,
+  period: ResetPeriodType,
   resetDay?: number | null,
   resetTime: string = '23:55'
 ): Date {
@@ -117,7 +118,7 @@ export function getResetPeriodStart(
   const minutes = parseInt(minutesStr || '55', 10);
 
   switch (period) {
-    case ResetPeriod.DAILY: {
+    case 'DAILY': {
       const startOfToday = new Date(now);
       startOfToday.setHours(hours, minutes, 0, 0);
 
@@ -129,7 +130,7 @@ export function getResetPeriodStart(
       return startOfToday;
     }
 
-    case ResetPeriod.WEEKLY: {
+    case 'WEEKLY': {
       if (resetDay === null || resetDay === undefined) {
         resetDay = 0; // Default to Sunday
       }
@@ -149,7 +150,7 @@ export function getResetPeriodStart(
       return periodStart;
     }
 
-    case ResetPeriod.MONTHLY: {
+    case 'MONTHLY': {
       if (resetDay === null || resetDay === undefined) {
         resetDay = 1; // Default to 1st of month
       }
@@ -178,7 +179,7 @@ export function getResetPeriodStart(
       return periodStart;
     }
 
-    case ResetPeriod.CUSTOM:
+    case 'CUSTOM':
       // For custom, return beginning of time (never resets)
       return new Date(0);
 

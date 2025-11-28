@@ -129,8 +129,7 @@ export const twoFactorRouter = router({
         await createAuditLog({
           userId: ctx.user.id,
           action: AUDIT_ACTIONS.AUTH_2FA_VERIFY_FAILED,
-          success: false,
-          metadata: { reason: 'Invalid token' },
+          changes: { reason: 'Invalid token' },
         });
 
         throw new TRPCError({
@@ -158,8 +157,7 @@ export const twoFactorRouter = router({
       await createAuditLog({
         userId: ctx.user.id,
         action: AUDIT_ACTIONS.AUTH_2FA_ENABLED,
-        success: true,
-        metadata: { backupCodesCount: backupCodes.length },
+        changes: { backupCodesCount: backupCodes.length },
       });
 
       return {
@@ -205,19 +203,20 @@ export const twoFactorRouter = router({
       // If token verification failed, try backup code
       if (!isValid && user.twoFactorBackupCodes && user.twoFactorBackupCodes.length > 0) {
         const encryptedCodes = user.twoFactorBackupCodes[0];
-        const hashedCodes = JSON.parse(decryptTwoFactorData(encryptedCodes));
+        if (encryptedCodes) {
+          const hashedCodes = JSON.parse(decryptTwoFactorData(encryptedCodes));
 
-        isValid = hashedCodes.some((hashedCode: string) =>
-          verifyBackupCode(input.token, hashedCode)
-        );
+          isValid = hashedCodes.some((hashedCode: string) =>
+            verifyBackupCode(input.token, hashedCode)
+          );
+        }
       }
 
       if (!isValid) {
         await createAuditLog({
           userId: ctx.user.id,
           action: AUDIT_ACTIONS.AUTH_2FA_DISABLED,
-          success: false,
-          metadata: { reason: 'Invalid token' },
+          changes: { reason: 'Invalid token' },
         });
 
         throw new TRPCError({
@@ -239,7 +238,6 @@ export const twoFactorRouter = router({
       await createAuditLog({
         userId: ctx.user.id,
         action: AUDIT_ACTIONS.AUTH_2FA_DISABLED,
-        success: true,
       });
 
       return { success: true };
@@ -283,26 +281,28 @@ export const twoFactorRouter = router({
       // If token verification failed, try backup code
       if (!isValid && user.twoFactorBackupCodes && user.twoFactorBackupCodes.length > 0) {
         const encryptedCodes = user.twoFactorBackupCodes[0];
-        const hashedCodes: string[] = JSON.parse(decryptTwoFactorData(encryptedCodes));
+        if (encryptedCodes) {
+          const hashedCodes: string[] = JSON.parse(decryptTwoFactorData(encryptedCodes));
 
-        const matchIndex = hashedCodes.findIndex((hashedCode) =>
-          verifyBackupCode(input.token, hashedCode)
-        );
+          const matchIndex = hashedCodes.findIndex((hashedCode) =>
+            verifyBackupCode(input.token, hashedCode)
+          );
 
-        if (matchIndex !== -1) {
-          isValid = true;
-          usedBackupCode = true;
+          if (matchIndex !== -1) {
+            isValid = true;
+            usedBackupCode = true;
 
-          // Remove used backup code
-          hashedCodes.splice(matchIndex, 1);
-          const updatedEncryptedCodes = encryptTwoFactorData(JSON.stringify(hashedCodes));
+            // Remove used backup code
+            hashedCodes.splice(matchIndex, 1);
+            const updatedEncryptedCodes = encryptTwoFactorData(JSON.stringify(hashedCodes));
 
-          await ctx.prisma.user.update({
-            where: { id: ctx.user.id },
-            data: {
-              twoFactorBackupCodes: [updatedEncryptedCodes],
-            },
-          });
+            await ctx.prisma.user.update({
+              where: { id: ctx.user.id },
+              data: {
+                twoFactorBackupCodes: [updatedEncryptedCodes],
+              },
+            });
+          }
         }
       }
 
@@ -310,8 +310,7 @@ export const twoFactorRouter = router({
         await createAuditLog({
           userId: ctx.user.id,
           action: AUDIT_ACTIONS.AUTH_2FA_VERIFY_FAILED,
-          success: false,
-          metadata: { reason: 'Invalid token' },
+          changes: { reason: 'Invalid token' },
         });
 
         throw new TRPCError({
@@ -323,8 +322,7 @@ export const twoFactorRouter = router({
       await createAuditLog({
         userId: ctx.user.id,
         action: AUDIT_ACTIONS.AUTH_2FA_VERIFIED,
-        success: true,
-        metadata: { usedBackupCode },
+        changes: { usedBackupCode },
       });
 
       return {
@@ -384,8 +382,7 @@ export const twoFactorRouter = router({
       await createAuditLog({
         userId: ctx.user.id,
         action: AUDIT_ACTIONS.SECURITY_2FA_CODES_REGENERATED,
-        success: true,
-        metadata: { backupCodesCount: backupCodes.length },
+        changes: { backupCodesCount: backupCodes.length },
       });
 
       return {

@@ -2,18 +2,16 @@
 
 import { trpc } from '@/lib/trpc/client';
 import { PersonCard } from './person-card';
-import { SharedPersonCard } from './SharedPersonCard';
 import { CoParentCard } from '@/components/coparent/CoParentCard';
 import { Button } from '@/components/ui/button';
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState, useCallback, useMemo, memo } from 'react';
 import { PersonForm } from './person-form';
-import { SharePersonModal } from '@/components/sharing/SharePersonModal';
 import { KioskCodeManager } from '@/components/kiosk/kiosk-code-manager';
 import { CoParentDetailModal } from '@/components/coparent/CoParentDetailModal';
 import type { Person } from '@/lib/types/database';
 import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
-import { CacheInspector } from '@/components/debug/cache-inspector';
+import Link from 'next/link';
 
 interface PersonListProps {
   roleId: string;
@@ -33,15 +31,12 @@ export const PersonList = memo(function PersonList({
   roleType
 }: PersonListProps) {
   const [showForm, setShowForm] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
   const [kioskCollapsed, setKioskCollapsed] = useState(true); // Collapsed by default
   const [selectedCoParent, setSelectedCoParent] = useState<any>(null);
 
   // Event handlers with useCallback
   const handleOpenForm = useCallback(() => setShowForm(true), []);
   const handleCloseForm = useCallback(() => setShowForm(false), []);
-  const handleOpenShareModal = useCallback(() => setShowShareModal(true), []);
-  const handleCloseShareModal = useCallback(() => setShowShareModal(false), []);
   const handleToggleKiosk = useCallback(() => setKioskCollapsed(prev => !prev), []);
   const handleSelectCoParent = useCallback((coParent: any) => setSelectedCoParent(coParent), []);
   const handleCloseCoParentModal = useCallback(() => setSelectedCoParent(null), []);
@@ -51,7 +46,7 @@ export const PersonList = memo(function PersonList({
     {
       enabled: !!roleId,
       staleTime: 5 * 60 * 1000, // 5 minutes - person data rarely changes
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
     }
   );
 
@@ -68,48 +63,22 @@ export const PersonList = memo(function PersonList({
     console.warn('Co-parent feature not available:', coParentsError.message);
   }
 
-  // Get shared persons using the personSharing API
-  const { data: accessiblePersons, isLoading: isLoadingAccessible, error: accessiblePersonsError } = trpc.personSharing.getAccessiblePersons.useQuery(
-    { roleId },
-    {
-      enabled: !!roleId,
-      retry: false,
-    }
-  );
-
-  // Log person sharing errors if they occur (but don't break the UI)
-  if (accessiblePersonsError) {
-    console.warn('Person sharing feature not available:', accessiblePersonsError.message);
-  }
-
   // IMPORTANT: All useMemo hooks MUST be called before any conditional returns
   // to maintain consistent hook order between renders
 
-  // Combine owned and shared persons with useMemo
-  const allAccessiblePersons = useMemo(() => [
-    ...(accessiblePersons?.ownedPersons || []),
-    ...(accessiblePersons?.sharedPersons || [])
-  ], [accessiblePersons]);
-
   // Separate adults (Me) from children with useMemo
   const adults = useMemo(() =>
-    accessiblePersons?.ownedPersons?.filter((person) => person.isAccountOwner) || [],
-    [accessiblePersons]
+    persons?.filter((person) => person.isAccountOwner) || [],
+    [persons]
   );
 
   const ownedChildren = useMemo(() =>
-    accessiblePersons?.ownedPersons?.filter((person) => !person.isAccountOwner) || [],
-    [accessiblePersons]
-  );
-
-  // Get shared children separately with useMemo
-  const sharedChildren = useMemo(() =>
-    accessiblePersons?.sharedPersons?.filter((person) => !person.isAccountOwner) || [],
-    [accessiblePersons]
+    persons?.filter((person) => !person.isAccountOwner) || [],
+    [persons]
   );
 
   // Early return for loading state - AFTER all hooks
-  if (isLoading || isLoadingAccessible) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500">Loading...</p>
@@ -128,7 +97,6 @@ export const PersonList = memo(function PersonList({
 
   return (
     <div className="space-y-8">
-      <CacheInspector roleId={roleId} />
       {/* Row 1: Family Group Kiosk Code - Collapsible */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <button
@@ -183,13 +151,13 @@ export const PersonList = memo(function PersonList({
             />
           ))}
 
-          {/* Add Co-Parent placeholder card */}
-          <button
-            onClick={canAddCoParent ? handleOpenShareModal : undefined}
+          {/* Add Co-Parent placeholder card - Manage co-parents via Settings */}
+          <Link
+            href="/settings?tab=coparents"
             className={`border-2 border-dashed rounded-xl p-6 transition-all flex flex-col items-center justify-center min-h-[200px] group ${
               canAddCoParent
                 ? 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50 cursor-pointer'
-                : 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                : 'border-gray-200 bg-gray-50 cursor-not-allowed pointer-events-none'
             }`}
           >
             {canAddCoParent ? (
@@ -210,14 +178,14 @@ export const PersonList = memo(function PersonList({
                 <span className="text-xs text-gray-400 mt-1">({currentCoParentCount}/{coParentLimit})</span>
               </>
             )}
-          </button>
+          </Link>
         </div>
       </div>
 
       {/* Row 3: Children */}
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Owned child cards */}
+          {/* Child cards */}
           {ownedChildren.map((person) => (
             <PersonCard
               key={person.id}
@@ -226,15 +194,6 @@ export const PersonList = memo(function PersonList({
               roleId={roleId}
               roleType={roleType}
               userId={userId}
-            />
-          ))}
-
-          {/* Shared child cards */}
-          {sharedChildren.map((person) => (
-            <SharedPersonCard
-              key={person.id}
-              person={person}
-              onClick={() => onSelectPerson?.(person as Person)}
             />
           ))}
 
@@ -270,16 +229,6 @@ export const PersonList = memo(function PersonList({
       </div>
 
       {showForm && <PersonForm roleId={roleId} onClose={handleCloseForm} />}
-
-      {showShareModal && (
-        <SharePersonModal
-          isOpen={showShareModal}
-          onClose={handleCloseShareModal}
-          roleId={roleId}
-          roleType="PARENT"
-          persons={ownedChildren}
-        />
-      )}
 
       {selectedCoParent && (
         <CoParentDetailModal

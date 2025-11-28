@@ -140,20 +140,14 @@ export function PersonKioskCodeManager({ roleId, personId, personName }: PersonK
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="border-t border-gray-100 mt-3">
-      <CollapsibleTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full flex items-center justify-between py-3 px-0 hover:bg-transparent"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-600">Individual Kiosk Code</span>
-            <SessionIndicator count={sessionCount?.count || 0} />
-          </div>
-          <ChevronDown
-            className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          />
-        </Button>
+      <CollapsibleTrigger className="w-full flex items-center justify-between py-3 px-0 hover:bg-transparent text-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-600">Individual Kiosk Code</span>
+          <SessionIndicator count={sessionCount?.count || 0} />
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </CollapsibleTrigger>
 
       <CollapsibleContent className="space-y-3 pb-3">

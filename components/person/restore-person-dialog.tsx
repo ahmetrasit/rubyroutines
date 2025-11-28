@@ -34,8 +34,6 @@ export function RestorePersonDialog({ roleId, onClose }: RestorePersonDialogProp
         variant: 'success',
       });
       utils.person.list.invalidate();
-      // Also invalidate the query that PersonList actually uses
-      utils.personSharing.getAccessiblePersons.invalidate();
     },
     onError: (error) => {
       toast({

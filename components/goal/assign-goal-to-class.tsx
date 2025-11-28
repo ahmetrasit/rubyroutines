@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +26,7 @@ export function AssignGoalToClass({ roleId, persons, onClose }: AssignGoalToClas
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
-  const [scope, setScope] = useState<GoalScope>('GROUP');
+  const [scope, setScope] = useState<GoalScope>(GoalScope.GROUP);
   const [customTargets, setCustomTargets] = useState<Record<string, string>>({});
 
   const { toast } = useToast();
@@ -105,24 +104,20 @@ export function AssignGoalToClass({ roleId, persons, onClose }: AssignGoalToClas
     const template = goalTemplates.find(t => t.id === selectedTemplate);
     if (!template) return;
 
-    if (scope === 'GROUP' || scope === 'ROLE') {
+    if (scope === GoalScope.GROUP || scope === GoalScope.ROLE) {
       // Create single goal for entire class
       createGoalMutation.mutate({
         roleId,
         goals: [{
           name: template.name,
           description: template.description,
-          type: template.type,
-          category: template.category,
+          type: template.type as any,
           target: template.defaultTarget,
-          period: template.defaultPeriod,
+          period: template.defaultPeriod as any,
           unit: template.defaultUnit,
-          scope,
-          streakEnabled: template.streakEnabled,
           icon: template.icon,
           color: template.color,
-          rewardMessage: template.rewardMessage,
-          personIds: scope === 'GROUP' ? selectedPersonIds : [],
+          personIds: scope === GoalScope.GROUP ? selectedPersonIds : [],
           groupIds: []
         }]
       });
@@ -131,16 +126,12 @@ export function AssignGoalToClass({ roleId, persons, onClose }: AssignGoalToClas
       const goals = selectedPersonIds.map(personId => ({
         name: template.name,
         description: template.description,
-        type: template.type,
-        category: template.category,
+        type: template.type as any,
         target: customTargets[personId] ? parseFloat(customTargets[personId]) : template.defaultTarget,
-        period: template.defaultPeriod,
+        period: template.defaultPeriod as any,
         unit: template.defaultUnit,
-        scope: 'INDIVIDUAL' as GoalScope,
-        streakEnabled: template.streakEnabled,
         icon: template.icon,
         color: template.color,
-        rewardMessage: template.rewardMessage,
         personIds: [personId],
         groupIds: []
       }));
@@ -212,14 +203,15 @@ export function AssignGoalToClass({ roleId, persons, onClose }: AssignGoalToClas
                 <Label className="text-base font-semibold mb-3 block">
                   2. Assignment Type
                 </Label>
-                <Select
+                <select
                   value={scope}
                   onChange={(e) => setScope(e.target.value as GoalScope)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="GROUP">Group Goal (students work together)</option>
                   <option value="INDIVIDUAL">Individual Goals (each student separately)</option>
                   <option value="ROLE">Entire Class (all students contribute)</option>
-                </Select>
+                </select>
 
                 <Alert className="mt-3">
                   <Info className="h-4 w-4" />
@@ -244,7 +236,7 @@ export function AssignGoalToClass({ roleId, persons, onClose }: AssignGoalToClas
                     <Checkbox
                       id="select-all"
                       checked={selectAll}
-                      onCheckedChange={handleSelectAll}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
                     />
                     <label
                       htmlFor="select-all"
@@ -260,7 +252,7 @@ export function AssignGoalToClass({ roleId, persons, onClose }: AssignGoalToClas
                         <Checkbox
                           id={person.id}
                           checked={selectedPersonIds.includes(person.id)}
-                          onCheckedChange={(checked) => handlePersonToggle(person.id, checked as boolean)}
+                          onChange={(e) => handlePersonToggle(person.id, e.target.checked)}
                         />
                         <label
                           htmlFor={person.id}

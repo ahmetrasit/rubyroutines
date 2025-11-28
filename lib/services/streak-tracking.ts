@@ -96,15 +96,20 @@ export async function calculateRoutineStreak(
   const sortedDates = Array.from(completionsByDate.keys()).sort();
 
   for (let i = 0; i < sortedDates.length; i++) {
-    const currentDate = new Date(sortedDates[i]);
-    const completedTasks = completionsByDate.get(sortedDates[i])!;
+    const dateStr = sortedDates[i];
+    if (!dateStr) continue;
+
+    const currentDate = new Date(dateStr);
+    const completedTasks = completionsByDate.get(dateStr)!;
 
     if (completedTasks.size >= requiredTasksPerDay) {
       tempStreak++;
 
       // Check if next day continues the streak
       if (i < sortedDates.length - 1) {
-        const nextDate = new Date(sortedDates[i + 1]);
+        const nextDateStr = sortedDates[i + 1];
+        if (!nextDateStr) continue;
+        const nextDate = new Date(nextDateStr);
         const daysDiff = differenceInDays(nextDate, currentDate);
         if (daysDiff > 1) {
           // Streak is broken
@@ -133,10 +138,11 @@ export async function calculateRoutineStreak(
     });
   }
 
+  const firstCompletion = completions[0];
   return {
     currentStreak,
     longestStreak,
-    lastCompletionDate: completions[0].completedAt,
+    lastCompletionDate: firstCompletion?.completedAt || new Date(),
     totalCompletions: completions.length,
     streakHistory,
   };
@@ -292,10 +298,11 @@ export async function calculatePersonStreak(personId: string): Promise<StreakDat
     });
   }
 
+  const firstCompletion = completions[0];
   return {
     currentStreak,
     longestStreak: 0, // FEATURE: Longest streak calculation not yet implemented
-    lastCompletionDate: completions[0].completedAt,
+    lastCompletionDate: firstCompletion?.completedAt || new Date(),
     totalCompletions: completions.length,
     streakHistory,
   };

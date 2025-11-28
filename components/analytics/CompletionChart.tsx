@@ -135,11 +135,12 @@ export function CompletionChart({ data, isLoading }: CompletionChartProps) {
     svg
       .selectAll('.dot')
       .on('mouseover', function (event, d) {
+        const dataPoint = d as CompletionDataPoint;
         d3.select(this).attr('r', 6);
         tooltip
           .style('visibility', 'visible')
           .html(
-            `<strong>${d3.timeFormat('%b %d, %Y')(d.date)}</strong><br/>Completion: ${d.completionRate.toFixed(1)}%`
+            `<strong>${d3.timeFormat('%b %d, %Y')(dataPoint.date)}</strong><br/>Completion: ${dataPoint.completionRate.toFixed(1)}%`
           );
       })
       .on('mousemove', function (event) {

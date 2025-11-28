@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
-import { ConditionOperator, TimeOperator, ConditionLogic } from '@/lib/types/prisma-enums';
+import { ConditionOperator, TimeOperator, ConditionLogic } from '@prisma/client';
 
 interface ConditionFormProps {
   routineId: string;
@@ -80,7 +80,7 @@ export function ConditionForm({ routineId, condition, onClose }: ConditionFormPr
   );
 
   const { data: goals } = trpc.goal.list.useQuery(
-    { roleId: routine?.roleId },
+    { roleId: routine?.roleId || '' },
     { enabled: !!routine?.roleId }
   );
 
@@ -177,7 +177,7 @@ export function ConditionForm({ routineId, condition, onClose }: ConditionFormPr
 
   const updateCheck = (index: number, updates: Partial<ConditionCheck>) => {
     const newChecks = [...checks];
-    newChecks[index] = { ...newChecks[index], ...updates };
+    newChecks[index] = { ...newChecks[index], ...updates } as ConditionCheck;
     setChecks(newChecks);
   };
 
@@ -189,38 +189,39 @@ export function ConditionForm({ routineId, condition, onClose }: ConditionFormPr
         { value: ConditionOperator.TASK_NOT_COMPLETED, label: 'Is Not Completed' },
         { value: ConditionOperator.TASK_COUNT_GT, label: 'Count Greater Than' },
         { value: ConditionOperator.TASK_COUNT_LT, label: 'Count Less Than' },
-        { value: ConditionOperator.TASK_STREAK_GT, label: 'Streak Greater Than' },
+        { value: ConditionOperator.TASK_VALUE_GT, label: 'Value Greater Than' },
+        { value: ConditionOperator.TASK_VALUE_LT, label: 'Value Less Than' },
       ];
     }
     if (check.targetRoutineId) {
       return [
-        { value: ConditionOperator.ROUTINE_COMPLETED, label: 'Is Completed' },
         { value: ConditionOperator.ROUTINE_PERCENT_GT, label: 'Completion % Greater Than' },
         { value: ConditionOperator.ROUTINE_PERCENT_LT, label: 'Completion % Less Than' },
+        { value: ConditionOperator.ROUTINE_PERCENT_EQUALS, label: 'Completion % Equals' },
       ];
     }
     if (check.targetGoalId) {
       return [
         { value: ConditionOperator.GOAL_ACHIEVED, label: 'Is Achieved' },
         { value: ConditionOperator.GOAL_NOT_ACHIEVED, label: 'Is Not Achieved' },
-        { value: ConditionOperator.GOAL_PROGRESS_GT, label: 'Progress Greater Than' },
-        { value: ConditionOperator.GOAL_PROGRESS_LT, label: 'Progress Less Than' },
       ];
     }
     return [];
   };
 
   const needsValue = (operator: ConditionOperator) => {
-    return [
+    const operatorsNeedingValue = [
       ConditionOperator.TASK_COUNT_GT,
       ConditionOperator.TASK_COUNT_LT,
-      ConditionOperator.TASK_STREAK_GT,
-      ConditionOperator.TASK_STREAK_LT,
+      ConditionOperator.TASK_COUNT_EQUALS,
+      ConditionOperator.TASK_VALUE_GT,
+      ConditionOperator.TASK_VALUE_LT,
+      ConditionOperator.TASK_VALUE_EQUALS,
       ConditionOperator.ROUTINE_PERCENT_GT,
       ConditionOperator.ROUTINE_PERCENT_LT,
-      ConditionOperator.GOAL_PROGRESS_GT,
-      ConditionOperator.GOAL_PROGRESS_LT,
-    ].includes(operator);
+      ConditionOperator.ROUTINE_PERCENT_EQUALS,
+    ] as const;
+    return (operatorsNeedingValue as readonly ConditionOperator[]).includes(operator);
   };
 
   const daysOfWeek = [

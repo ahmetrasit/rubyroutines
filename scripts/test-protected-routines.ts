@@ -102,7 +102,7 @@ async function testProtectedRoutines() {
         WHERE table_name = 'routines' AND column_name = 'isProtected'
       );
     `;
-    if (result[0].exists) {
+    if (result[0]?.exists) {
       console.log('   ✓ Migration applied: isProtected column exists');
     } else {
       console.log('   ✗ Migration NOT applied: isProtected column missing!');
@@ -116,7 +116,7 @@ async function testProtectedRoutines() {
         WHERE tablename = 'routines' AND indexname = 'routines_isProtected_idx'
       );
     `;
-    if (indexResult[0].exists) {
+    if (indexResult[0]?.exists) {
       console.log('   ✓ Index created: routines_isProtected_idx');
     } else {
       console.log('   ✗ Index NOT created!');

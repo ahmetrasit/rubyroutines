@@ -42,7 +42,7 @@ export const TaskCard = memo(function TaskCard({
       retry: false,
       refetchOnWindowFocus: false,
       staleTime: 2 * 60 * 1000, // 2 minutes - goals update moderately
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
     }
   );
 

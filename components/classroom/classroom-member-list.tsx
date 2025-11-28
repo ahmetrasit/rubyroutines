@@ -49,17 +49,18 @@ export function ClassroomMemberList({
   );
 
   // Get co-teachers for this classroom
-  const { data: coTeachers } = trpc.coTeacher.list.useQuery(
+  const { data: coTeachers, error: coTeachersError } = trpc.coTeacher.list.useQuery(
     { groupId: classroomId },
     {
       enabled: !!classroomId,
       retry: false,
-      onError: (error) => {
-        // Silently handle co-teacher errors if the feature is not set up yet
-        console.warn('Co-teacher feature not available:', error.message);
-      }
     }
   );
+
+  // Log co-teacher errors if the feature is not set up yet
+  if (coTeachersError) {
+    console.warn('Co-teacher feature not available:', coTeachersError.message);
+  }
 
   if (isLoading) {
     return (

@@ -117,8 +117,8 @@ export function PricingTable({ currentTier, onUpgrade, isLoading, roleType = 'PA
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {tiers.map((tier) => {
-        const features = TIER_FEATURES[tier];
-        const tierPrices = TIER_PRICES[tier];
+        const features = TIER_FEATURES[tier]!;
+        const tierPrices = TIER_PRICES[tier]!;
         const price = roleType === 'TEACHER' ? tierPrices.teacher : tierPrices.parent;
         const isCurrent = currentTier === tier;
         const isUpgrade = tiers.indexOf(tier) > tiers.indexOf(currentTier);

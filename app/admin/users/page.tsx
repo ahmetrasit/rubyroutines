@@ -48,6 +48,10 @@ function UsersContent() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPermanentDeleteDialog, setShowPermanentDeleteDialog] = useState(false);
+  const [permanentDeleteReason, setPermanentDeleteReason] = useState('');
+  const [permanentDeleteConfirmText, setPermanentDeleteConfirmText] = useState('');
+  const [showVerifyDialog, setShowVerifyDialog] = useState(false);
 
   const { data: usersData, isLoading } = trpc.adminUsers.search.useQuery({
     email: searchEmail || undefined,
@@ -95,10 +99,52 @@ function UsersContent() {
     onSuccess: () => {
       toast({
         title: 'Success',
-        description: 'User deleted',
+        description: 'User soft-deleted',
       });
       utils.adminUsers.search.invalidate();
       setShowDeleteDialog(false);
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const permanentDeleteUserMutation = trpc.adminUsers.permanentlyDeleteUser.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'User permanently deleted',
+      });
+      utils.adminUsers.search.invalidate();
+      utils.adminUsers.statistics.invalidate();
+      setShowPermanentDeleteDialog(false);
+      setPermanentDeleteReason('');
+      setPermanentDeleteConfirmText('');
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const verifyEmailMutation = trpc.adminUsers.verifyUserEmail.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Email verified successfully',
+      });
+      utils.adminUsers.search.invalidate();
+      utils.adminUsers.statistics.invalidate();
+      setShowVerifyDialog(false);
       setSelectedUser(null);
     },
     onError: (error) => {
@@ -146,11 +192,39 @@ function UsersContent() {
     setShowDeleteDialog(true);
   };
 
+  const handlePermanentDeleteUser = (user: any) => {
+    if (!user?.id || typeof user.id !== 'string') {
+      toast({
+        title: 'Error',
+        description: 'Invalid user data',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSelectedUser(user);
+    setPermanentDeleteReason('');
+    setPermanentDeleteConfirmText('');
+    setShowPermanentDeleteDialog(true);
+  };
+
   const handleTierChange = async (roleId: string, newTier: Tier) => {
     await changeTierMutation.mutateAsync({
       roleId,
       tier: newTier,
     });
+  };
+
+  const handleVerifyEmail = (user: any) => {
+    if (!user?.id || typeof user.id !== 'string') {
+      toast({
+        title: 'Error',
+        description: 'Invalid user data',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSelectedUser(user);
+    setShowVerifyDialog(true);
   };
 
   return (
@@ -242,7 +316,13 @@ function UsersContent() {
                           </Badge>
                         )}
                         {!user.emailVerified && (
-                          <Badge variant="outline">Unverified</Badge>
+                          <Badge
+                            variant="outline"
+                            className="cursor-pointer hover:bg-muted transition-colors"
+                            onClick={() => handleVerifyEmail(user)}
+                          >
+                            Unverified (click to verify)
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -274,14 +354,26 @@ function UsersContent() {
                         Manage
                       </Button>
                       {!user.isAdmin && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user)}
+                            className="text-orange-600 hover:text-orange-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePermanentDeleteUser(user)}
+                            className="text-destructive hover:text-destructive border-destructive"
+                            title="Permanent Delete (GDPR)"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="ml-1 text-xs">GDPR</span>
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -362,14 +454,15 @@ function UsersContent() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Soft Delete Confirmation Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete User</DialogTitle>
+              <DialogTitle>Soft Delete User</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete {selectedUser?.email}? This action cannot be undone.
-                All data associated with this user will be permanently deleted.
+                Are you sure you want to soft-delete {selectedUser?.email}? This will mark the user as deleted
+                but preserve data for potential recovery. For permanent deletion (GDPR compliance), use the
+                Permanent Delete option.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -377,7 +470,7 @@ function UsersContent() {
                 Cancel
               </Button>
               <Button
-                variant="destructive"
+                variant="danger"
                 onClick={() => {
                   if (!selectedUser?.id) {
                     toast({
@@ -391,7 +484,145 @@ function UsersContent() {
                 }}
                 disabled={deleteUserMutation.isPending}
               >
-                Delete User
+                Soft Delete User
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Permanent Delete Confirmation Dialog (GDPR) */}
+        <Dialog open={showPermanentDeleteDialog} onOpenChange={setShowPermanentDeleteDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-destructive">Permanent Delete User (GDPR/COPPA Compliance)</DialogTitle>
+              <DialogDescription className="space-y-2">
+                <p className="font-semibold">WARNING: This action is IRREVERSIBLE!</p>
+                <p>You are about to permanently delete {selectedUser?.email} and ALL associated data:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>User account will be removed from authentication system</li>
+                  <li>All roles, persons, groups, routines, tasks, and completions will be PERMANENTLY deleted</li>
+                  <li>All goals, marketplace items, comments, and ratings will be PERMANENTLY deleted</li>
+                  <li>All sharing connections and invitations will be PERMANENTLY deleted</li>
+                  <li>Audit logs will be anonymized (action preserved, PII removed)</li>
+                </ul>
+                <p className="text-destructive font-semibold mt-4">
+                  This operation is intended for GDPR "Right to Erasure" and COPPA compliance requests only.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Deletion Reason (required):
+                </label>
+                <Input
+                  placeholder="e.g., GDPR request, Parent request, COPPA compliance"
+                  value={permanentDeleteReason}
+                  onChange={(e) => setPermanentDeleteReason(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Type DELETE to confirm:
+                </label>
+                <Input
+                  placeholder="DELETE"
+                  value={permanentDeleteConfirmText}
+                  onChange={(e) => setPermanentDeleteConfirmText(e.target.value)}
+                  className="w-full font-mono"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowPermanentDeleteDialog(false);
+                  setPermanentDeleteReason('');
+                  setPermanentDeleteConfirmText('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (!selectedUser?.id) {
+                    toast({
+                      title: 'Error',
+                      description: 'Invalid user ID',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  if (permanentDeleteConfirmText !== 'DELETE') {
+                    toast({
+                      title: 'Error',
+                      description: 'Please type DELETE to confirm',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  if (!permanentDeleteReason || permanentDeleteReason.length < 5) {
+                    toast({
+                      title: 'Error',
+                      description: 'Please provide a reason (minimum 5 characters)',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  permanentDeleteUserMutation.mutate({
+                    userId: selectedUser.id,
+                    reason: permanentDeleteReason
+                  });
+                }}
+                disabled={
+                  permanentDeleteUserMutation.isPending ||
+                  permanentDeleteConfirmText !== 'DELETE' ||
+                  !permanentDeleteReason ||
+                  permanentDeleteReason.length < 5
+                }
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {permanentDeleteUserMutation.isPending ? 'Deleting...' : 'Permanently Delete User'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Email Verification Confirmation Dialog */}
+        <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Verify User Email</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to manually verify the email for {selectedUser?.email}?
+                This will mark their email as verified in both the database and Supabase Auth.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowVerifyDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedUser?.id) {
+                    toast({
+                      title: 'Error',
+                      description: 'Invalid user ID',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  verifyEmailMutation.mutate({ userId: selectedUser.id });
+                }}
+                disabled={verifyEmailMutation.isPending}
+              >
+                Verify Email
               </Button>
             </DialogFooter>
           </DialogContent>

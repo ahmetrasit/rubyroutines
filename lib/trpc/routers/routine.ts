@@ -40,7 +40,16 @@ export const routineRouter = router({
     if (input.personId) {
       where.assignments = {
         some: {
-          personId: input.personId,
+          OR: [
+            { personId: input.personId },
+            {
+              group: {
+                members: {
+                  some: { personId: input.personId }
+                }
+              }
+            }
+          ]
         },
       };
     }
@@ -61,15 +70,15 @@ export const routineRouter = router({
                 orderBy: { order: 'asc' },
               },
             }
-          : {
-              _count: {
-                select: {
-                  tasks: {
-                    where: { status: EntityStatus.ACTIVE },
-                  },
-                },
-              },
-            }),
+          : {}),
+        // Always include task count
+        _count: {
+          select: {
+            tasks: {
+              where: { status: EntityStatus.ACTIVE },
+            },
+          },
+        },
       },
       orderBy: { name: 'asc' },
     });
@@ -134,7 +143,9 @@ export const routineRouter = router({
     // Create a map of personId to routine count
     const routineCountMap = new Map<string, number>();
     routineCounts.forEach((rc) => {
-      routineCountMap.set(rc.personId, rc._count);
+      if (rc.personId) {
+        routineCountMap.set(rc.personId, rc._count);
+      }
     });
 
     // Check tier limit for each person
@@ -288,7 +299,9 @@ export const routineRouter = router({
     // Create a map of personId to routine count
     const routineCountMap = new Map<string, number>();
     routineCounts.forEach((rc) => {
-      routineCountMap.set(rc.personId, rc._count);
+      if (rc.personId) {
+        routineCountMap.set(rc.personId, rc._count);
+      }
     });
 
     // If Daily Routine, batch query to find existing Daily Routines for all persons
@@ -372,7 +385,6 @@ export const routineRouter = router({
                     description: task.description,
                     type: task.type,
                     order: lastTaskOrder + index + 1,
-                    targetValue: task.targetValue,
                     unit: task.unit,
                   },
                 })

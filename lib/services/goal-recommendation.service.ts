@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma';
-import { GoalType, GoalCategory } from '@prisma/client';
 import { subDays, differenceInDays } from 'date-fns';
 import { goalTemplates, type GoalTemplate } from '@/lib/constants/goal-templates';
 
@@ -41,6 +40,7 @@ export async function recommendGoals(
     candidateTemplates = candidateTemplates.filter(t => {
       if (!t.ageGroup) return true;
       const [min, max] = t.ageGroup.split('-').map(Number);
+      if (min === undefined || max === undefined) return true;
       return age >= min && age <= max;
     });
   }
@@ -123,10 +123,7 @@ async function getExistingGoals(roleId: string, personId?: string) {
       roleId,
       status: 'ACTIVE',
       ...(personId && {
-        OR: [
-          { personIds: { has: personId } },
-          { scope: 'ROLE' }
-        ]
+        personIds: { has: personId }
       })
     }
   });
@@ -216,7 +213,11 @@ function calculateConsecutiveDays(history: any[]): number {
   let currentStreak = 1;
 
   for (let i = 1; i < sortedDays.length; i++) {
-    const diff = differenceInDays(sortedDays[i - 1], sortedDays[i]);
+    const prevDay = sortedDays[i - 1];
+    const currentDay = sortedDays[i];
+    if (!prevDay || !currentDay) continue;
+
+    const diff = differenceInDays(prevDay, currentDay);
     if (diff === 1) {
       currentStreak++;
       maxStreak = Math.max(maxStreak, currentStreak);

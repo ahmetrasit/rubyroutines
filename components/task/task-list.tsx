@@ -32,7 +32,7 @@ export const TaskList = memo(function TaskList({ routineId, personId = '', effec
     },
     {
       staleTime: 1 * 60 * 1000, // 1 minute - task completions update frequently
-      cacheTime: 5 * 60 * 1000, // 5 minutes cache
+      gcTime: 5 * 60 * 1000, // 5 minutes cache
     }
   );
 

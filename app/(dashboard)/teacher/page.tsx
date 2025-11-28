@@ -1,46 +1,29 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { GroupList } from '@/components/group/group-list';
 import { ModeSwitcher } from '@/components/mode-switcher';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Store, BarChart3, CreditCard, Settings, Download, Share2, Copy, Clock } from 'lucide-react';
 import { ImportFromCodeModal } from '@/components/marketplace/ImportFromCodeModal';
-import { ClaimShareCodeModal } from '@/components/sharing/ClaimShareCodeModal';
 import { CopyRoutineModal } from '@/components/routine/copy-routine-modal';
 import { BulkVisibilityControl } from '@/components/routine/bulk-visibility-control';
 import Link from 'next/link';
 
 export default function TeacherDashboard() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { data: session, isLoading } = trpc.auth.getSession.useQuery();
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showClaimShareModal, setShowClaimShareModal] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [showBulkVisibility, setShowBulkVisibility] = useState(false);
-  const [inviteCodeFromUrl, setInviteCodeFromUrl] = useState<string | null>(null);
-  const hasProcessedInviteCode = useRef(false);
 
   useEffect(() => {
     if (!isLoading && !session?.user) {
       router.push('/login');
     }
-  }, [isLoading, session]); // router removed - it's stable and doesn't need to be a dependency
-
-  // Auto-open claim share modal if inviteCode is in URL
-  useEffect(() => {
-    const inviteCode = searchParams.get('inviteCode');
-    if (inviteCode && session?.user && !hasProcessedInviteCode.current) {
-      hasProcessedInviteCode.current = true;
-      setInviteCodeFromUrl(inviteCode);
-      setShowClaimShareModal(true);
-      // Clean up URL by removing the query parameter
-      router.replace('/teacher');
-    }
-  }, [searchParams, session]); // router removed - it's stable and doesn't need to be a dependency
+  }, [isLoading, session, router]);
 
   if (isLoading) {
     return (
@@ -135,19 +118,6 @@ export default function TeacherDashboard() {
 
               <Card
                 className="hover:shadow-lg transition-shadow cursor-pointer h-full"
-                onClick={() => setShowClaimShareModal(true)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Sharing</CardTitle>
-                  <Share2 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xs text-muted-foreground">Accept share code</div>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="hover:shadow-lg transition-shadow cursor-pointer h-full"
                 onClick={() => setShowCopyModal(true)}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -227,18 +197,6 @@ export default function TeacherDashboard() {
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         roleId={teacherRole.id}
-      />
-
-      {/* Claim Share Code Modal */}
-      <ClaimShareCodeModal
-        isOpen={showClaimShareModal}
-        onClose={() => {
-          setShowClaimShareModal(false);
-          setInviteCodeFromUrl(null);
-        }}
-        roleId={teacherRole.id}
-        userId={session.user.id}
-        initialCode={inviteCodeFromUrl || undefined}
       />
 
       {/* Copy Routine Modal */}

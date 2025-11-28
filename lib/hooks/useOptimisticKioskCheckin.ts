@@ -17,9 +17,16 @@ interface TaskCompletion {
   taskId: string;
   personId: string;
   completedAt: Date;
-  value?: number | null;
+  value?: string | number | null;
   summedValue?: number | null;
   entryNumber?: number | null;
+  wasCached?: boolean;
+  notes?: string | null;
+  createdAt?: Date;
+  idempotencyKey?: string | null;
+  deviceId?: string | null;
+  sessionId?: string | null;
+  version?: number;
 }
 
 interface Task {
@@ -289,7 +296,7 @@ export function useOptimisticKioskUndo(
                 updatedTask.completionCount = Math.max(0, (task.completionCount || 1) - 1);
                 updatedTask.isComplete = false;
               } else if (task.type === TaskType.PROGRESS && completionToRemove?.value) {
-                const newTotal = Math.max(0, (task.totalValue || 0) - completionToRemove.value);
+                const newTotal = Math.max(0, (task.totalValue || 0) - Number(completionToRemove.value));
                 updatedTask.totalValue = newTotal;
                 updatedTask.summedValue = newTotal;
                 updatedTask.entryNumber = Math.max(0, (task.entryNumber || 1) - 1);

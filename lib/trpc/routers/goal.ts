@@ -696,12 +696,12 @@ export const goalRouter = router({
 
       // Check tier limits
       const tierLimits = await getEffectiveTierLimits(ctx.user.id);
-      const limits = mapDatabaseLimitsToComponentFormat(tierLimits);
+      const limits = mapDatabaseLimitsToComponentFormat(tierLimits, role.type);
 
-      if (role.goals.length + input.goals.length > limits.max_goals) {
+      if (limits && role.goals.length + input.goals.length > limits.goals) {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: `Goal limit (${limits.max_goals}) would be exceeded`
+          message: `Goal limit (${limits.goals}) would be exceeded`
         });
       }
 

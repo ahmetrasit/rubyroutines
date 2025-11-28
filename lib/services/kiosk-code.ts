@@ -49,7 +49,11 @@ export async function generateKioskCode(
   }
 
   // Extract first name and format it (uppercase, no spaces)
-  const firstName = userName.split(' ')[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const firstNamePart = userName.split(' ')[0];
+  if (!firstNamePart) {
+    throw new Error('Invalid user name');
+  }
+  const firstName = firstNamePart.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
   let attempts = 0;
   const maxAttempts = 10;

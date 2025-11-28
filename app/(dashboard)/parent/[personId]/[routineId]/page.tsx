@@ -10,8 +10,8 @@ import { ArrowLeft } from 'lucide-react';
 export default function RoutineDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const personId = params.personId as string;
-  const routineId = params.routineId as string;
+  const personId = params?.personId as string;
+  const routineId = params?.routineId as string;
 
   const { data: session, isLoading: sessionLoading } = trpc.auth.getSession.useQuery();
   const { data: person, isLoading: personLoading } = trpc.person.getById.useQuery(
@@ -42,7 +42,8 @@ export default function RoutineDetailPage() {
   }
 
   // Find parent role
-  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
+  // Cast to include effectiveLimits which is added by auth router
+  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT') as (typeof session.user.roles)[0] & { effectiveLimits?: any } | undefined;
 
   if (!parentRole) {
     return (

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -46,7 +45,7 @@ export function GoalAnalyticsChart({ roleId, personId, groupId }: GoalAnalyticsC
     },
     {
       staleTime: 5 * 60 * 1000, // 5 minutes - analytics data can be slightly stale
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
       refetchOnWindowFocus: false,
     }
   );
@@ -59,7 +58,7 @@ export function GoalAnalyticsChart({ roleId, personId, groupId }: GoalAnalyticsC
     },
     {
       staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
       refetchOnWindowFocus: false,
     }
   );
@@ -71,7 +70,7 @@ export function GoalAnalyticsChart({ roleId, personId, groupId }: GoalAnalyticsC
     },
     {
       staleTime: 3 * 60 * 1000, // 3 minutes - streaks update more frequently
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
       refetchOnWindowFocus: false,
     }
   );
@@ -85,7 +84,7 @@ export function GoalAnalyticsChart({ roleId, personId, groupId }: GoalAnalyticsC
     },
     {
       staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
       refetchOnWindowFocus: false,
     }
   );
@@ -201,12 +200,16 @@ export function GoalAnalyticsChart({ roleId, personId, groupId }: GoalAnalyticsC
               <CardDescription>Track goal progress and achievements over time</CardDescription>
             </div>
             <div className="flex gap-2">
-              <Select value={period} onChange={(e) => setPeriod(e.target.value as any)}>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as any)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
                 <option value="WEEK">Week</option>
                 <option value="MONTH">Month</option>
                 <option value="QUARTER">Quarter</option>
                 <option value="YEAR">Year</option>
-              </Select>
+              </select>
             </div>
           </div>
         </CardHeader>
@@ -261,7 +264,7 @@ export function GoalAnalyticsChart({ roleId, personId, groupId }: GoalAnalyticsC
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                     outerRadius={120}
                     fill="#8884d8"
                     dataKey="value"

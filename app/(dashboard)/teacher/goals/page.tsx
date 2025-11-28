@@ -13,7 +13,8 @@ import { trpc } from '@/lib/trpc/client';
 import { Plus, Users, Target, TrendingUp, Award } from 'lucide-react';
 
 export default function TeacherGoalsPage() {
-  const { roleId } = useActiveRole();
+  const { activeRole } = useActiveRole();
+  const roleId = activeRole?.id;
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [selectedTab, setSelectedTab] = useState('overview');
@@ -34,8 +35,8 @@ export default function TeacherGoalsPage() {
   const stats = {
     totalGoals: goals?.length || 0,
     activeStudents: persons?.filter(p => p.status === 'ACTIVE').length || 0,
-    groupGoals: goals?.filter(g => g.scope === 'GROUP').length || 0,
-    individualGoals: goals?.filter(g => g.scope === 'INDIVIDUAL').length || 0,
+    groupGoals: goals?.filter(g => g.groupIds && g.groupIds.length > 0).length || 0,
+    individualGoals: goals?.filter(g => g.personIds && g.personIds.length > 0 && (!g.groupIds || g.groupIds.length === 0)).length || 0,
   };
 
   if (!roleId) {

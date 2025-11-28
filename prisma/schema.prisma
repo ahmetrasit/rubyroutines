@@ -87,6 +87,11 @@ model Role {
   ownerSharingConnections     PersonSharingConnection[]  @relation("OwnerRoleSharingConnections")
   sharedWithConnections       PersonSharingConnection[]  @relation("SharedWithRoleSharingConnections")
 
+  // Person Connection relations (cross-account observation)
+  originConnections           PersonConnection[]         @relation("OriginRoleConnections")
+  targetConnections           PersonConnection[]         @relation("TargetRoleConnections")
+  originConnectionCodes       PersonConnectionCode[]     @relation("OriginRoleConnectionCodes")
+
   @@unique([userId, type])
   @@index([userId])
   @@index([type])
@@ -137,6 +142,11 @@ model Person {
   codes                   Code[]                    // Individual kiosk codes for this person
   ownerSharingInvites     PersonSharingInvite[]     @relation("OwnerPersonSharingInvites")
   ownerSharingConnections PersonSharingConnection[] @relation("OwnerPersonSharingConnections")
+
+  // Person Connection relations (cross-account observation)
+  originConnections       PersonConnection[]        @relation("OriginPersonConnections")
+  targetConnections       PersonConnection[]        @relation("TargetPersonConnections")
+  originConnectionCodes   PersonConnectionCode[]    @relation("OriginPersonConnectionCodes")
 
   @@index([roleId])
   @@index([status])
@@ -888,6 +898,87 @@ model PersonSharingConnection {
   @@index([sharedWithUserId])
   @@index([status])
   @@map("person_sharing_connections")
+}
+
+// ============================================================================
+// PERSON CONNECTIONS (Cross-account person observation)
+// ============================================================================
+
+// Connection between two persons across different accounts
+// Origin person (being observed) -> Target person (observer)
+model PersonConnection {
+  id                    String    @id @default(cuid())
+
+  // Origin side (person being observed - their tasks are shown)
+  originRoleId          String
+  originPersonId        String
+
+  // Target side (observer - sees origin's tasks in their dashboard)
+  targetRoleId          String
+  targetPersonId        String
+
+  // Connection status
+  status                String    @default("ACTIVE") // ACTIVE, DISCONNECTED
+
+  // Scope control (what routines/goals are visible to target)
+  scopeMode             String    @default("ALL") // ALL, SELECTED
+  visibleRoutineIds     String[]  @default([])    // When scopeMode=SELECTED, which routines are visible
+  visibleGoalIds        String[]  @default([])    // When scopeMode=SELECTED, which goals are visible
+
+  // Timestamps
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  disconnectedAt        DateTime?
+  disconnectedBy        String?   // UserId who disconnected
+
+  // Relations
+  originRole            Role      @relation("OriginRoleConnections", fields: [originRoleId], references: [id], onDelete: Cascade)
+  originPerson          Person    @relation("OriginPersonConnections", fields: [originPersonId], references: [id], onDelete: Cascade)
+  targetRole            Role      @relation("TargetRoleConnections", fields: [targetRoleId], references: [id], onDelete: Cascade)
+  targetPerson          Person    @relation("TargetPersonConnections", fields: [targetPersonId], references: [id], onDelete: Cascade)
+
+  @@unique([originPersonId, targetPersonId]) // Prevent duplicate connections between same persons
+  @@index([originRoleId])
+  @@index([originPersonId])
+  @@index([targetRoleId])
+  @@index([targetPersonId])
+  @@index([status])
+  @@map("person_connections")
+}
+
+// Connection codes for establishing person connections
+model PersonConnectionCode {
+  id                String      @id @default(cuid())
+  code              String      @unique  // 4-word code (e.g., "happy-turtle-jump-blue")
+
+  // Origin side (who generates the code)
+  originRoleId      String
+  originPersonId    String
+
+  // Type constraint - what type of person can claim this code
+  // KID = only kids (parent's non-account-owner persons)
+  // STUDENT = only students (teacher's non-account-owner persons)
+  // PARENT = only parent account owners
+  // PARENT_OR_KID = parent account owner or their kids
+  allowedTargetType String
+
+  // Code metadata
+  expiresAt         DateTime    // 24 hours from creation
+  usedAt            DateTime?
+  status            CodeStatus  @default(ACTIVE)
+
+  createdAt         DateTime    @default(now())
+
+  // Relations
+  originRole        Role        @relation("OriginRoleConnectionCodes", fields: [originRoleId], references: [id], onDelete: Cascade)
+  originPerson      Person      @relation("OriginPersonConnectionCodes", fields: [originPersonId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([originRoleId])
+  @@index([originPersonId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("person_connection_codes")
 }
 
 // ============================================================================

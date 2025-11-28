@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,9 +33,9 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
   const [period, setPeriod] = useState<ResetPeriod>(ResetPeriod.WEEKLY);
-  const [type, setType] = useState<GoalType>('COMPLETION_COUNT');
-  const [category, setCategory] = useState<GoalCategory>('CUSTOM');
-  const [scope, setScope] = useState<GoalScope>('INDIVIDUAL');
+  const [type, setType] = useState<GoalType>(GoalType.COMPLETION_COUNT);
+  const [category, setCategory] = useState<GoalCategory>(GoalCategory.CUSTOM);
+  const [scope, setScope] = useState<GoalScope>(GoalScope.INDIVIDUAL);
   const [unit, setUnit] = useState('');
   const [streakEnabled, setStreakEnabled] = useState(false);
   const [resetDay, setResetDay] = useState<number | undefined>();
@@ -77,10 +76,10 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
     setName(template.name);
     setDescription(template.description);
     setTarget(template.defaultTarget.toString());
-    setPeriod(template.defaultPeriod);
-    setType(template.type);
-    setCategory(template.category);
-    setScope(template.scope);
+    setPeriod(template.defaultPeriod as any);
+    setType(template.type as any);
+    setCategory(template.category as any);
+    setScope(template.scope as any);
     setUnit(template.defaultUnit || '');
     setStreakEnabled(template.streakEnabled || false);
     setIcon(template.icon || '');
@@ -175,8 +174,8 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
-  const getCategoryBadgeColor = (category: GoalCategory) => {
-    const colors: Record<GoalCategory, string> = {
+  const getCategoryBadgeColor = (category: string) => {
+    const colors: Record<string, string> = {
       EDUCATION: 'bg-blue-100 text-blue-800',
       HEALTH: 'bg-green-100 text-green-800',
       CHORES: 'bg-orange-100 text-orange-800',
@@ -211,9 +210,10 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Label>Filter by category:</Label>
-                <Select
+                <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value as GoalCategory | 'ALL')}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="ALL">All Categories</option>
                   <option value="EDUCATION">Education</option>
@@ -222,7 +222,7 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
                   <option value="BEHAVIOR">Behavior</option>
                   <option value="SOCIAL">Social</option>
                   <option value="CREATIVE">Creative</option>
-                </Select>
+                </select>
               </div>
 
               <ScrollArea className="h-[400px]">
@@ -318,27 +318,29 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="type">Goal Type *</Label>
-                      <Select
+                      <select
                         id="type"
                         value={type}
                         onChange={(e) => setType(e.target.value as GoalType)}
                         disabled={isPending}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
                         <option value="COMPLETION_COUNT">Completion Count</option>
                         <option value="STREAK">Streak</option>
                         <option value="TIME_BASED">Time Based</option>
                         <option value="PERCENTAGE">Percentage</option>
                         <option value="VALUE_BASED">Value Based</option>
-                      </Select>
+                      </select>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="category">Category</Label>
-                      <Select
+                      <select
                         id="category"
                         value={category}
                         onChange={(e) => setCategory(e.target.value as GoalCategory)}
                         disabled={isPending}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
                         <option value="CUSTOM">Custom</option>
                         <option value="EDUCATION">Education</option>
@@ -347,7 +349,7 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
                         <option value="BEHAVIOR">Behavior</option>
                         <option value="SOCIAL">Social</option>
                         <option value="CREATIVE">Creative</option>
-                      </Select>
+                      </select>
                     </div>
                   </div>
 
@@ -379,27 +381,29 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
 
                     <div className="space-y-2">
                       <Label htmlFor="period">Period *</Label>
-                      <Select
+                      <select
                         id="period"
                         value={period}
                         onChange={(e) => setPeriod(e.target.value as ResetPeriod)}
                         disabled={isPending}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
                         <option value={ResetPeriod.DAILY}>Daily</option>
                         <option value={ResetPeriod.WEEKLY}>Weekly</option>
                         <option value={ResetPeriod.MONTHLY}>Monthly</option>
-                      </Select>
+                      </select>
                     </div>
                   </div>
 
                   {period === ResetPeriod.WEEKLY && (
                     <div className="space-y-2">
                       <Label htmlFor="resetDay">Reset Day</Label>
-                      <Select
+                      <select
                         id="resetDay"
                         value={resetDay?.toString() || '0'}
                         onChange={(e) => setResetDay(parseInt(e.target.value))}
                         disabled={isPending}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
                         <option value="0">Sunday</option>
                         <option value="1">Monday</option>
@@ -408,23 +412,24 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
                         <option value="4">Thursday</option>
                         <option value="5">Friday</option>
                         <option value="6">Saturday</option>
-                      </Select>
+                      </select>
                     </div>
                   )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="scope">Scope</Label>
-                      <Select
+                      <select
                         id="scope"
                         value={scope}
                         onChange={(e) => setScope(e.target.value as GoalScope)}
                         disabled={isPending}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       >
                         <option value="INDIVIDUAL">Individual</option>
                         <option value="GROUP">Group</option>
                         <option value="ROLE">Entire Role</option>
-                      </Select>
+                      </select>
                     </div>
 
                     <div className="space-y-2">

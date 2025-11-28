@@ -49,7 +49,7 @@ const INACTIVITY_TIMEOUT = 60000; // 60 seconds (default, can be configured in a
 export default function KioskModePage() {
   const router = useRouter();
   const params = useParams();
-  const code = params.code as string;
+  const code = params?.code as string;
   const [sessionData, setSessionData] = useState<any>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
@@ -304,7 +304,8 @@ export default function KioskModePage() {
 
   // Use optimistic mutations for instant UI feedback
   const baseCompleteMutation = trpc.kiosk.completeTask.useMutation();
-  const completeMutation = useOptimisticKioskCheckin(baseCompleteMutation, {
+  // Cast to any to handle type incompatibility between mutation return type and hook interface
+  const completeMutation = useOptimisticKioskCheckin(baseCompleteMutation as any, {
     kioskCodeId: sessionData?.codeId!,
     personId: selectedPersonId!,
     kioskTasksKey: kioskTasksQueryKey,
@@ -342,7 +343,8 @@ export default function KioskModePage() {
   });
 
   const baseUndoMutation = trpc.kiosk.undoCompletion.useMutation();
-  const undoMutation = useOptimisticKioskUndo(baseUndoMutation, {
+  // Cast to any to handle type incompatibility between mutation return type and hook interface
+  const undoMutation = useOptimisticKioskUndo(baseUndoMutation as any, {
     kioskCodeId: sessionData?.codeId!,
     personId: selectedPersonId!,
     messages: {
@@ -423,7 +425,7 @@ export default function KioskModePage() {
 
   // Auto-select person for individual codes
   useEffect(() => {
-    if (isIndividualCode && activePersons.length === 1 && !selectedPersonId) {
+    if (isIndividualCode && activePersons.length === 1 && !selectedPersonId && activePersons[0]) {
       setSelectedPersonId(activePersons[0].id);
     }
   }, [isIndividualCode, activePersons, selectedPersonId]);

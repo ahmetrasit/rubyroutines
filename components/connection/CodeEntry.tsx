@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Link2, Plus } from 'lucide-react';
 
 interface CodeEntryProps {
@@ -38,8 +37,6 @@ export function CodeEntry({ parentRoleId }: CodeEntryProps) {
   const createPersonMutation = trpc.person.create.useMutation({
     onSuccess: () => {
       utils.person.list.invalidate();
-      // Also invalidate the query that PersonList actually uses
-      utils.personSharing.getAccessiblePersons.invalidate();
     },
     onError: (error) => {
       toast({
@@ -246,8 +243,9 @@ export function CodeEntry({ parentRoleId }: CodeEntryProps) {
                 {/* Show appropriate input based on selection */}
                 {!isCreatingNew && persons && persons.length > 0 ? (
                   <div className="pl-7">
-                    <Select
+                    <select
                       id="child"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                       value={selectedPersonId}
                       onChange={(e) => setSelectedPersonId(e.target.value)}
                       required
@@ -261,7 +259,7 @@ export function CodeEntry({ parentRoleId }: CodeEntryProps) {
                           </option>
                         );
                       })}
-                    </Select>
+                    </select>
                   </div>
                 ) : isCreatingNew ? (
                   <div className="pl-7">

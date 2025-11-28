@@ -88,9 +88,6 @@ export function useKioskRealtime(options: UseKioskRealtimeOptions) {
         if (currentPersonId) {
           // Invalidate person tasks query
           currentUtils.kiosk.getPersonTasks.invalidate({ personId: currentPersonId });
-
-          // Invalidate person query (for updated timestamps)
-          currentUtils.kiosk.getPerson.invalidate({ personId: currentPersonId });
         }
 
         // Call custom callback if provided
@@ -131,7 +128,7 @@ export function useKioskRealtime(options: UseKioskRealtimeOptions) {
       const currentSessionId = sessionIdRef.current;
       const currentUtils = utilsRef.current;
       if (currentSessionId) {
-        currentUtils.kiosk.verifySession.invalidate({ code: currentSessionId });
+        currentUtils.kiosk.validateSession.invalidate({ sessionId: currentSessionId });
       }
     },
     [handleSessionTermination] // Only handleSessionTermination (now stable)
@@ -214,10 +211,9 @@ export function useKioskRealtime(options: UseKioskRealtimeOptions) {
   const refresh = useCallback(() => {
     if (personId) {
       utils.kiosk.getPersonTasks.invalidate({ personId });
-      utils.kiosk.getPerson.invalidate({ personId });
     }
     if (sessionId) {
-      utils.kiosk.verifySession.invalidate({ code: sessionId });
+      utils.kiosk.validateSession.invalidate({ sessionId });
     }
   }, [personId, sessionId, utils]);
 

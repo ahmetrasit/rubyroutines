@@ -8,6 +8,9 @@ import { SkipNavigation } from "@/components/skip-navigation";
 import { NetworkStatusIndicator } from "@/components/ui/network-status-indicator";
 import "./globals.css";
 
+// Force dynamic rendering for all pages to prevent SSR/prerendering issues with tRPC
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "Ruby Routines",
   description: "Routine management for parents and teachers",

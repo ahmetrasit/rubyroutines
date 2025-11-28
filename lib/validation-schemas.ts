@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { VALIDATION } from './constants';
+import { VALIDATION } from './utils/constants';
 
 // ============================================================================
 // Common Field Schemas
@@ -102,9 +102,19 @@ export const createTaskSchema = taskBaseSchema.extend({
   ])
 );
 
-export const updateTaskSchema = createTaskSchema.partial().extend({
+export const updateTaskSchema = z.intersection(
+  taskBaseSchema.partial().extend({
+    routineId: z.string().cuid('Invalid routine ID').optional(),
+  }),
+  z.discriminatedUnion('type', [
+    z.object({ type: z.literal('SIMPLE') }),
+    z.object({ type: z.literal('MULTIPLE_CHECKIN') }),
+    z.object({ type: z.literal('PROGRESS') }).merge(taskProgressSchema.partial()),
+    z.object({ type: z.literal('TIMED') }).merge(taskTimedSchema.partial()),
+  ])
+).and(z.object({
   id: z.string().cuid('Invalid task ID'),
-});
+}));
 
 // ============================================================================
 // Routine Validation
@@ -208,5 +218,6 @@ export function validateForm<T>(
  */
 export function getFirstError(errors: Record<string, string>): string | null {
   const keys = Object.keys(errors);
-  return keys.length > 0 ? errors[keys[0]] : null;
+  const firstKey = keys[0];
+  return firstKey ? errors[firstKey] ?? null : null;
 }

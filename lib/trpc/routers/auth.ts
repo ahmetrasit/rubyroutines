@@ -82,12 +82,13 @@ export const authRouter = router({
       }
 
       // Create user with default roles, persons, and routines in a transaction
+      const userId = data.user.id;
       try {
         await ctx.prisma.$transaction(async (tx) => {
           // Create the user
           await tx.user.create({
             data: {
-              id: data.user.id,
+              id: userId,
               email: input.email,
               name: input.name,
             },
@@ -95,14 +96,14 @@ export const authRouter = router({
 
           // Create default roles, persons, and routines
           await createDefaultRoles({
-            userId: data.user.id,
+            userId: userId,
             name: input.name,
             prisma: tx, // Pass transaction context
           });
         });
 
         logger.info('Successfully created user with default data', {
-          userId: data.user.id,
+          userId: userId,
           email: input.email
         });
       } catch (dbError) {
@@ -258,13 +259,13 @@ export const authRouter = router({
           dbUser.roles.map(async (role) => {
             try {
               const dbLimits = await getEffectiveTierLimits(role.id);
-              const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type);
+              const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type as any);
               return {
                 ...role,
                 effectiveLimits,
               };
             } catch (error) {
-              logger.warn(`Failed to fetch tier limits for role ${role.id}:`, error);
+              logger.warn(`Failed to fetch tier limits for role ${role.id}:`, error as any);
               return {
                 ...role,
                 effectiveLimits: null,

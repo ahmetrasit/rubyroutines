@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
@@ -217,14 +216,14 @@ export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select {type === 'ROUTINE' ? 'Routine' : 'Goal'}
               </label>
-              <Select value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}>
+              <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={selectedItem} onChange={(e) => setSelectedItem(e.target.value)}>
                 <option value="">-- Select --</option>
                 {items?.map((item: any) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
 
             {/* Visibility Toggle */}
@@ -266,14 +265,14 @@ export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Category (optional)
                   </label>
-                  <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+                  <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
                     <option value="">-- None --</option>
                     {CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
                     ))}
-                  </Select>
+                  </select>
                 </div>
 
                 {/* Age Group */}
@@ -281,14 +280,14 @@ export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Age Group (optional)
                   </label>
-                  <Select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
+                  <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
                     <option value="">-- None --</option>
                     {AGE_GROUPS.map((age) => (
                       <option key={age} value={age}>
                         {age}
                       </option>
                     ))}
-                  </Select>
+                  </select>
                 </div>
 
                 {/* Tags */}

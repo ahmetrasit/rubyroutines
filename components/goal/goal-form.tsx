@@ -56,12 +56,12 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
   );
 
   // Extract all tasks from routines and sort by routine, type, then name
-  const availableTasks = (routines?.flatMap(routine =>
+  const availableTasks = ((routines as any)?.flatMap((routine: any) =>
     routine.tasks?.map((task: any) => ({
       ...task,
       routineName: routine.name
     })) || []
-  ) || []).sort((a, b) => {
+  ) || []).sort((a: any, b: any) => {
     // First: Sort by routine name
     const routineCompare = a.routineName.localeCompare(b.routineName);
     if (routineCompare !== 0) return routineCompare;
@@ -614,7 +614,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                           <Label htmlFor="condition">Condition *</Label>
                           <Select
                             value={simpleCondition}
-                            onValueChange={(value: 'complete' | 'not_complete') => setSimpleCondition(value)}
+                            onValueChange={(value) => setSimpleCondition(value as 'complete' | 'not_complete')}
                           >
                             <SelectTrigger disabled={isPending}>
                               <span className="text-sm">
@@ -732,7 +732,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                           <Label htmlFor="operator">Operator *</Label>
                           <Select
                             value={comparisonOperator}
-                            onValueChange={(value: 'lte' | 'gte') => setComparisonOperator(value)}
+                            onValueChange={(value) => setComparisonOperator(value as 'lte' | 'gte')}
                           >
                             <SelectTrigger disabled={isPending}>
                               <span className="text-sm font-mono">
@@ -1007,7 +1007,7 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                     </div>
                     {selectedTaskIds.length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {selectedTaskIds.length} task{selectedTaskIds.length > 1 ? 's' : ''} selected
+                        {selectedTaskIds.length} {selectedTaskIds.length === 1 ? 'task' : 'tasks'} selected
                       </p>
                     )}
                   </div>

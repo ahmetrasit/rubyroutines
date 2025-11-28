@@ -41,7 +41,7 @@ export function useRoleOwnership(
   const { roleId, roleType } = options;
   const { data: session, isLoading } = trpc.auth.getSession.useQuery(undefined, {
     staleTime: 5 * 60 * 1000, // 5 minutes - auth session rarely changes
-    cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    gcTime: 10 * 60 * 1000, // 10 minutes cache (renamed from cacheTime in v5)
     refetchOnWindowFocus: false, // Don't refetch auth on every focus
   });
 
@@ -83,7 +83,7 @@ export function useRoleOwnership(
 export function useOwnsResource(resourceRoleId: string | undefined): boolean {
   const { data: session } = trpc.auth.getSession.useQuery(undefined, {
     staleTime: 5 * 60 * 1000, // 5 minutes - auth session rarely changes
-    cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    gcTime: 10 * 60 * 1000, // 10 minutes cache (renamed from cacheTime in v5)
     refetchOnWindowFocus: false, // Don't refetch auth on every focus
   });
 
@@ -121,7 +121,7 @@ export function useCanAccessResource(resourceRoleId: string | undefined): boolea
 export function useActiveRole(preferredRoleType?: RoleType): any | undefined {
   const { data: session } = trpc.auth.getSession.useQuery(undefined, {
     staleTime: 5 * 60 * 1000, // 5 minutes - auth session rarely changes
-    cacheTime: 10 * 60 * 1000, // 10 minutes cache
+    gcTime: 10 * 60 * 1000, // 10 minutes cache (renamed from cacheTime in v5)
     refetchOnWindowFocus: false, // Don't refetch auth on every focus
   });
   const userRoles = session?.user?.roles ?? [];

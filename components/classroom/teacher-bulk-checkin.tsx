@@ -49,7 +49,7 @@ export function TeacherBulkCheckin({
     {
       enabled: isOpen && !!classroomId,
       staleTime: 5 * 60 * 1000, // 5 minutes - classroom data rarely changes
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
     }
   );
 
@@ -59,7 +59,7 @@ export function TeacherBulkCheckin({
     {
       enabled: isOpen && !!roleId,
       staleTime: 5 * 60 * 1000, // 5 minutes - person data rarely changes
-      cacheTime: 10 * 60 * 1000, // 10 minutes cache
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
     }
   );
 

@@ -61,7 +61,7 @@ export async function getAllSettings() {
     if (!grouped[setting.category]) {
       grouped[setting.category] = [];
     }
-    grouped[setting.category].push({
+    grouped[setting.category]!.push({
       key: setting.key,
       value: setting.value,
       description: setting.description,

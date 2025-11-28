@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { Tier } from '@prisma/client';
+import { Tier, Prisma } from '@prisma/client';
 import { createAuditLog, AdminAction } from './audit.service';
 import { logger } from '@/lib/utils/logger';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -421,7 +421,7 @@ export async function removeTierOverride(
 
   await prisma.role.update({
     where: { id: roleId },
-    data: { tierOverride: null },
+    data: { tierOverride: Prisma.JsonNull },
   });
 
   await createAuditLog({
@@ -490,7 +490,7 @@ export async function getSystemStatistics() {
   };
   tierCountsByType.forEach((item) => {
     if (item.type === 'PARENT' || item.type === 'TEACHER') {
-      tierDistributionByType[item.type][item.tier] = item._count;
+      tierDistributionByType[item.type]![item.tier] = item._count;
     }
   });
 
@@ -504,6 +504,80 @@ export async function getSystemStatistics() {
     tierDistributionByType,
     recentUsers,
   };
+}
+
+/**
+ * Verify user email (admin only)
+ */
+export async function verifyUserEmail(
+  userId: string,
+  verifiedByAdminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, emailVerified: true },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  if (user.emailVerified) {
+    throw new Error('User email is already verified');
+  }
+
+  // Update email verification in database
+  const now = new Date();
+  await prisma.user.update({
+    where: { id: userId },
+    data: { emailVerified: now },
+  });
+
+  // Update email verification in Supabase Auth
+  try {
+    const supabaseAdmin = createAdminClient();
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      email_confirm: true,
+    });
+
+    if (error) {
+      logger.error(`Failed to verify email in Supabase for user ${userId}`, error);
+      // Don't throw - we still updated in our database
+    }
+  } catch (error) {
+    logger.error(`Error updating Supabase auth for user ${userId}`, error as Error);
+    // Don't throw - we still updated in our database
+  }
+
+  await createAuditLog({
+    userId: verifiedByAdminId,
+    action: AdminAction.USER_EMAIL_VERIFIED,
+    entityType: 'User',
+    entityId: userId,
+    changes: {
+      email: user.email,
+      emailVerified: { before: null, after: now.toISOString() },
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  // Also log in moderation system
+  await logModerationAction({
+    adminUserId: verifiedByAdminId,
+    entityType: EntityType.USER,
+    entityId: userId,
+    action: ModerationAction.VERIFY_EMAIL,
+    metadata: {
+      email: user.email,
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  logger.info(`Email verified for user ${userId} by admin ${verifiedByAdminId}`);
 }
 
 /**
@@ -609,4 +683,256 @@ export async function deleteUserAccount(
   });
 
   logger.info(`User ${userId} soft-deleted by admin ${deletedByAdminId}`);
+}
+
+/**
+ * Permanently delete user account (GDPR "Right to Erasure")
+ * This is IRREVERSIBLE and should only be used for legal compliance requests
+ * - Deletes from Supabase Auth
+ * - Hard deletes user data from database
+ * - Anonymizes audit logs (keeps action, removes PII)
+ */
+export async function permanentlyDeleteUserAccount(
+  userId: string,
+  deletedByAdminId: string,
+  reason: string, // e.g., "GDPR request", "Parent request", "COPPA compliance"
+  ipAddress?: string,
+  userAgent?: string
+) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      isAdmin: true,
+      roles: {
+        select: {
+          id: true,
+          type: true,
+          tier: true,
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Prevent deleting admin users
+  if (user.isAdmin) {
+    throw new Error('Cannot permanently delete admin users. Revoke admin access first.');
+  }
+
+  // Prevent self-deletion
+  if (userId === deletedByAdminId) {
+    throw new Error('Cannot permanently delete your own account');
+  }
+
+  const roleIds = user.roles.map((role) => role.id);
+  const emailHash = Buffer.from(user.email).toString('base64').substring(0, 8);
+  const anonymizedEmail = `deleted-user-${emailHash}@deleted.local`;
+
+  logger.info(`PERMANENT DELETE initiated for user ${userId} (${user.email}) by admin ${deletedByAdminId}. Reason: ${reason}`);
+
+  // Create audit log BEFORE deletion
+  await createAuditLog({
+    userId: deletedByAdminId,
+    action: AdminAction.USER_PERMANENTLY_DELETED,
+    entityType: 'User',
+    entityId: userId,
+    changes: {
+      email: user.email,
+      roleCount: user.roles.length,
+      reason,
+      timestamp: new Date().toISOString(),
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  // Log in moderation system BEFORE deletion
+  await logModerationAction({
+    adminUserId: deletedByAdminId,
+    entityType: EntityType.USER,
+    entityId: userId,
+    action: ModerationAction.PERMANENT_DELETE_USER,
+    reason,
+    metadata: {
+      email: user.email,
+      roleCount: user.roles.length,
+      roleIds,
+      roles: user.roles,
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  // Perform hard deletion in transaction
+  await prisma.$transaction(async (tx) => {
+    // Delete all role-related data (cascades will handle most, but we're explicit for clarity)
+    for (const roleId of roleIds) {
+      // These will cascade delete via Prisma schema onDelete: Cascade
+      // But we log them for audit purposes
+
+      // Delete persons and all related data (task completions, goal progress, etc.)
+      await tx.person.deleteMany({ where: { roleId } });
+
+      // Delete groups and related data
+      await tx.group.deleteMany({ where: { roleId } });
+
+      // Delete routines and related data (tasks, assignments, etc.)
+      await tx.routine.deleteMany({ where: { roleId } });
+
+      // Delete goals and related data
+      await tx.goal.deleteMany({ where: { roleId } });
+
+      // Delete codes (kiosk codes)
+      await tx.code.deleteMany({ where: { roleId } });
+
+      // Delete invitations
+      await tx.invitation.deleteMany({
+        where: {
+          OR: [
+            { inviterRoleId: roleId },
+            { acceptedByUserId: userId }
+          ]
+        }
+      });
+
+      // Delete co-parent relationships
+      await tx.coParent.deleteMany({
+        where: {
+          OR: [
+            { primaryRoleId: roleId },
+            { coParentRoleId: roleId }
+          ]
+        }
+      });
+
+      // Delete co-teacher relationships
+      await tx.coTeacher.deleteMany({
+        where: {
+          OR: [
+            { primaryTeacherRoleId: roleId },
+            { coTeacherRoleId: roleId }
+          ]
+        }
+      });
+
+      // Delete student-parent connections
+      await tx.studentParentConnection.deleteMany({
+        where: {
+          OR: [
+            { teacherRoleId: roleId },
+            { parentRoleId: roleId }
+          ]
+        }
+      });
+
+      // Delete person sharing invites and connections
+      await tx.personSharingInvite.deleteMany({ where: { ownerRoleId: roleId } });
+      await tx.personSharingConnection.deleteMany({
+        where: {
+          OR: [
+            { ownerRoleId: roleId },
+            { sharedWithRoleId: roleId }
+          ]
+        }
+      });
+
+      // Delete person connections (cross-account observation)
+      await tx.personConnection.deleteMany({
+        where: {
+          OR: [
+            { originRoleId: roleId },
+            { targetRoleId: roleId }
+          ]
+        }
+      });
+
+      // Delete person connection codes
+      await tx.personConnectionCode.deleteMany({ where: { originRoleId: roleId } });
+
+      // Delete school memberships
+      await tx.schoolMember.deleteMany({ where: { roleId } });
+
+      // Delete marketplace items
+      await tx.marketplaceItem.deleteMany({ where: { authorRoleId: roleId } });
+
+      // Finally delete the role itself
+      await tx.role.delete({ where: { id: roleId } });
+    }
+
+    // Delete user-level data
+    // Marketplace ratings
+    await tx.marketplaceRating.deleteMany({ where: { userId } });
+
+    // Marketplace comments and flags
+    const userComments = await tx.marketplaceComment.findMany({
+      where: { userId },
+      select: { id: true }
+    });
+    const commentIds = userComments.map(c => c.id);
+    if (commentIds.length > 0) {
+      await tx.commentFlag.deleteMany({ where: { commentId: { in: commentIds } } });
+      await tx.marketplaceComment.deleteMany({ where: { id: { in: commentIds } } });
+    }
+
+    // Delete comment flags created by this user
+    await tx.commentFlag.deleteMany({ where: { userId } });
+
+    // Delete marketplace share codes
+    await tx.marketplaceShareCode.deleteMany({ where: { createdBy: userId } });
+
+    // Delete routine share codes
+    await tx.routineShareCode.deleteMany({ where: { createdBy: userId } });
+
+    // Delete marketplace imports
+    await tx.marketplaceImport.deleteMany({ where: { importedBy: userId } });
+
+    // Delete verification codes
+    await tx.verificationCode.deleteMany({ where: { userId } });
+
+    // Delete person sharing connections where user is shared with
+    await tx.personSharingConnection.deleteMany({ where: { sharedWithUserId: userId } });
+
+    // Anonymize audit logs (keep records but remove PII)
+    await tx.auditLog.updateMany({
+      where: { userId },
+      data: {
+        changes: Prisma.JsonNull, // Remove PII from changes field
+      }
+    });
+
+    // Anonymize moderation logs (keep records but remove PII from metadata)
+    await tx.moderationLog.updateMany({
+      where: { adminUserId: userId },
+      data: {
+        metadata: Prisma.JsonNull, // Remove PII from metadata
+      }
+    });
+
+    // Finally, delete the user account from database
+    await tx.user.delete({ where: { id: userId } });
+  });
+
+  // Delete from Supabase Auth (after database deletion succeeds)
+  try {
+    const supabaseAdmin = createAdminClient();
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+    if (error) {
+      logger.error(`Failed to delete user from Supabase Auth: ${userId}`, error);
+      // Note: Database deletion already succeeded, so we log but don't throw
+      // Admin can manually delete from Supabase dashboard if needed
+    } else {
+      logger.info(`User ${userId} deleted from Supabase Auth`);
+    }
+  } catch (error) {
+    logger.error(`Error deleting user from Supabase Auth: ${userId}`, error as Error);
+    // Note: Database deletion already succeeded, so we log but don't throw
+  }
+
+  logger.info(`User ${userId} (${user.email}) permanently deleted by admin ${deletedByAdminId}. Reason: ${reason}`);
 }

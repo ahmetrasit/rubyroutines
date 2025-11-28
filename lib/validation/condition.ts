@@ -1,6 +1,6 @@
 import { idValidator } from './id-validator';
 import { z } from 'zod';
-import { ConditionLogic, ConditionOperator, TimeOperator } from '@/lib/types/prisma-enums';
+import { ConditionLogic, ConditionOperator, TimeOperator } from '@prisma/client';
 
 // Condition check schema - Enhanced for Phase 1
 export const conditionCheckSchema = z.object({

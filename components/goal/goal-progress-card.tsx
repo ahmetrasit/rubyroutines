@@ -35,7 +35,7 @@ export const GoalProgressCard = memo(function GoalProgressCard({ goal, onEdit, o
   const handleCloseDetails = useCallback(() => setShowDetails(false), []);
 
   // Get goal color (use first color from AVATAR_COLORS if not set)
-  const goalColor = goal.color || AVATAR_COLORS[0];
+  const goalColor = goal.color || AVATAR_COLORS.DEFAULT;
 
   // Get icon based on goal type
   const getGoalIcon = () => {

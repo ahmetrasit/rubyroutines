@@ -29,7 +29,7 @@ export function BulkVisibilityControl({ isOpen, onClose, roleId }: BulkVisibilit
   // Filter to show only hidden routines (out of schedule)
   const hiddenRoutines = useMemo(() => {
     if (!routines) return [];
-    return routines.filter(routine => !isRoutineVisible(routine));
+    return routines.filter(routine => !isRoutineVisible(routine as any));
   }, [routines]);
 
   const createOverrideMutation = trpc.routine.createVisibilityOverride.useMutation({
@@ -175,7 +175,7 @@ export function BulkVisibilityControl({ isOpen, onClose, roleId }: BulkVisibilit
                             {routine.name}
                           </div>
                           <div className="text-xs text-gray-600 mt-1">
-                            {routine._count?.tasks || 0} tasks • {getResetDescription(routine.resetPeriod, routine.resetDay)}
+                            {((count) => `${count} ${count === 1 ? 'task' : 'tasks'}`)((routine as any)._count?.tasks || (routine as any).tasks?.length || 0)} • {getResetDescription(routine.resetPeriod as any, routine.resetDay)}
                           </div>
                         </div>
                         {selectedRoutineIds.includes(routine.id) && (

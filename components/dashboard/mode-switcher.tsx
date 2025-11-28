@@ -20,8 +20,8 @@ export function ModeSwitcher({ roles }: ModeSwitcherProps) {
     return null;
   }
 
-  const isParentMode = pathname.startsWith('/parent');
-  const isTeacherMode = pathname.startsWith('/teacher');
+  const isParentMode = pathname?.startsWith('/parent');
+  const isTeacherMode = pathname?.startsWith('/teacher');
 
   return (
     <div className="flex items-center gap-2 bg-white rounded-lg shadow-sm p-1">

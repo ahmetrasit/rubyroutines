@@ -32,6 +32,7 @@ interface Task {
   summedValue?: number;
   isTeacherOnly?: boolean;
   routineName?: string;
+  order?: number;
   completions?: Array<{
     id: string;
     completedAt: Date;
@@ -107,7 +108,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
 
   // Use optimistic mutations for instant UI feedback
   const baseMutation = trpc.task.complete.useMutation();
-  const completeMutation = useOptimisticCheckin(baseMutation, {
+  const completeMutation = useOptimisticCheckin(baseMutation as any, {
     personId,
     personKey: [['person', 'getById'], { input: { id: personId }, type: 'query' }],
     onSuccess: async () => {
@@ -119,7 +120,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   });
 
   const baseUndoMutation = trpc.task.undoCompletion.useMutation();
-  const undoMutation = useOptimisticUndo(baseUndoMutation, {
+  const undoMutation = useOptimisticUndo(baseUndoMutation as any, {
     personId,
   });
 
@@ -171,7 +172,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
       // First: incomplete tasks on top
       if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
       // Second: group by routine name
-      const routineCompare = (a.routine?.name || '').localeCompare(b.routine?.name || '');
+      const routineCompare = (a.routineName || '').localeCompare(b.routineName || '');
       if (routineCompare !== 0) return routineCompare;
       // Third: by task order within routine
       return (a.order || 0) - (b.order || 0);
@@ -182,7 +183,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     .sort((a, b) => {
       // Multi tasks should maintain their position regardless of completion status
       // First: group by routine name
-      const routineCompare = (a.routine?.name || '').localeCompare(b.routine?.name || '');
+      const routineCompare = (a.routineName || '').localeCompare(b.routineName || '');
       if (routineCompare !== 0) return routineCompare;
       // Second: by task order within routine
       return (a.order || 0) - (b.order || 0);
@@ -193,7 +194,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     .sort((a, b) => {
       // Progress tasks should maintain their position regardless of completion status
       // First: group by routine name
-      const routineCompare = (a.routine?.name || '').localeCompare(b.routine?.name || '');
+      const routineCompare = (a.routineName || '').localeCompare(b.routineName || '');
       if (routineCompare !== 0) return routineCompare;
       // Second: by task order within routine
       return (a.order || 0) - (b.order || 0);
@@ -300,32 +301,30 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
               {/* Goals Section */}
               <Collapsible open={goalsOpen} onOpenChange={setGoalsOpen}>
                 <div className="border-2 border-gray-300 rounded-lg bg-white">
-                  <CollapsibleTrigger asChild>
-                    <button className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-bold text-gray-900">🎯 Goals</h3>
-                          {goalCount > 0 && (
-                            <span className="text-sm text-gray-500">({goalCount})</span>
-                          )}
-                        </div>
-                        <div className="mt-2">
-                          <Progress value={goalProgress} max={100} className="h-2" />
-                          <p className="text-xs text-gray-500 mt-1">
-                            {goalCount > 0 ? (
-                              `${goalsAccomplished} of ${goalCount} achieved (${Math.round(goalProgress)}%)`
-                            ) : (
-                              'No goals set'
-                            )}
-                          </p>
-                        </div>
+                  <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold text-gray-900">🎯 Goals</h3>
+                        {goalCount > 0 && (
+                          <span className="text-sm text-gray-500">({goalCount})</span>
+                        )}
                       </div>
-                      {goalsOpen ? (
-                        <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
-                      )}
-                    </button>
+                      <div className="mt-2">
+                        <Progress value={goalProgress} max={100} className="h-2" />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {goalCount > 0 ? (
+                            `${goalsAccomplished} of ${goalCount} achieved (${Math.round(goalProgress)}%)`
+                          ) : (
+                            'No goals set'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    {goalsOpen ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 ml-2" />
+                    )}
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="p-4 pt-0 border-t">
@@ -653,34 +652,32 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
               {isTeacher && teacherOnlyTasks.length > 0 && (
                 <Collapsible open={teacherNotesOpen} onOpenChange={setTeacherNotesOpen}>
                   <div className="border-2 border-purple-400 rounded-lg bg-purple-50">
-                    <CollapsibleTrigger asChild>
-                      <button className="w-full p-4 flex items-center justify-between hover:bg-purple-100 transition-colors">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-lg font-bold text-purple-900">📋 Teacher Notes</h3>
-                            <span className="px-2 py-0.5 text-xs font-semibold bg-purple-200 text-purple-800 rounded-full">
-                              Teacher Only
-                            </span>
-                          </div>
-                          {teacherSimpleTotal > 0 && (
-                            <div>
-                              <Progress
-                                value={teacherSimpleCompleted}
-                                max={teacherSimpleTotal}
-                                className="h-2 bg-purple-200"
-                              />
-                              <p className="text-xs text-purple-700 mt-1">
-                                {teacherSimpleCompleted} of {teacherSimpleTotal} completed
-                              </p>
-                            </div>
-                          )}
+                    <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-purple-100 transition-colors">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-lg font-bold text-purple-900">📋 Teacher Notes</h3>
+                          <span className="px-2 py-0.5 text-xs font-semibold bg-purple-200 text-purple-800 rounded-full">
+                            Teacher Only
+                          </span>
                         </div>
-                        {teacherNotesOpen ? (
-                          <ChevronDown className="h-5 w-5 text-purple-700 flex-shrink-0 ml-2" />
-                        ) : (
-                          <ChevronRight className="h-5 w-5 text-purple-700 flex-shrink-0 ml-2" />
+                        {teacherSimpleTotal > 0 && (
+                          <div>
+                            <Progress
+                              value={teacherSimpleCompleted}
+                              max={teacherSimpleTotal}
+                              className="h-2 bg-purple-200"
+                            />
+                            <p className="text-xs text-purple-700 mt-1">
+                              {teacherSimpleCompleted} of {teacherSimpleTotal} completed
+                            </p>
+                          </div>
                         )}
-                      </button>
+                      </div>
+                      {teacherNotesOpen ? (
+                        <ChevronDown className="h-5 w-5 text-purple-700 flex-shrink-0 ml-2" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-purple-700 flex-shrink-0 ml-2" />
+                      )}
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <div className="p-4 pt-0 border-t border-purple-300">

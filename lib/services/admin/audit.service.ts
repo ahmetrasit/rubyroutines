@@ -1,12 +1,15 @@
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { logger } from '@/lib/utils/logger';
 
 export enum AdminAction {
   USER_CREATED = 'USER_CREATED',
   USER_UPDATED = 'USER_UPDATED',
   USER_DELETED = 'USER_DELETED',
+  USER_PERMANENTLY_DELETED = 'USER_PERMANENTLY_DELETED',
   USER_ADMIN_GRANTED = 'USER_ADMIN_GRANTED',
   USER_ADMIN_REVOKED = 'USER_ADMIN_REVOKED',
+  USER_EMAIL_VERIFIED = 'USER_EMAIL_VERIFIED',
   TIER_CHANGED = 'TIER_CHANGED',
   TIER_OVERRIDE_SET = 'TIER_OVERRIDE_SET',
   TIER_OVERRIDE_REMOVED = 'TIER_OVERRIDE_REMOVED',
@@ -38,13 +41,14 @@ export async function createAuditLog(entry: AuditLogEntry): Promise<void> {
         action: entry.action,
         entityType: entry.entityType || null,
         entityId: entry.entityId || null,
-        changes: entry.changes || null,
+        changes: entry.changes || Prisma.JsonNull,
         ipAddress: entry.ipAddress || null,
         userAgent: entry.userAgent || null,
       },
     });
 
-    logger.audit(entry.action, entry.userId, {
+    logger.audit(entry.action, {
+      userId: entry.userId,
       entityType: entry.entityType,
       entityId: entry.entityId,
       changes: entry.changes,

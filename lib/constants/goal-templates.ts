@@ -1,20 +1,19 @@
-import { GoalType, ResetPeriod, GoalCategory, GoalScope } from '@prisma/client'
-
+// Use string types for flexibility with string literals in templates
 export interface GoalTemplate {
   id: string
   name: string
   description: string
-  type: GoalType
-  category: GoalCategory
+  type: string
+  category: string
   targetAudience: 'PARENT' | 'TEACHER' | 'BOTH'
   ageGroup?: string
   defaultTarget: number
-  defaultPeriod: ResetPeriod
+  defaultPeriod: string
   defaultUnit?: string
   icon?: string
   color?: string
   streakEnabled?: boolean
-  scope: GoalScope
+  scope: string
   rewardMessage?: string
 }
 
@@ -345,11 +344,11 @@ export function getTemplatesByAudience(audience: 'PARENT' | 'TEACHER' | 'BOTH'):
   )
 }
 
-export function getTemplatesByCategory(category: GoalCategory): GoalTemplate[] {
+export function getTemplatesByCategory(category: string): GoalTemplate[] {
   return goalTemplates.filter(template => template.category === category)
 }
 
-export function getTemplatesByType(type: GoalType): GoalTemplate[] {
+export function getTemplatesByType(type: string): GoalTemplate[] {
   return goalTemplates.filter(template => template.type === type)
 }
 
@@ -360,7 +359,10 @@ export function getTemplateById(id: string): GoalTemplate | undefined {
 export function getTemplatesForAgeGroup(age: number): GoalTemplate[] {
   return goalTemplates.filter(template => {
     if (!template.ageGroup) return true
-    const [min, max] = template.ageGroup.split('-').map(Number)
+    const parts = template.ageGroup.split('-').map(Number)
+    const min = parts[0]
+    const max = parts[1]
+    if (min === undefined || max === undefined) return true
     return age >= min && age <= max
   })
 }

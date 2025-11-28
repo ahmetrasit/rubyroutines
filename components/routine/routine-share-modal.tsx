@@ -135,7 +135,6 @@ export function RoutineShareModal({ isOpen, onClose, routine }: RoutineShareModa
         visibility: 'PUBLIC',
         category: category || undefined,
         tags: tagsArray,
-        targetAudience,
       });
     } else {
       // Generate private share code

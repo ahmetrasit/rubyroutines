@@ -23,7 +23,7 @@ async function checkColumn() {
         FROM routines
         WHERE is_protected = true
       `;
-      console.log(`✓ Found ${count[0].count} protected routines`);
+      console.log(`✓ Found ${count[0]?.count ?? 0} protected routines`);
     } else {
       console.log('✗ is_protected column DOES NOT EXIST in database');
       console.log('\n🔧 The migration needs to be applied. Run:');

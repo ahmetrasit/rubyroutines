@@ -61,7 +61,7 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
   const routineQueryKeyForUpdate = task?.routineId ? getQueryKey(trpc.routine.getById, { id: task.routineId }, 'query') : [];
 
   const createMutationBase = trpc.task.create.useMutation();
-  const createMutation = useOptimisticCreate(createMutationBase, {
+  const createMutation = useOptimisticCreate(createMutationBase as any, {
     entityName: 'Task',
     // Wrap query key in array - hook expects array of keys
     listKey: [taskListQueryKey],
@@ -91,7 +91,7 @@ export function TaskForm({ task, routineId, personId, onClose, effectiveLimits =
   });
 
   const updateMutationBase = trpc.task.update.useMutation();
-  const updateMutation = useOptimisticUpdate(updateMutationBase, {
+  const updateMutation = useOptimisticUpdate(updateMutationBase as any, {
     entityName: 'Task',
     // Wrap query key in array - hook expects array of keys
     listKey: [taskListQueryKeyForUpdate],

@@ -20,7 +20,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
           queries: {
             // Cache configuration
             staleTime: 60 * 1000, // 1 minute default - data considered fresh for this period
-            cacheTime: 5 * 60 * 1000, // 5 minutes - keep in cache after unmount
+            gcTime: 5 * 60 * 1000, // 5 minutes - keep in cache after unmount (formerly cacheTime in React Query v4)
             refetchOnWindowFocus: false, // Don't refetch on every tab focus
             refetchOnReconnect: 'always', // Always refetch on reconnect
             refetchInterval: false, // No automatic polling by default

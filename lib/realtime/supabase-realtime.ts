@@ -7,19 +7,11 @@
 
 'use client';
 
-import { createClient, RealtimeChannel } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
-// Create Supabase client for realtime subscriptions
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  realtime: {
-    params: {
-      eventsPerSecond: 10 // Rate limit to prevent abuse
-    }
-  }
-});
+// Use the singleton Supabase client to avoid multiple GoTrueClient instances
+export const supabase = createClient();
 
 /**
  * Subscribe to task completions for a specific person

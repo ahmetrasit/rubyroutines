@@ -21,18 +21,17 @@ export function RealtimeStatus() {
     // Handle subscription with error catching
     try {
       channel
-        .subscribe((status) => {
+        .subscribe((status, err) => {
           if (status === 'SUBSCRIBED') {
             setStatus('connected');
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            if (err) {
+              console.log('Realtime connection error (expected if realtime is not configured):', err.message);
+            }
             setStatus('disconnected');
           } else {
             setStatus('connecting');
           }
-        })
-        .on('error', (error) => {
-          console.log('Realtime connection error (expected if realtime is not configured):', error.message);
-          setStatus('disconnected');
         });
     } catch (error) {
       // Silently handle connection errors - realtime might not be configured

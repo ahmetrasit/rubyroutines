@@ -13,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Share2 } from 'lucide-react';
 
 interface ShareModalProps {
@@ -103,11 +102,11 @@ export function ShareModal({ roleId, groupId: initialGroupId, onClose }: ShareMo
             {groupsLoading ? (
               <div className="text-center py-4 text-gray-500">Loading classrooms...</div>
             ) : groups && groups.length > 0 ? (
-              <Select
+              <select
                 id="classroom"
                 value={selectedGroupId}
                 onChange={(e) => setSelectedGroupId(e.target.value)}
-                className="mt-1"
+                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 required
               >
                 <option value="">Select a classroom...</option>
@@ -116,7 +115,7 @@ export function ShareModal({ roleId, groupId: initialGroupId, onClose }: ShareMo
                     {group.name}
                   </option>
                 ))}
-              </Select>
+              </select>
             ) : (
               <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg mt-1">
                 <p className="text-gray-500">No classrooms available</p>
@@ -128,16 +127,16 @@ export function ShareModal({ roleId, groupId: initialGroupId, onClose }: ShareMo
           {/* Permissions Selector */}
           <div>
             <Label htmlFor="permissions">Permission Level *</Label>
-            <Select
+            <select
               id="permissions"
               value={permissions}
               onChange={(e) => setPermissions(e.target.value as any)}
-              className="mt-1"
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="VIEW">View Only - View students and tasks</option>
               <option value="EDIT_TASKS">Edit Tasks - View and complete tasks</option>
               <option value="FULL_EDIT">Full Edit - Manage students, routines, and tasks</option>
-            </Select>
+            </select>
             <p className="text-sm text-gray-500 mt-1">
               {permissions === 'VIEW' && 'Can view but not modify anything'}
               {permissions === 'EDIT_TASKS' && 'Can complete tasks but not edit routines'}

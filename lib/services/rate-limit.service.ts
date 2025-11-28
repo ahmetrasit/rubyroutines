@@ -23,6 +23,11 @@ export const RATE_LIMIT_CONFIGS = {
     maxAttempts: 5,
     windowMinutes: 60, // 5 codes per hour
   },
+  PERSON_CONNECTION_CODE_GENERATION: {
+    action: 'person_connection_code_generation',
+    maxAttempts: 10,
+    windowMinutes: 60, // 10 codes per hour
+  },
   PERSON_SHARING_CODE_GENERATION: {
     action: 'person_sharing_code_generation',
     maxAttempts: 20,
@@ -37,6 +42,11 @@ export const RATE_LIMIT_CONFIGS = {
   // Code claiming limits (prevent brute force)
   CONNECTION_CODE_CLAIM: {
     action: 'connection_code_claim',
+    maxAttempts: 5,
+    windowMinutes: 60, // 5 failed attempts per hour
+  },
+  PERSON_CONNECTION_CODE_CLAIM: {
+    action: 'person_connection_code_claim',
     maxAttempts: 5,
     windowMinutes: 60, // 5 failed attempts per hour
   },

@@ -55,19 +55,18 @@ export const PersonCard = memo(function PersonCard({
 
   const deleteMutation = trpc.person.delete.useMutation();
   const { mutate: deletePerson, isLoading: isDeleting } = useDeleteMutation(
-    deleteMutation,
+    deleteMutation as any,
     {
       entityName: person.name,
       invalidateQueries: [
         () => utils.person.list.invalidate(),
-        () => utils.personSharing.getAccessiblePersons.invalidate()
       ],
     }
   );
 
   const removeMemberMutation = trpc.group.removeMember.useMutation();
   const { mutate: removeMember, isLoading: isRemoving } = useDeleteMutation(
-    removeMemberMutation,
+    removeMemberMutation as any,
     {
       entityName: person.name,
       invalidateQueries: [
@@ -80,15 +79,15 @@ export const PersonCard = memo(function PersonCard({
   // Get person details with assignments for stats and group memberships for smart deletion
   const { data: personDetails } = trpc.person.getById.useQuery({ id: person.id });
 
-  // Get person shares to count co-parent connections
-  const { data: personShares } = trpc.personSharing.getPersonShares.useQuery(
-    { personId: person.id },
-    { enabled: !!person.id }
-  );
-
   // Get goals for this person
   const { data: goals } = trpc.goal.list.useQuery(
     { roleId: roleId!, personId: person.id },
+    { enabled: !!roleId && !!person.id }
+  );
+
+  // Get person connections to count connections
+  const { data: outboundConnections } = trpc.personConnection.listAsOrigin.useQuery(
+    { roleId: roleId!, originPersonId: person.id },
     { enabled: !!roleId && !!person.id }
   );
 
@@ -145,12 +144,12 @@ export const PersonCard = memo(function PersonCard({
 
   // Calculate connection counts
   const classroomCount = personDetails?.groupMembers?.length || 0;
-  const coParentCount = personShares?.length || 0;
+  const personConnectionCount = outboundConnections?.length || 0;
 
   // Build connection status text
   const connectionParts = [];
-  if (coParentCount > 0) {
-    connectionParts.push(`${coParentCount} co-parent${coParentCount !== 1 ? 's' : ''}`);
+  if (personConnectionCount > 0) {
+    connectionParts.push(`${personConnectionCount} connection${personConnectionCount !== 1 ? 's' : ''}`);
   }
   if (classroomCount > 0) {
     connectionParts.push(`${classroomCount} classroom${classroomCount !== 1 ? 's' : ''}`);
@@ -159,7 +158,7 @@ export const PersonCard = memo(function PersonCard({
   // Always show connection status
   let connectionStatus: string;
   if (connectionParts.length > 0) {
-    connectionStatus = `Connected to ${connectionParts.join(', ')}`;
+    connectionStatus = connectionParts.join(', ');
   } else {
     connectionStatus = 'No connections';
   }
@@ -212,15 +211,15 @@ export const PersonCard = memo(function PersonCard({
           <div className="flex items-center justify-around text-center">
             <div className="flex-1">
               <div className="text-2xl font-bold text-gray-900">{routineCount}</div>
-              <div className="text-xs text-gray-500">Routines</div>
+              <div className="text-xs text-gray-500">{routineCount === 1 ? 'Routine' : 'Routines'}</div>
             </div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-gray-900">{taskCount}</div>
-              <div className="text-xs text-gray-500">Tasks</div>
+              <div className="text-xs text-gray-500">{taskCount === 1 ? 'Task' : 'Tasks'}</div>
             </div>
             <div className="flex-1">
               <div className="text-2xl font-bold text-gray-900">{goalCount}</div>
-              <div className="text-xs text-gray-500">Goals</div>
+              <div className="text-xs text-gray-500">{goalCount === 1 ? 'Goal' : 'Goals'}</div>
             </div>
           </div>
 

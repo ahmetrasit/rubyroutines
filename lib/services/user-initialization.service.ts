@@ -169,7 +169,7 @@ export async function createDefaultRoles({
     return { parentRole, teacherRole };
   } catch (error) {
     logger.error('Failed to create default roles', { userId, error });
-    throw new Error(`Failed to create default roles for user ${userId}: ${error.message}`);
+    throw new Error(`Failed to create default roles for user ${userId}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

@@ -10,8 +10,8 @@ import { kioskRouter } from './kiosk';
 import { coParentRouter } from './coparent';
 import { coTeacherRouter } from './coteacher';
 import { connectionRouter } from './connection';
+import { personConnectionRouter } from './person-connection';
 import { invitationRouter } from './invitation';
-import { personSharingRouter } from './person-sharing';
 import { analyticsRouter } from './analytics';
 import { marketplaceRouter } from './marketplace';
 import { billingRouter } from './billing';
@@ -25,7 +25,7 @@ import { adminModerationLogsRouter } from './admin-moderation-logs';
 import { gdprRouter } from './gdpr';
 import { streakRouter } from './streak';
 import { twoFactorRouter } from './two-factor';
-import { notificationRouter } from './notification';
+// import { notificationRouter } from './notification';
 
 export const appRouter = router({
   auth: authRouter,
@@ -40,8 +40,8 @@ export const appRouter = router({
   coParent: coParentRouter,
   coTeacher: coTeacherRouter,
   connection: connectionRouter,
+  personConnection: personConnectionRouter,
   invitation: invitationRouter,
-  personSharing: personSharingRouter,
   analytics: analyticsRouter,
   marketplace: marketplaceRouter,
   billing: billingRouter,
@@ -54,7 +54,7 @@ export const appRouter = router({
   adminModerationLogs: adminModerationLogsRouter,
   gdpr: gdprRouter,
   streak: streakRouter,
-  notification: notificationRouter,
+  // notification: notificationRouter, // Disabled: Notification table not in schema yet
 });
 
 export type AppRouter = typeof appRouter;

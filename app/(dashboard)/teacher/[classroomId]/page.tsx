@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 export default function ClassroomDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const classroomId = params.classroomId as string;
+  const classroomId = params?.classroomId as string;
 
   const { data: session, isLoading: sessionLoading } = trpc.auth.getSession.useQuery();
   const { data: classroom, isLoading: classroomLoading } = trpc.group.getById.useQuery(
@@ -36,7 +36,8 @@ export default function ClassroomDetailPage() {
     return null;
   }
 
-  const teacherRole = session.user.roles?.find((role: any) => role.type === 'TEACHER');
+  // Cast to include effectiveLimits which is added by auth router
+  const teacherRole = session.user.roles?.find((role: any) => role.type === 'TEACHER') as (typeof session.user.roles)[0] & { effectiveLimits?: any } | undefined;
 
   if (!teacherRole) {
     return (

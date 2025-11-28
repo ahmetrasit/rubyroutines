@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { logger } from '@/lib/utils/logger';
 
 export interface AuditLogData {
@@ -120,7 +121,7 @@ export async function createAuditLog(data: AuditLogData): Promise<void> {
         action: data.action,
         entityType: data.entityType,
         entityId: data.entityId,
-        changes: data.changes || null,
+        changes: data.changes || Prisma.JsonNull,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
       },

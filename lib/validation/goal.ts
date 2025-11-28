@@ -14,10 +14,10 @@ export const createGoalSchema = z.object({
   color: z.string().optional(),
 
   // Goal Configuration
-  type: z.nativeEnum(GoalType).default('COMPLETION_COUNT'),
+  type: z.nativeEnum(GoalType).default(GoalType.COMPLETION_COUNT),
   target: z.number().positive('Target must be positive'),
   unit: z.string().max(50).optional(),
-  period: z.nativeEnum(ResetPeriod).default('WEEKLY'),
+  period: z.nativeEnum(ResetPeriod).default(ResetPeriod.WEEKLY),
   resetDay: z.number().int().min(0).max(6).optional(), // 0 = Sunday, 6 = Saturday
 
   // Goal Scope

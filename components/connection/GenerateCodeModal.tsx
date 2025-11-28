@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Copy, Key, Clock } from 'lucide-react';
 
 interface GenerateCodeModalProps {
@@ -125,11 +124,11 @@ export function GenerateCodeModal({ roleId, groupId, onClose }: GenerateCodeModa
               {studentsLoading ? (
                 <div className="text-center py-4 text-gray-500">Loading students...</div>
               ) : students && students.length > 0 ? (
-                <Select
+                <select
                   id="student"
                   value={selectedStudentId}
                   onChange={(e) => setSelectedStudentId(e.target.value)}
-                  className="mt-1"
+                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   required
                 >
                   <option value="">Select a student...</option>
@@ -141,7 +140,7 @@ export function GenerateCodeModal({ roleId, groupId, onClose }: GenerateCodeModa
                       </option>
                     );
                   })}
-                </Select>
+                </select>
               ) : (
                 <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg mt-1">
                   <p className="text-gray-500">No students in this classroom</p>

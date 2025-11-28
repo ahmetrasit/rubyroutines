@@ -220,8 +220,8 @@ export function getIpAddress(
 
   if (forwardedFor) {
     return Array.isArray(forwardedFor)
-      ? forwardedFor[0]
-      : forwardedFor.split(',')[0].trim();
+      ? forwardedFor[0] || 'unknown'
+      : forwardedFor.split(',')[0]?.trim() || 'unknown';
   }
 
   const realIp =

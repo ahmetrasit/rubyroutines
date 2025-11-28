@@ -21,8 +21,8 @@ export const createMockTRPCClient = (mockHandlers: any = {}) => {
   const trpcReact = createTRPCReact<AppRouter>();
 
   const defaultHandlers = {
-    personSharing: {
-      validateInvite: {
+    personConnection: {
+      generateCode: {
         useMutation: jest.fn(() => ({
           mutate: jest.fn(),
           mutateAsync: jest.fn(),
@@ -32,7 +32,7 @@ export const createMockTRPCClient = (mockHandlers: any = {}) => {
           error: null,
         })),
       },
-      claimInvite: {
+      validateCode: {
         useMutation: jest.fn(() => ({
           mutate: jest.fn(),
           mutateAsync: jest.fn(),
@@ -42,7 +42,7 @@ export const createMockTRPCClient = (mockHandlers: any = {}) => {
           error: null,
         })),
       },
-      generateInvite: {
+      claimCode: {
         useMutation: jest.fn(() => ({
           mutate: jest.fn(),
           mutateAsync: jest.fn(),
@@ -52,7 +52,15 @@ export const createMockTRPCClient = (mockHandlers: any = {}) => {
           error: null,
         })),
       },
-      getConnections: {
+      listAsOrigin: {
+        useQuery: jest.fn(() => ({
+          data: [],
+          isLoading: false,
+          isError: false,
+          error: null,
+        })),
+      },
+      listAsTarget: {
         useQuery: jest.fn(() => ({
           data: [],
           isLoading: false,

@@ -20,11 +20,11 @@ async function checkColumns() {
 
     // Check specific columns
     const teacherOnly = result.find(c => c.column_name.includes('teacher'));
-    const protected = result.find(c => c.column_name.includes('protected'));
+    const protectedField = result.find(c => c.column_name.includes('protected'));
 
     console.log('\n🔍 Checking naming convention:');
     console.log(`  Teacher-only field: ${teacherOnly?.column_name || 'NOT FOUND'}`);
-    console.log(`  Protected field:    ${protected?.column_name || 'NOT FOUND'}`);
+    console.log(`  Protected field:    ${protectedField?.column_name || 'NOT FOUND'}`);
 
   } catch (error) {
     console.error('Error:', error);

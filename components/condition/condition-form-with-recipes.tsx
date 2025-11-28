@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +31,7 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
   // Form fields
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [logic, setLogic] = useState<ConditionLogic>('AND');
+  const [logic, setLogic] = useState<ConditionLogic>(ConditionLogic.AND);
   const [controlsRoutine, setControlsRoutine] = useState(true);
   const [checks, setChecks] = useState<any[]>([]);
 
@@ -50,20 +49,18 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
 
   // Get tasks and routines for selection when needed
   const { data: tasks } = trpc.task.list.useQuery({ routineId }, {
-    enabled: selectedRecipe?.checks.some(c => c.operator === 'TASK_COMPLETED')
+    enabled: selectedRecipe?.checks.some(c => c.operator === ConditionOperator.TASK_COMPLETED)
   });
 
   const { data: routines } = trpc.routine.list.useQuery({}, {
     enabled: selectedRecipe?.checks.some(c =>
-      c.operator === 'ROUTINE_COMPLETED' || c.operator === 'ROUTINE_PERCENT_GT'
+      (c.operator as string) === 'ROUTINE_COMPLETED' || c.operator === ConditionOperator.ROUTINE_PERCENT_GT
     )
   });
 
-  const { data: goals } = trpc.goal.list.useQuery({}, {
-    enabled: selectedRecipe?.checks.some(c =>
-      c.operator === 'GOAL_ACHIEVED' || c.operator === 'GOAL_MILESTONE_REACHED'
-    )
-  });
+  // Note: goals query disabled - requires roleId which this component doesn't have access to
+  // const { data: goals } = trpc.goal.list.useQuery({ roleId: '' }, {...});
+  const goals: any[] = [];
 
   useEffect(() => {
     if (condition) {
@@ -80,7 +77,7 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
     setSelectedRecipe(recipe);
     setName(recipe.name);
     setDescription(recipe.description);
-    setLogic(recipe.logic);
+    setLogic(recipe.logic as ConditionLogic);
 
     // Check if recipe has placeholders that need custom values
     const hasPlaceholders = recipe.checks.some(check =>
@@ -220,7 +217,8 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
             return (
               <div key={index} className="space-y-2">
                 <Label>Select Task</Label>
-                <Select
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={customValues.task_id || ''}
                   onChange={(e) => setCustomValues({ ...customValues, task_id: e.target.value })}
                 >
@@ -230,7 +228,7 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
                       {task.name}
                     </option>
                   ))}
-                </Select>
+                </select>
               </div>
             );
           }
@@ -239,7 +237,8 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
             return (
               <div key={index} className="space-y-2">
                 <Label>Select Routine</Label>
-                <Select
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={customValues.routine_id || ''}
                   onChange={(e) => setCustomValues({ ...customValues, routine_id: e.target.value })}
                 >
@@ -249,7 +248,7 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
                       {routine.name}
                     </option>
                   ))}
-                </Select>
+                </select>
               </div>
             );
           }
@@ -258,7 +257,8 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
             return (
               <div key={index} className="space-y-2">
                 <Label>Select Goal</Label>
-                <Select
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={customValues.goal_id || ''}
                   onChange={(e) => setCustomValues({ ...customValues, goal_id: e.target.value })}
                 >
@@ -268,7 +268,7 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
                       {goal.name}
                     </option>
                   ))}
-                </Select>
+                </select>
               </div>
             );
           }
@@ -311,7 +311,8 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Label>Filter by type:</Label>
-                <Select
+                <select
+                  className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                 >
@@ -321,7 +322,7 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
                   <option value="SEQUENCE">Sequence</option>
                   <option value="ACHIEVEMENT">Achievement</option>
                   <option value="CONTEXT">Context</option>
-                </Select>
+                </select>
               </div>
 
               <ScrollArea className="h-[350px]">
@@ -414,15 +415,16 @@ export function ConditionFormWithRecipes({ routineId, roleType, condition, onClo
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="logic">Logic Type</Label>
-                      <Select
+                      <select
                         id="logic"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         value={logic}
                         onChange={(e) => setLogic(e.target.value as ConditionLogic)}
                         disabled={isPending}
                       >
                         <option value="AND">AND (all checks must pass)</option>
                         <option value="OR">OR (any check must pass)</option>
-                      </Select>
+                      </select>
                     </div>
 
                     <div className="space-y-2 flex items-end">

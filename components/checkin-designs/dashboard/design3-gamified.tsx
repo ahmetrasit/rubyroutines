@@ -77,9 +77,10 @@ export function Design3Gamified({
     setShowReward(true);
 
     // Create confetti
+    const emojis = ['⭐', '✨', '🎉', '🎊', '💫'];
     const newConfetti = Array.from({ length: 15 }, (_, i) => ({
       id: Date.now() + i,
-      emoji: ['⭐', '✨', '🎉', '🎊', '💫'][Math.floor(Math.random() * 5)],
+      emoji: emojis[Math.floor(Math.random() * 5)] || '⭐',
       x: Math.random() * 100,
       y: Math.random() * 100,
     }));

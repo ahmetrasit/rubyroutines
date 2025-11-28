@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Select } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { trpc } from '@/lib/trpc/client';
 import {
@@ -19,7 +18,7 @@ import {
   TrendingUp,
   Clock
 } from 'lucide-react';
-import { GoalType, GoalScope } from '@/lib/types/prisma-enums';
+import { GoalType } from '@/lib/types/prisma-enums';
 
 interface ClassroomGoalOverviewProps {
   roleId: string;
@@ -28,7 +27,6 @@ interface ClassroomGoalOverviewProps {
 
 export function ClassroomGoalOverview({ roleId, persons }: ClassroomGoalOverviewProps) {
   const [filterType, setFilterType] = useState<GoalType | 'ALL'>('ALL');
-  const [filterScope, setFilterScope] = useState<GoalScope | 'ALL'>('ALL');
   const [selectedPersonId, setSelectedPersonId] = useState<string>('ALL');
 
   // Fetch goals with progress
@@ -40,15 +38,13 @@ export function ClassroomGoalOverview({ roleId, persons }: ClassroomGoalOverview
   // Filter goals based on selections
   const filteredGoals = goals?.filter(goal => {
     if (filterType !== 'ALL' && goal.type !== filterType) return false;
-    if (filterScope !== 'ALL' && goal.scope !== filterScope) return false;
     if (selectedPersonId !== 'ALL' && !goal.personIds?.includes(selectedPersonId)) return false;
     return true;
   }) || [];
 
-  // Group goals by scope
-  const groupGoals = filteredGoals.filter(g => g.scope === 'GROUP');
-  const individualGoals = filteredGoals.filter(g => g.scope === 'INDIVIDUAL');
-  const roleGoals = filteredGoals.filter(g => g.scope === 'ROLE');
+  // Group goals by whether they have assigned persons
+  const classGoals = filteredGoals.filter(g => !g.personIds || g.personIds.length === 0);
+  const individualGoals = filteredGoals.filter(g => g.personIds && g.personIds.length > 0);
 
   const getGoalIcon = (type: GoalType) => {
     switch (type) {
@@ -107,7 +103,7 @@ export function ClassroomGoalOverview({ roleId, persons }: ClassroomGoalOverview
               <Progress value={percentage} className={getProgressColor(percentage)} />
             </div>
 
-            {goal.scope === 'INDIVIDUAL' && goal.personIds?.length > 0 && (
+            {goal.personIds?.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {goal.personIds.slice(0, 3).map((personId: string) => {
                   const person = persons.find(p => p.id === personId);
@@ -176,12 +172,13 @@ export function ClassroomGoalOverview({ roleId, persons }: ClassroomGoalOverview
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">Goal Type</label>
-              <Select
+              <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value as any)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="ALL">All Types</option>
                 <option value="COMPLETION_COUNT">Completion Count</option>
@@ -189,27 +186,15 @@ export function ClassroomGoalOverview({ roleId, persons }: ClassroomGoalOverview
                 <option value="TIME_BASED">Time Based</option>
                 <option value="PERCENTAGE">Percentage</option>
                 <option value="VALUE_BASED">Value Based</option>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1 block">Scope</label>
-              <Select
-                value={filterScope}
-                onChange={(e) => setFilterScope(e.target.value as any)}
-              >
-                <option value="ALL">All Scopes</option>
-                <option value="INDIVIDUAL">Individual</option>
-                <option value="GROUP">Group</option>
-                <option value="ROLE">Entire Class</option>
-              </Select>
+              </select>
             </div>
 
             <div>
               <label className="text-sm font-medium mb-1 block">Student</label>
-              <Select
+              <select
                 value={selectedPersonId}
                 onChange={(e) => setSelectedPersonId(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="ALL">All Students</option>
                 {persons.map(person => (
@@ -217,29 +202,29 @@ export function ClassroomGoalOverview({ roleId, persons }: ClassroomGoalOverview
                     {person.name}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Group Goals */}
-      {groupGoals.length > 0 && (
+      {/* Class Goals (no specific persons assigned) */}
+      {classGoals.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Users className="h-5 w-5 text-blue-500" />
             <h2 className="text-xl font-semibold">Classroom Goals</h2>
-            <Badge variant="secondary">{groupGoals.length}</Badge>
+            <Badge variant="secondary">{classGoals.length}</Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {groupGoals.map(goal => (
+            {classGoals.map(goal => (
               <GoalCard key={goal.id} goal={goal} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Individual Goals */}
+      {/* Individual Goals (specific persons assigned) */}
       {individualGoals.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-4">
@@ -255,22 +240,6 @@ export function ClassroomGoalOverview({ roleId, persons }: ClassroomGoalOverview
         </div>
       )}
 
-      {/* Role Goals */}
-      {roleGoals.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Award className="h-5 w-5 text-purple-500" />
-            <h2 className="text-xl font-semibold">All Students Goals</h2>
-            <Badge variant="secondary">{roleGoals.length}</Badge>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {roleGoals.map(goal => (
-              <GoalCard key={goal.id} goal={goal} />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Empty State */}
       {filteredGoals.length === 0 && (
         <Card>
@@ -278,7 +247,7 @@ export function ClassroomGoalOverview({ roleId, persons }: ClassroomGoalOverview
             <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <p className="text-gray-500 text-lg mb-2">No goals found</p>
             <p className="text-gray-400 text-sm">
-              {filterType !== 'ALL' || filterScope !== 'ALL' || selectedPersonId !== 'ALL'
+              {filterType !== 'ALL' || selectedPersonId !== 'ALL'
                 ? 'Try adjusting your filters'
                 : 'Create your first classroom goal to get started'}
             </p>

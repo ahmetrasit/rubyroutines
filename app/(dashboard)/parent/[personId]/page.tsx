@@ -7,16 +7,26 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { PersonKioskCodeManager } from '@/components/kiosk/person-kiosk-code-manager';
 import { PersonDetailSections } from '@/components/person/person-detail-sections';
+import { PersonConnectionsManager, ConnectedPersonsSection } from '@/components/person-connection';
 
 export default function PersonDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const personId = params.personId as string;
+  const personId = params?.personId as string;
 
   const { data: session, isLoading: sessionLoading } = trpc.auth.getSession.useQuery();
   const { data: person, isLoading: personLoading } = trpc.person.getById.useQuery(
     { id: personId },
     { enabled: !!personId }
+  );
+
+  // Get parent role ID for fetching all persons
+  const parentRoleId = session?.user?.roles?.find((role: any) => role.type === 'PARENT')?.id;
+
+  // Fetch all persons for this role (needed for connection claiming)
+  const { data: allPersons } = trpc.person.list.useQuery(
+    { roleId: parentRoleId! },
+    { enabled: !!parentRoleId }
   );
 
   useEffect(() => {
@@ -37,8 +47,8 @@ export default function PersonDetailPage() {
     return null;
   }
 
-  // Find parent role
-  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
+  // Find parent role (cast to include effectiveLimits which is added by auth router)
+  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT') as (typeof session.user.roles)[0] & { effectiveLimits?: any } | undefined;
 
   if (!parentRole) {
     return (
@@ -123,6 +133,26 @@ export default function PersonDetailPage() {
           effectiveLimits={parentRole.effectiveLimits}
           onSelectRoutine={handleSelectRoutine}
         />
+
+        {/* Person Connections Section */}
+        <div className="mt-6 space-y-6">
+          {/* Show connected persons (who this person can observe) */}
+          <ConnectedPersonsSection
+            roleId={parentRole.id}
+            targetPersonId={personId}
+            roleType="PARENT"
+          />
+
+          {/* Connection management (generate codes, see who observes this person) */}
+          {allPersons && (
+            <PersonConnectionsManager
+              person={person}
+              roleId={parentRole.id}
+              roleType="PARENT"
+              allPersons={allPersons}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

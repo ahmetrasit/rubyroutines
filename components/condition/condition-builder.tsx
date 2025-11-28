@@ -58,7 +58,7 @@ export function ConditionBuilder({
 
   function handleCheckChange(index: number, updates: Partial<ConditionCheck>) {
     const newChecks = [...checks];
-    newChecks[index] = { ...newChecks[index], ...updates };
+    newChecks[index] = { ...newChecks[index], ...updates } as ConditionCheck;
     setChecks(newChecks);
     onChange(logic, newChecks);
   }

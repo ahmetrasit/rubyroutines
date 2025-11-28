@@ -102,36 +102,10 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
 
       // Optimistically update all lists
       for (const key of listKeys) {
-        // Check if this is the personSharing.getAccessiblePersons query
-        // Handle both old format and tRPC v11 format
-        const isPersonSharingQuery =
-          // Old format: ['personSharing', 'getAccessiblePersons', ...]
-          (key[0] === 'personSharing' && key[1] === 'getAccessiblePersons') ||
-          // tRPC v11 format: [['personSharing', 'getAccessiblePersons'], ...]
-          (Array.isArray(key[0]) && key[0][0] === 'personSharing' && key[0][1] === 'getAccessiblePersons');
-
-        if (isPersonSharingQuery) {
-          // Handle the special structure of getAccessiblePersons
-          queryClient.setQueryData(key, (old: any) => {
-            if (!old) return {
-              ownedPersons: [optimisticItem],
-              sharedPersons: [],
-              allPersons: [optimisticItem]
-            };
-
-            return {
-              ...old,
-              ownedPersons: [...(old.ownedPersons || []), optimisticItem],
-              allPersons: [...(old.allPersons || []), optimisticItem]
-            };
-          });
-        } else {
-          // Handle regular array queries
-          queryClient.setQueryData<TItem[]>(key, (old) => {
-            if (!old) return [optimisticItem];
-            return [...old, optimisticItem];
-          });
-        }
+        queryClient.setQueryData<TItem[]>(key, (old) => {
+          if (!old) return [optimisticItem];
+          return [...old, optimisticItem];
+        });
       }
 
       // Return context for rollback
@@ -142,53 +116,17 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
       if (context?.tempId) {
         // Replace temporary item with server response in all lists
         for (const key of listKeys) {
-          // Check if this is the personSharing.getAccessiblePersons query
-          // Handle both old format and tRPC v11 format
-          const isPersonSharingQuery =
-            // Old format: ['personSharing', 'getAccessiblePersons', ...]
-            (key[0] === 'personSharing' && key[1] === 'getAccessiblePersons') ||
-            // tRPC v11 format: [['personSharing', 'getAccessiblePersons'], ...]
-            (Array.isArray(key[0]) && key[0][0] === 'personSharing' && key[0][1] === 'getAccessiblePersons');
+          queryClient.setQueryData<TItem[]>(key, (old) => {
+            if (!old) return [data];
 
-          if (isPersonSharingQuery) {
-            // Handle the special structure of getAccessiblePersons
-            queryClient.setQueryData(key, (old: any) => {
-              if (!old) return {
-                ownedPersons: [data],
-                sharedPersons: [],
-                allPersons: [data]
-              };
-
-              const updateList = (list: TItem[]) => {
-                return list.map((item) => {
-                  const itemId = getId(item);
-                  if (itemId === context.tempId) {
-                    return replaceItem(item, data);
-                  }
-                  return item;
-                });
-              };
-
-              return {
-                ...old,
-                ownedPersons: updateList(old.ownedPersons || []),
-                allPersons: updateList(old.allPersons || [])
-              };
+            return old.map((item) => {
+              const itemId = getId(item);
+              if (itemId === context.tempId) {
+                return replaceItem(item, data);
+              }
+              return item;
             });
-          } else {
-            // Handle regular array queries
-            queryClient.setQueryData<TItem[]>(key, (old) => {
-              if (!old) return [data];
-
-              return old.map((item) => {
-                const itemId = getId(item);
-                if (itemId === context.tempId) {
-                  return replaceItem(item, data);
-                }
-                return item;
-              });
-            });
-          }
+          });
         }
       }
 
@@ -203,7 +141,7 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
       }
     },
 
-    onError: async (error: Error, variables: TCreateInput, context: any) => {
+    onError: (async (error: Error, variables: TCreateInput, context: any) => {
       // Rollback optimistic updates for all keys
       if (context?.previousDataMap) {
         for (const [key, data] of context.previousDataMap.entries()) {
@@ -215,7 +153,7 @@ export function useOptimisticCreate<TItem = any, TCreateInput = any>(
       if (onError) {
         await onError(error, variables);
       }
-    },
+    }) as any,
   });
 }
 
@@ -242,8 +180,12 @@ export function useOptimisticCreateNested<TParent = any, TItem = any, TCreateInp
     ...createOptions
   } = options;
 
-  return useOptimisticCreate(mutation, {
-    ...createOptions,
+  return useOptimisticMutation(mutation, {
+    messages: {
+      success: createOptions.messages?.success || `${createOptions.entityName || 'Item'} created successfully`,
+      error: createOptions.messages?.error || `Failed to create ${(createOptions.entityName || 'item').toLowerCase()}`,
+    },
+    invalidateKeys: createOptions.invalidateKeys || [],
 
     onMutate: async (variables: TCreateInput) => {
       // Cancel queries
@@ -281,7 +223,36 @@ export function useOptimisticCreateNested<TParent = any, TItem = any, TCreateInp
       };
     },
 
-    onError: async (error: Error, variables: TCreateInput, context: any) => {
+    onSuccess: (async (data: TItem, variables: TCreateInput, context: any) => {
+      // Replace optimistic item with real data in parent
+      const parentData = queryClient.getQueryData<TParent>(parentKey);
+      if (parentData && context?.tempId) {
+        const currentList = getList(parentData);
+        const getId = createOptions.getId || ((item: any) => item.id);
+        const replaceItem = createOptions.replaceItem || ((_, serverItem: TItem) => serverItem);
+
+        const newList = currentList.map((item) => {
+          if (getId(item) === context.tempId) {
+            return replaceItem(item, data);
+          }
+          return item;
+        });
+        const updatedParent = setList(parentData, newList);
+        queryClient.setQueryData(parentKey, updatedParent);
+      }
+
+      // Call user's onSuccess
+      if (createOptions.onSuccess) {
+        await createOptions.onSuccess(data, variables);
+      }
+
+      // Close dialog if provided
+      if (createOptions.closeDialog) {
+        createOptions.closeDialog();
+      }
+    }) as any,
+
+    onError: (async (error: Error, variables: TCreateInput, context: any) => {
       // Rollback parent
       if (context?.previousParent !== undefined) {
         queryClient.setQueryData(parentKey, context.previousParent);
@@ -295,6 +266,6 @@ export function useOptimisticCreateNested<TParent = any, TItem = any, TCreateInp
       if (createOptions.onError) {
         await createOptions.onError(error, variables);
       }
-    },
+    }) as any,
   });
 }

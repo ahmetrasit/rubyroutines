@@ -14,7 +14,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { UserX, Edit, Mail } from 'lucide-react';
 
 interface CoTeacherListProps {
@@ -93,10 +92,10 @@ export function CoTeacherList({ groupId }: CoTeacherListProps) {
       EDIT_TASKS: { label: 'Edit Tasks', className: 'bg-blue-100 text-blue-800' },
       FULL_EDIT: { label: 'Full Edit', className: 'bg-green-100 text-green-800' },
     };
-    const variant = variants[permission] || variants.VIEW;
+    const variant = variants[permission] ?? variants.VIEW;
     return (
-      <Badge className={variant.className}>
-        {variant.label}
+      <Badge className={variant!.className}>
+        {variant!.label}
       </Badge>
     );
   };
@@ -216,16 +215,16 @@ export function CoTeacherList({ groupId }: CoTeacherListProps) {
 
               <div>
                 <Label htmlFor="edit-permissions">Permission Level *</Label>
-                <Select
+                <select
                   id="edit-permissions"
                   value={permissions}
                   onChange={(e) => setPermissions(e.target.value as any)}
-                  className="mt-1"
+                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="VIEW">View Only - View students and tasks</option>
                   <option value="EDIT_TASKS">Edit Tasks - View and complete tasks</option>
                   <option value="FULL_EDIT">Full Edit - Manage students, routines, and tasks</option>
-                </Select>
+                </select>
               </div>
 
               <DialogFooter>
