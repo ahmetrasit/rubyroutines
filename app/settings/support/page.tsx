@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Mail, MessageSquare, FileText, ExternalLink, ChevronLeft } from 'lucide-react';
+import { Mail, MessageSquare, FileText, ExternalLink, ChevronLeft, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/toast';
 
@@ -35,6 +35,13 @@ export default function SupportPage() {
   };
 
   const supportResources = [
+    {
+      title: 'Blog',
+      description: 'Tips, updates, and parenting insights',
+      icon: BookOpen,
+      href: '/blog',
+      external: false,
+    },
     {
       title: 'Documentation',
       description: 'Learn how to use Ruby Routines',

@@ -4,7 +4,7 @@ import { AdminGuard } from '@/components/admin/AdminGuard';
 import { StatCard } from '@/components/admin/StatCard';
 import { ModeSwitcher } from '@/components/mode-switcher';
 import { trpc } from '@/lib/trpc/client';
-import { Users, UserCheck, Shield, BarChart3, Activity, Calendar, Store } from 'lucide-react';
+import { Users, UserCheck, Shield, BarChart3, Activity, Calendar, Store, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -86,6 +86,18 @@ function DashboardContent() {
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-muted-foreground">System settings</div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/blog" className="block">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Blog</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground">Manage posts</div>
               </CardContent>
             </Card>
           </Link>
