@@ -71,7 +71,7 @@ export function RoutineShareModal({ isOpen, onClose, routine }: RoutineShareModa
       setSuccess(true);
       toast({
         title: 'Success',
-        description: 'Routine published to marketplace',
+        description: 'Routine published to Community Routines',
         variant: 'success',
       });
     },
@@ -214,7 +214,7 @@ export function RoutineShareModal({ isOpen, onClose, routine }: RoutineShareModa
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800">
                   Share this routine with other {userRoleType === 'TEACHER' ? 'teachers' : 'parents'}.
-                  Choose between private sharing (with a code) or public sharing (marketplace).
+                  Choose between private sharing (with a code) or public sharing (Community Routines).
                 </p>
               </div>
 
@@ -252,7 +252,7 @@ export function RoutineShareModal({ isOpen, onClose, routine }: RoutineShareModa
                     <div>
                       <div className="font-semibold text-sm text-gray-900">Public</div>
                       <p className="text-xs text-gray-600 mt-1">
-                        Share on marketplace. Anyone can discover and import.
+                        Share publicly. Anyone can discover and import.
                       </p>
                     </div>
                   </div>
@@ -435,7 +435,7 @@ export function RoutineShareModal({ isOpen, onClose, routine }: RoutineShareModa
                 ) : (
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-sm text-green-900">
-                      Your routine has been published to the public marketplace! Other users can now
+                      Your routine has been published to Community Routines! Other users can now
                       discover and import it.
                     </p>
                   </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, Pencil, Share2, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Pencil, Share2, Trash2, Eye, Clock } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { isRoutineVisible } from '@/lib/services/visibility-rules';
 import { RoutineForm } from '@/components/routine/routine-form';
@@ -9,7 +9,8 @@ import { GoalForm } from '@/components/goal/goal-form';
 import { GoalDetailModal } from '@/components/goal/goal-detail-modal';
 import { Button } from '@/components/ui/button';
 import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limits';
-import { RoutineShareModal } from '@/components/routine/routine-share-modal';
+import { RoutineActionsModal } from '@/components/routine/RoutineActionsModal';
+import { CopyRoutineModal } from '@/components/routine/copy-routine-modal';
 import { useToast } from '@/components/ui/toast';
 
 interface PersonDetailSectionsProps {
@@ -27,7 +28,8 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingRoutine, setEditingRoutine] = useState<any>(null);
   const [editingGoal, setEditingGoal] = useState<any>(null);
-  const [sharingRoutine, setSharingRoutine] = useState<any>(null);
+  const [actionsRoutine, setActionsRoutine] = useState<any>(null);
+  const [showCopyModal, setShowCopyModal] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<any>(null);
   const { toast } = useToast();
   const utils = trpc.useUtils();
@@ -81,8 +83,36 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
     },
   });
 
+  // Visibility override mutation
+  const visibilityOverrideMutation = trpc.routine.createVisibilityOverride.useMutation({
+    onSuccess: (data, variables) => {
+      const routine = routines?.find((r) => r.id === variables.routineId);
+      toast({
+        title: 'Routine visible',
+        description: `${routine?.name || 'Routine'} is now temporarily visible`,
+        variant: 'success',
+      });
+      utils.routine.list.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleShowTemporarily = (routineId: string, minutes: number) => {
+    visibilityOverrideMutation.mutate({ routineId, duration: minutes });
+  };
+
   // Filter goals for this person
   const filteredGoals = goals?.filter((goal) => goal.personIds.includes(personId)) || [];
+
+  // Separate visible and hidden routines
+  const visibleRoutines = routines?.filter((r: any) => isRoutineVisible(r)) || [];
+  const hiddenRoutines = routines?.filter((r: any) => !isRoutineVisible(r)) || [];
 
   // Check tier limits using effective limits from database
   const routineLimit = getTierLimit(effectiveLimits, 'routines_per_person');
@@ -145,11 +175,12 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
             {routinesLoading ? (
               <div className="text-center py-8 text-gray-500">Loading...</div>
             ) : routines && routines.length > 0 ? (
+              <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[...routines]
+                {[...visibleRoutines]
                   .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
                   .map((routine: any) => {
-                  const visible = isRoutineVisible(routine);
+                  const visible = true; // These are already filtered as visible
 
                   // Extract emoji from name
                   const emojiMatch = routine.name.match(/^(\p{Emoji}+)\s*(.*)$/u);
@@ -264,9 +295,9 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
                           variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSharingRoutine(routine);
+                            setActionsRoutine(routine);
                           }}
-                          title="Share"
+                          title="Share/Copy"
                           className="h-7 px-2 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50"
                         >
                           <Share2 className="h-3 w-3" />
@@ -326,6 +357,78 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
                   )}
                 </button>
               </div>
+
+              {/* Hidden Routines Section */}
+              {hiddenRoutines.length > 0 && (
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Eye className="h-4 w-4 text-gray-500" />
+                    <h3 className="font-medium text-gray-700">
+                      Hidden Routines ({hiddenRoutines.length})
+                    </h3>
+                  </div>
+                  <p className="text-sm text-gray-500 mb-4">
+                    These routines are currently hidden based on their schedule. You can temporarily show them.
+                  </p>
+                  <div className="space-y-3">
+                    {hiddenRoutines.map((routine: any) => {
+                      const emojiMatch = routine.name.match(/^(\p{Emoji}+)\s*(.*)$/u);
+                      const emoji = emojiMatch ? emojiMatch[1] : '📋';
+                      const displayName = emojiMatch ? emojiMatch[2] : routine.name;
+                      const taskCount = routine.tasks?.length || routine._count?.tasks || 0;
+
+                      return (
+                        <div
+                          key={routine.id}
+                          className="flex items-center justify-between p-3 bg-white rounded-lg border"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl">{emoji}</span>
+                            <div>
+                              <p className="font-medium text-gray-900 text-sm">{displayName}</p>
+                              <p className="text-xs text-gray-500">
+                                {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 mr-2">Show for:</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleShowTemporarily(routine.id, 10)}
+                              disabled={visibilityOverrideMutation.isPending}
+                              className="h-7 px-2 text-xs"
+                            >
+                              <Clock className="h-3 w-3 mr-1" />
+                              10m
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleShowTemporarily(routine.id, 30)}
+                              disabled={visibilityOverrideMutation.isPending}
+                              className="h-7 px-2 text-xs"
+                            >
+                              30m
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleShowTemporarily(routine.id, 90)}
+                              disabled={visibilityOverrideMutation.isPending}
+                              className="h-7 px-2 text-xs"
+                            >
+                              90m
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              </>
             ) : (
               <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
                 <p className="text-gray-500 mb-4">No routines yet</p>
@@ -615,17 +718,27 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
         />
       )}
 
-      {/* Share Modal */}
-      {sharingRoutine && (
-        <RoutineShareModal
-          isOpen={!!sharingRoutine}
-          onClose={() => setSharingRoutine(null)}
+      {/* Routine Actions Modal (Share/Copy) */}
+      {actionsRoutine && (
+        <RoutineActionsModal
+          isOpen={!!actionsRoutine}
+          onClose={() => setActionsRoutine(null)}
           routine={{
-            id: sharingRoutine.id,
-            name: sharingRoutine.name,
+            id: actionsRoutine.id,
+            name: actionsRoutine.name,
           }}
+          roleId={roleId}
+          onCopyClick={() => setShowCopyModal(true)}
         />
       )}
+
+      {/* Copy Routine Modal */}
+      <CopyRoutineModal
+        isOpen={showCopyModal}
+        onClose={() => setShowCopyModal(false)}
+        roleId={roleId}
+        preselectedRoutineId={actionsRoutine?.id}
+      />
     </div>
   );
 }

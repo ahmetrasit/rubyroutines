@@ -83,7 +83,7 @@ export const copyRoutineSchema = z.object({
 
 export const createVisibilityOverrideSchema = z.object({
   routineId: idValidator,
-  duration: z.number().int().min(10).max(60), // 10-60 minutes
+  duration: z.number().int().min(10).max(90), // 10-90 minutes
 });
 
 export const cancelVisibilityOverrideSchema = z.object({

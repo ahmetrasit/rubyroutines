@@ -172,7 +172,7 @@ export default function PricingPage() {
                     {renderFeature('Goals', features.goals)}
                     {renderFeature('Smart Routines', features.smartRoutines)}
                     {renderFeature('Analytics', features.analytics)}
-                    {renderFeature('Marketplace', features.marketplace)}
+                    {renderFeature('Community Routines', features.marketplace)}
                     {renderFeature('Co-parent Access', features.coparentAccess)}
                     {renderFeature('Co-teacher Access', features.coteacherAccess)}
                     {renderFeature('Support', features.support)}

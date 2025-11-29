@@ -117,10 +117,10 @@ function MarketplaceItemContent({ itemId, roleId, toast, router }: MarketplaceIt
           <div className="text-center py-12">
             <h1 className="text-2xl font-bold mb-4">Item Not Found</h1>
             <p className="text-gray-600 mb-6">
-              The marketplace item you're looking for doesn't exist.
+              The item you're looking for doesn't exist.
             </p>
-            <Link href="/marketplace">
-              <Button>Back to Marketplace</Button>
+            <Link href="/community-routines">
+              <Button>Back to Community Routines</Button>
             </Link>
           </div>
         </div>
@@ -134,10 +134,10 @@ function MarketplaceItemContent({ itemId, roleId, toast, router }: MarketplaceIt
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
-        <Link href="/marketplace">
+        <Link href="/community-routines">
           <Button variant="ghost" className="mb-6">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Marketplace
+            Back to Community Routines
           </Button>
         </Link>
 

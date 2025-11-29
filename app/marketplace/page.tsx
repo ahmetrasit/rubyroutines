@@ -131,7 +131,7 @@ function MarketplacePageContent({
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Marketplace</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Community Routines</h1>
           <p className="text-gray-600 mt-2">
             Discover and share routines and goals with the community
           </p>
@@ -145,7 +145,7 @@ function MarketplacePageContent({
         {/* Results */}
         {isLoading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500">Loading marketplace items...</p>
+            <p className="text-gray-500">Loading community routines...</p>
           </div>
         ) : data?.items && data.items.length > 0 ? (
           <>
@@ -190,9 +190,9 @@ function MarketplacePageContent({
 
         {/* Info Panel */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-blue-900 mb-2">About the Marketplace</h3>
+          <h3 className="font-semibold text-blue-900 mb-2">About Community Routines</h3>
           <p className="text-sm text-blue-700">
-            The marketplace is a community-driven space where you can discover routines and goals
+            Community Routines is a space where you can discover routines and goals
             created by other users. Fork items to customize them for your needs, rate and comment
             on items you've tried.
           </p>

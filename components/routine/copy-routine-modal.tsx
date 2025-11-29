@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc/client';
@@ -15,14 +15,27 @@ interface CopyRoutineModalProps {
   onClose: () => void;
   roleId: string;
   sourcePersonId?: string; // Optional: if copying from a specific person
+  preselectedRoutineId?: string; // Optional: if a specific routine is already selected
 }
 
-export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId }: CopyRoutineModalProps) {
+export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, preselectedRoutineId }: CopyRoutineModalProps) {
   const [selectedRoutineIds, setSelectedRoutineIds] = useState<string[]>([]);
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
   const [isSuccess, setIsSuccess] = useState(false);
   const [copiedCount, setCopiedCount] = useState({ routines: 0, targets: 0, merged: 0 });
   const { toast } = useToast();
+
+  // Update selected routine when preselectedRoutineId changes
+  useEffect(() => {
+    if (isOpen && preselectedRoutineId) {
+      setSelectedRoutineIds([preselectedRoutineId]);
+    } else if (!isOpen) {
+      // Reset when modal closes
+      setSelectedRoutineIds([]);
+      setSelectedTargetIds([]);
+      setIsSuccess(false);
+    }
+  }, [isOpen, preselectedRoutineId]);
   const utils = trpc.useUtils();
 
   // Get all persons
