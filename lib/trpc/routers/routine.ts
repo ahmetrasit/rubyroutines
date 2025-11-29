@@ -12,6 +12,7 @@ import {
   listRoutinesSchema,
   getRoutineSchema,
   copyRoutineSchema,
+  checkCopyConflictsSchema,
   createVisibilityOverrideSchema,
   cancelVisibilityOverrideSchema,
 } from '@/lib/validation/routine';
@@ -252,6 +253,67 @@ export const routineRouter = router({
       return routine;
     }),
 
+  // Check for naming conflicts before copying
+  checkCopyConflicts: authorizedProcedure.input(checkCopyConflictsSchema).query(async ({ ctx, input }) => {
+    await verifyRoutineOwnership(ctx.user.id, input.routineId, ctx.prisma);
+
+    const source = await ctx.prisma.routine.findUnique({
+      where: { id: input.routineId },
+      select: { name: true, roleId: true },
+    });
+
+    if (!source) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Routine not found' });
+    }
+
+    // Find existing routines with the same name for each target person
+    const existingRoutines = await ctx.prisma.routine.findMany({
+      where: {
+        roleId: source.roleId,
+        name: source.name,
+        status: EntityStatus.ACTIVE,
+        assignments: {
+          some: {
+            personId: { in: input.targetPersonIds },
+          },
+        },
+      },
+      include: {
+        assignments: {
+          where: {
+            personId: { in: input.targetPersonIds },
+          },
+          include: {
+            person: {
+              select: { id: true, name: true },
+            },
+          },
+        },
+      },
+    });
+
+    // Build conflict list: personId -> { personName, existingRoutineId }
+    const conflicts: { personId: string; personName: string; existingRoutineId: string }[] = [];
+
+    existingRoutines.forEach((routine) => {
+      routine.assignments.forEach((assignment: any) => {
+        if (assignment.person) {
+          conflicts.push({
+            personId: assignment.person.id,
+            personName: assignment.person.name,
+            existingRoutineId: routine.id,
+          });
+        }
+      });
+    });
+
+    return {
+      routineName: source.name,
+      conflicts,
+      hasConflicts: conflicts.length > 0,
+    };
+  }),
+
   copy: authorizedProcedure.input(copyRoutineSchema).mutation(async ({ ctx, input }) => {
     // Verify routine ownership
     await verifyRoutineOwnership(ctx.user.id, input.routineId, ctx.prisma);
@@ -304,42 +366,43 @@ export const routineRouter = router({
       }
     });
 
-    // If Daily Routine, batch query to find existing Daily Routines for all persons
-    let existingDailyRoutinesMap = new Map<string, any>();
-    if (isDailyRoutine) {
-      const existingDailyRoutines = await ctx.prisma.routine.findMany({
-        where: {
-          roleId: source.roleId,
-          name: { contains: 'Daily Routine' },
-          status: EntityStatus.ACTIVE,
-          assignments: {
-            some: {
-              personId: { in: input.targetPersonIds },
-            },
+    // Find existing routines with the same name for conflict detection
+    const existingRoutinesWithSameName = await ctx.prisma.routine.findMany({
+      where: {
+        roleId: source.roleId,
+        name: source.name,
+        status: EntityStatus.ACTIVE,
+        assignments: {
+          some: {
+            personId: { in: input.targetPersonIds },
           },
         },
-        include: {
-          assignments: {
-            where: {
-              personId: { in: input.targetPersonIds },
-            },
+      },
+      include: {
+        assignments: {
+          where: {
+            personId: { in: input.targetPersonIds },
           },
         },
-      });
+      },
+    });
 
-      // Map each existing Daily Routine to its person
-      existingDailyRoutines.forEach((routine) => {
-        routine.assignments.forEach((assignment: any) => {
-          existingDailyRoutinesMap.set(assignment.personId, routine);
-        });
+    // Map personId to existing routine with same name
+    const existingRoutineMap = new Map<string, any>();
+    existingRoutinesWithSameName.forEach((routine) => {
+      routine.assignments.forEach((assignment: any) => {
+        existingRoutineMap.set(assignment.personId, routine);
       });
-    }
+    });
 
     // Check tier limits for each target person before copying
     for (const personId of input.targetPersonIds) {
-      // If Daily Routine and person already has one, merging won't create a new routine
-      if (isDailyRoutine && existingDailyRoutinesMap.has(personId)) {
-        continue; // Skip limit check if merging into existing Daily Routine
+      const resolution = input.conflictResolutions?.[personId];
+      const hasConflict = existingRoutineMap.has(personId);
+
+      // If merging (either Daily Routine or explicit merge resolution), won't create a new routine
+      if (hasConflict && (isDailyRoutine || resolution === 'merge')) {
+        continue; // Skip limit check if merging into existing routine
       }
 
       // Check routine limit for this person using the pre-fetched count
@@ -347,13 +410,75 @@ export const routineRouter = router({
       checkTierLimit(effectiveLimits, 'routines_per_person', personRoutineCount);
     }
 
-    // Fetch last task order for existing Daily Routines that need merging
+    // Validate renamed names don't conflict with existing routines
+    const personsNeedingRename = input.targetPersonIds.filter(personId => {
+      const resolution = input.conflictResolutions?.[personId];
+      return resolution === 'rename';
+    });
+
+    if (personsNeedingRename.length > 0) {
+      // Collect all unique renamed names to validate
+      const namesToValidate = new Map<string, string[]>(); // name -> personIds needing that name
+      const fallbackName = `${source.name} (Copy)`;
+
+      for (const personId of personsNeedingRename) {
+        const renamedName = input.renamedNames?.[personId] || fallbackName;
+        const existing = namesToValidate.get(renamedName) || [];
+        existing.push(personId);
+        namesToValidate.set(renamedName, existing);
+      }
+
+      // Check each unique name for conflicts
+      for (const [nameToCheck, personIdsForName] of namesToValidate) {
+        const existingWithName = await ctx.prisma.routine.findFirst({
+          where: {
+            roleId: source.roleId,
+            name: nameToCheck,
+            status: EntityStatus.ACTIVE,
+            assignments: {
+              some: {
+                personId: { in: personIdsForName },
+              },
+            },
+          },
+          include: {
+            assignments: {
+              where: {
+                personId: { in: personIdsForName },
+              },
+              include: {
+                person: {
+                  select: { name: true },
+                },
+              },
+            },
+          },
+        });
+
+        if (existingWithName) {
+          const personName = existingWithName.assignments[0]?.person?.name || 'a target person';
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `A routine named "${nameToCheck}" already exists for ${personName}. Please choose a different name.`,
+          });
+        }
+      }
+    }
+
+    // Fetch last task order for existing routines that need merging
+    const routineIdsToMerge = Array.from(existingRoutineMap.values())
+      .filter((routine) => {
+        const personId = routine.assignments[0]?.personId;
+        const resolution = input.conflictResolutions?.[personId];
+        return isDailyRoutine || resolution === 'merge';
+      })
+      .map((r) => r.id);
+
     let lastTaskOrderMap = new Map<string, number>();
-    if (isDailyRoutine && existingDailyRoutinesMap.size > 0) {
-      const routineIds = Array.from(existingDailyRoutinesMap.values()).map((r) => r.id);
+    if (routineIdsToMerge.length > 0) {
       const lastTasks = await ctx.prisma.task.findMany({
         where: {
-          routineId: { in: routineIds },
+          routineId: { in: routineIdsToMerge },
           status: EntityStatus.ACTIVE,
         },
         orderBy: { order: 'desc' },
@@ -368,38 +493,46 @@ export const routineRouter = router({
     // Create copies or merge for each target person
     const results = await Promise.all(
       input.targetPersonIds.map(async (personId) => {
-        // If Daily Routine, check if we already have the existing routine from our batch query
-        if (isDailyRoutine) {
-          const existingDailyRoutine = existingDailyRoutinesMap.get(personId);
+        const existingRoutine = existingRoutineMap.get(personId);
+        const resolution = input.conflictResolutions?.[personId];
 
-          if (existingDailyRoutine) {
-            // Merge: Add tasks to existing Daily Routine
-            const lastTaskOrder = lastTaskOrderMap.get(existingDailyRoutine.id) || 0;
+        // Determine if we should merge
+        const shouldMerge = existingRoutine && (isDailyRoutine || resolution === 'merge');
 
-            await Promise.all(
-              source.tasks.map((task: any, index: number) =>
-                ctx.prisma.task.create({
-                  data: {
-                    routineId: existingDailyRoutine.id,
-                    name: task.name,
-                    description: task.description,
-                    type: task.type,
-                    order: lastTaskOrder + index + 1,
-                    unit: task.unit,
-                  },
-                })
-              )
-            );
+        if (shouldMerge) {
+          // Merge: Add tasks to existing routine
+          const lastTaskOrder = lastTaskOrderMap.get(existingRoutine.id) || 0;
 
-            return { merged: true, routine: existingDailyRoutine, taskCount: source.tasks.length };
-          }
+          await Promise.all(
+            source.tasks.map((task: any, index: number) =>
+              ctx.prisma.task.create({
+                data: {
+                  routineId: existingRoutine.id,
+                  name: task.name,
+                  description: task.description,
+                  type: task.type,
+                  order: lastTaskOrder + index + 1,
+                  unit: task.unit,
+                },
+              })
+            )
+          );
+
+          return { merged: true, routine: existingRoutine, taskCount: source.tasks.length, personId };
         }
 
-        // Create new routine (either not Daily Routine, or no existing Daily Routine found)
+        // Determine the name for the new routine
+        let routineName = source.name;
+        if (existingRoutine && resolution === 'rename') {
+          // Use the person-specific renamed name or fallback
+          routineName = input.renamedNames?.[personId] || `${source.name} (Copy)`;
+        }
+
+        // Create new routine
         const routine = await ctx.prisma.routine.create({
           data: {
             roleId: source.roleId,
-            name: source.name,
+            name: routineName,
             description: source.description,
             type: source.type,
             resetPeriod: source.resetPeriod,
@@ -424,7 +557,7 @@ export const routineRouter = router({
           },
         });
 
-        return { merged: false, routine, taskCount: source.tasks.length };
+        return { merged: false, routine, taskCount: source.tasks.length, personId, renamed: !!existingRoutine && resolution === 'rename' };
       })
     );
 

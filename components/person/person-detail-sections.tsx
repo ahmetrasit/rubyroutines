@@ -737,6 +737,7 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
         isOpen={showCopyModal}
         onClose={() => setShowCopyModal(false)}
         roleId={roleId}
+        sourcePersonId={personId}
         preselectedRoutineId={actionsRoutine?.id}
       />
     </div>

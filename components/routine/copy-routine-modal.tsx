@@ -3,12 +3,60 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { useAvatar } from '@/lib/hooks';
 import { RenderIconEmoji } from '@/components/ui/icon-emoji-picker';
 import { getResetDescription } from '@/lib/services/reset-period';
+
+type ConflictResolution = 'merge' | 'rename';
+type Step = 'select' | 'resolve-conflicts' | 'success';
+
+// Separate component to safely use hooks
+interface PersonCardProps {
+  person: { id: string; name: string; avatar: string | null };
+  isSelected: boolean;
+  onToggle: () => void;
+}
+
+function PersonCard({ person, isSelected, onToggle }: PersonCardProps) {
+  const { color, emoji, backgroundColor } = useAvatar({
+    avatarString: person.avatar,
+    fallbackName: person.name,
+  });
+
+  return (
+    <button
+      onClick={onToggle}
+      className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+        isSelected
+          ? 'border-blue-500 bg-blue-50'
+          : 'border-gray-200 hover:border-gray-300'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className="h-10 w-10 rounded-full flex items-center justify-center text-xl border-2 flex-shrink-0"
+          style={{ backgroundColor, borderColor: color }}
+        >
+          <RenderIconEmoji value={emoji} className="h-5 w-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-sm truncate">
+            {person.name}
+          </div>
+        </div>
+        {isSelected && (
+          <Check className="h-5 w-5 text-blue-600 flex-shrink-0" />
+        )}
+      </div>
+    </button>
+  );
+}
 
 interface CopyRoutineModalProps {
   isOpen: boolean;
@@ -21,8 +69,12 @@ interface CopyRoutineModalProps {
 export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, preselectedRoutineId }: CopyRoutineModalProps) {
   const [selectedRoutineIds, setSelectedRoutineIds] = useState<string[]>([]);
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([]);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [copiedCount, setCopiedCount] = useState({ routines: 0, targets: 0, merged: 0 });
+  const [step, setStep] = useState<Step>('select');
+  const [copiedCount, setCopiedCount] = useState({ routines: 0, targets: 0, merged: 0, renamed: 0 });
+  const [conflicts, setConflicts] = useState<{ routineId: string; routineName: string; personId: string; personName: string }[]>([]);
+  const [conflictResolutions, setConflictResolutions] = useState<Record<string, ConflictResolution>>({});
+  const [renamedNames, setRenamedNames] = useState<Record<string, string>>({});
+  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
   const { toast } = useToast();
 
   // Update selected routine when preselectedRoutineId changes
@@ -33,7 +85,10 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, pres
       // Reset when modal closes
       setSelectedRoutineIds([]);
       setSelectedTargetIds([]);
-      setIsSuccess(false);
+      setStep('select');
+      setConflicts([]);
+      setConflictResolutions({});
+      setRenamedNames({});
     }
   }, [isOpen, preselectedRoutineId]);
   const utils = trpc.useUtils();
@@ -59,27 +114,13 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, pres
   // Filter persons to show as targets
   const targetPersons = useMemo(() => {
     if (!persons) return [];
-    // Exclude account owner and optionally the source person
+    // Exclude only the source person (can't copy to yourself)
     return persons.filter(p =>
-      !p.isAccountOwner &&
-      (!sourcePersonId || p.id !== sourcePersonId)
+      !sourcePersonId || p.id !== sourcePersonId
     );
   }, [persons, sourcePersonId]);
 
   const copyMutation = trpc.routine.copy.useMutation({
-    onSuccess: (results) => {
-      const mergedCount = results.filter(r => r.merged).length;
-      const totalRoutines = selectedRoutineIds.length;
-      const totalTargets = selectedTargetIds.length;
-
-      setCopiedCount({
-        routines: totalRoutines,
-        targets: totalTargets,
-        merged: mergedCount
-      });
-      setIsSuccess(true);
-      utils.routine.list.invalidate();
-    },
     onError: (error) => {
       toast({
         title: 'Error',
@@ -121,28 +162,139 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, pres
     setSelectedTargetIds([]);
   };
 
-  const handleCopy = async () => {
+  // Check for conflicts before copying
+  const handleCheckConflicts = async () => {
     if (selectedRoutineIds.length === 0 || selectedTargetIds.length === 0) {
       return;
     }
 
-    // Copy each routine to each target
-    await Promise.all(
-      selectedRoutineIds.map(routineId =>
-        copyMutation.mutateAsync({
+    setIsCheckingConflicts(true);
+    try {
+      // Check conflicts for each selected routine
+      const allConflicts: { routineId: string; routineName: string; personId: string; personName: string }[] = [];
+
+      for (const routineId of selectedRoutineIds) {
+        const result = await utils.client.routine.checkCopyConflicts.query({
           routineId,
           targetPersonIds: selectedTargetIds,
-        })
-      )
+        });
+
+        if (result.hasConflicts) {
+          result.conflicts.forEach((conflict: any) => {
+            allConflicts.push({
+              routineId,
+              routineName: result.routineName,
+              personId: conflict.personId,
+              personName: conflict.personName,
+            });
+          });
+        }
+      }
+
+      if (allConflicts.length > 0) {
+        setConflicts(allConflicts);
+        // Initialize all resolutions to 'merge' by default
+        const initialResolutions: Record<string, ConflictResolution> = {};
+        const initialNames: Record<string, string> = {};
+        allConflicts.forEach(conflict => {
+          const key = `${conflict.routineId}::${conflict.personId}`;
+          initialResolutions[key] = 'merge';
+          initialNames[key] = `${conflict.routineName} (Copy)`;
+        });
+        setConflictResolutions(initialResolutions);
+        setRenamedNames(initialNames);
+        setStep('resolve-conflicts');
+      } else {
+        // No conflicts, proceed with copy
+        await handleCopyWithResolutions({});
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to check for conflicts',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCheckingConflicts(false);
+    }
+  };
+
+  // Perform the actual copy with conflict resolutions
+  const handleCopyWithResolutions = async (resolutions: Record<string, ConflictResolution>) => {
+    let totalMerged = 0;
+    let totalRenamed = 0;
+
+    // Copy each routine to each target
+    const allResults = await Promise.all(
+      selectedRoutineIds.map(async routineId => {
+        // Build conflict resolutions map for this routine (personId -> resolution)
+        const routineConflictResolutions: Record<string, 'merge' | 'rename'> = {};
+        // Build per-person renamed names map (personId -> new name)
+        const perPersonRenamedNames: Record<string, string> = {};
+
+        for (const [key, resolution] of Object.entries(resolutions)) {
+          const [rId, personId] = key.split('::');
+          if (rId === routineId && personId) {
+            routineConflictResolutions[personId] = resolution;
+            if (resolution === 'rename' && renamedNames[key]) {
+              perPersonRenamedNames[personId] = renamedNames[key];
+            }
+          }
+        }
+
+        const result = await copyMutation.mutateAsync({
+          routineId,
+          targetPersonIds: selectedTargetIds,
+          conflictResolutions: Object.keys(routineConflictResolutions).length > 0 ? routineConflictResolutions : undefined,
+          renamedNames: Object.keys(perPersonRenamedNames).length > 0 ? perPersonRenamedNames : undefined,
+        });
+
+        return result;
+      })
     );
+
+    // Count results
+    allResults.forEach(results => {
+      results.forEach((r: any) => {
+        if (r.merged) totalMerged++;
+        if (r.renamed) totalRenamed++;
+      });
+    });
+
+    setCopiedCount({
+      routines: selectedRoutineIds.length,
+      targets: selectedTargetIds.length,
+      merged: totalMerged,
+      renamed: totalRenamed,
+    });
+    setStep('success');
+    utils.routine.list.invalidate();
+  };
+
+  const handleCopy = async () => {
+    if (step === 'resolve-conflicts') {
+      await handleCopyWithResolutions(conflictResolutions);
+    } else {
+      await handleCheckConflicts();
+    }
   };
 
   const handleClose = () => {
     setSelectedRoutineIds([]);
     setSelectedTargetIds([]);
-    setIsSuccess(false);
-    setCopiedCount({ routines: 0, targets: 0, merged: 0 });
+    setStep('select');
+    setCopiedCount({ routines: 0, targets: 0, merged: 0, renamed: 0 });
+    setConflicts([]);
+    setConflictResolutions({});
+    setRenamedNames({});
     onClose();
+  };
+
+  const handleBack = () => {
+    setStep('select');
+    setConflicts([]);
+    setConflictResolutions({});
+    setRenamedNames({});
   };
 
   const hasDailyRoutine = selectedRoutineIds.some(id => {
@@ -159,7 +311,7 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, pres
           <DialogTitle>Copy Routines</DialogTitle>
         </DialogHeader>
 
-        {!isSuccess ? (
+        {step === 'select' && (
           <div className="flex-1 overflow-hidden flex flex-col gap-4">
             {/* Two-column layout */}
             <div className="grid grid-cols-2 gap-4 flex-1 overflow-hidden">
@@ -256,41 +408,14 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, pres
                       No persons available
                     </p>
                   ) : (
-                    targetPersons.map((person) => {
-                      const { color, emoji, backgroundColor } = useAvatar({
-                        avatarString: person.avatar,
-                        fallbackName: person.name,
-                      });
-
-                      return (
-                        <button
-                          key={person.id}
-                          onClick={() => toggleTargetSelection(person.id)}
-                          className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
-                            selectedTargetIds.includes(person.id)
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="h-10 w-10 rounded-full flex items-center justify-center text-xl border-2 flex-shrink-0"
-                              style={{ backgroundColor, borderColor: color }}
-                            >
-                              <RenderIconEmoji value={emoji} className="h-5 w-5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm truncate">
-                                {person.name}
-                              </div>
-                            </div>
-                            {selectedTargetIds.includes(person.id) && (
-                              <Check className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })
+                    targetPersons.map((person) => (
+                      <PersonCard
+                        key={person.id}
+                        person={person}
+                        isSelected={selectedTargetIds.includes(person.id)}
+                        onToggle={() => toggleTargetSelection(person.id)}
+                      />
+                    ))
                   )}
                 </div>
 
@@ -304,7 +429,7 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, pres
             {hasDailyRoutine && selectedTargetIds.length > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800 font-medium">
-                  💡 Daily Routine tasks will be merged into existing Daily Routines (not duplicated)
+                  Daily Routine tasks will be merged into existing Daily Routines (not duplicated)
                 </p>
               </div>
             )}
@@ -319,10 +444,16 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, pres
                 disabled={
                   selectedRoutineIds.length === 0 ||
                   selectedTargetIds.length === 0 ||
-                  copyMutation.isPending
+                  copyMutation.isPending ||
+                  isCheckingConflicts
                 }
               >
-                {copyMutation.isPending ? (
+                {isCheckingConflicts ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Checking...
+                  </>
+                ) : copyMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Copying...
@@ -336,7 +467,119 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, pres
               </Button>
             </div>
           </div>
-        ) : (
+        )}
+
+        {step === 'resolve-conflicts' && (
+          <div className="flex-1 overflow-hidden flex flex-col gap-4">
+            {/* Warning banner */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-amber-900">Naming Conflicts Found</h3>
+                  <p className="text-sm text-amber-800 mt-1">
+                    Some target persons already have routines with the same name. Choose how to handle each conflict:
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Conflict list */}
+            <div className="flex-1 overflow-y-auto space-y-4">
+              {conflicts.map((conflict) => {
+                const key = `${conflict.routineId}::${conflict.personId}`;
+                const resolution = conflictResolutions[key] || 'merge';
+                return (
+                  <div key={key} className="border rounded-lg p-4">
+                    <div className="mb-3">
+                      <p className="font-medium text-sm">
+                        &quot;{conflict.routineName}&quot; → {conflict.personName}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {conflict.personName} already has a routine named &quot;{conflict.routineName}&quot;
+                      </p>
+                    </div>
+
+                    <RadioGroup
+                      value={resolution}
+                      onValueChange={(value: ConflictResolution) => {
+                        setConflictResolutions(prev => ({
+                          ...prev,
+                          [key]: value,
+                        }));
+                      }}
+                      className="space-y-2"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="merge" id={`${key}-merge`} />
+                        <Label htmlFor={`${key}-merge`} className="text-sm font-normal cursor-pointer">
+                          Merge tasks into existing routine
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="rename" id={`${key}-rename`} />
+                        <Label htmlFor={`${key}-rename`} className="text-sm font-normal cursor-pointer">
+                          Create new routine with different name
+                        </Label>
+                      </div>
+                    </RadioGroup>
+
+                    {resolution === 'rename' && (
+                      <div className="mt-3 pl-6">
+                        <Label htmlFor={`${key}-name`} className="text-xs text-gray-600">
+                          New routine name:
+                        </Label>
+                        <Input
+                          id={`${key}-name`}
+                          value={renamedNames[key] || ''}
+                          onChange={(e) => {
+                            setRenamedNames(prev => ({
+                              ...prev,
+                              [key]: e.target.value,
+                            }));
+                          }}
+                          placeholder="Enter new name"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-between pt-2 border-t">
+              <Button variant="outline" onClick={handleBack}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleClose}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCopy}
+                  disabled={copyMutation.isPending || conflicts.some(c => {
+                    const key = `${c.routineId}::${c.personId}`;
+                    return conflictResolutions[key] === 'rename' && !renamedNames[key]?.trim();
+                  })}
+                >
+                  {copyMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Copying...
+                    </>
+                  ) : (
+                    'Continue'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 'success' && (
           /* Success state */
           <div className="py-8">
             <div className="bg-green-50 border border-green-200 rounded-lg p-6">
@@ -353,9 +596,11 @@ export function CopyRoutineModal({ isOpen, onClose, roleId, sourcePersonId, pres
                   Copied <strong>{copiedCount.routines}</strong> routine{copiedCount.routines !== 1 ? 's' : ''} to{' '}
                   <strong>{copiedCount.targets}</strong> person{copiedCount.targets !== 1 ? 's' : ''}
                 </p>
-                {copiedCount.merged > 0 && (
+                {(copiedCount.merged > 0 || copiedCount.renamed > 0) && (
                   <p className="text-center text-xs mt-2">
-                    ({copiedCount.merged} Daily Routine{copiedCount.merged !== 1 ? 's' : ''} merged)
+                    ({copiedCount.merged > 0 && `${copiedCount.merged} merged`}
+                    {copiedCount.merged > 0 && copiedCount.renamed > 0 && ', '}
+                    {copiedCount.renamed > 0 && `${copiedCount.renamed} renamed`})
                   </p>
                 )}
               </div>
