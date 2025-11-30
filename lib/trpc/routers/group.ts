@@ -83,34 +83,35 @@ export const groupRouter = router({
       });
     }
 
-    // For classrooms, ensure a "Me" person exists
+    // For classrooms, ALWAYS create a new "Me" person specific to this classroom
+    // Each classroom should have its own separate teacher/account owner person
     let mePerson = null;
     if (input.type === 'CLASSROOM') {
-      // Find or create "Me" person for this role
-      mePerson = await ctx.prisma.person.findFirst({
-        where: {
-          roleId: input.roleId,
-          name: 'Me',
-        },
+      // Get user's name for the person
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { name: true },
       });
 
-      if (!mePerson) {
-        // Create "Me" person with default avatar
-        const defaultAvatar = JSON.stringify({
-          color: '#FFB3BA',
-          emoji: '👤',
-        });
+      const defaultAvatar = JSON.stringify({
+        color: '#3b82f6',
+        emoji: '👤',
+      });
 
-        mePerson = await ctx.prisma.person.create({
-          data: {
-            roleId: input.roleId,
-            name: 'Me',
-            avatar: defaultAvatar,
-            status: EntityStatus.ACTIVE,
-            isAccountOwner: true,
-          },
-        });
-      }
+      // Always create a new person for each classroom
+      // isAccountOwner is false because each classroom has its own "Me"
+      // (only the original "Me" in the default Teacher-Only classroom is the true account owner)
+      // isTeacher is true to identify this person as a teacher (not a student)
+      mePerson = await ctx.prisma.person.create({
+        data: {
+          roleId: input.roleId,
+          name: user?.name || 'Me',
+          avatar: defaultAvatar,
+          status: EntityStatus.ACTIVE,
+          isAccountOwner: false,
+          isTeacher: true,
+        },
+      });
     }
 
     // Create group and update role timestamp for kiosk polling
@@ -277,11 +278,12 @@ export const groupRouter = router({
 
     const addedPerson = await ctx.prisma.person.findUnique({
       where: { id: input.personId },
-      select: { isAccountOwner: true }
+      select: { isAccountOwner: true, isTeacher: true }
     });
 
     // Create teacher-only routine if adding student to classroom
-    if (role?.type === 'TEACHER' && !addedPerson?.isAccountOwner) {
+    // Only create for students (not teachers or account owners)
+    if (role?.type === 'TEACHER' && !addedPerson?.isAccountOwner && !addedPerson?.isTeacher) {
       await createDefaultTeacherOnlyRoutine(group.roleId, input.personId, role.type);
     }
 

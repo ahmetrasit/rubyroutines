@@ -8,25 +8,30 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { X, Check } from 'lucide-react';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
+import { GroupedPersonSelector, PersonGroupSelection } from './GroupedPersonSelector';
 
 interface ImportFromCodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   roleId: string;
+  roleType?: 'PARENT' | 'TEACHER';
 }
 
-export function ImportFromCodeModal({ isOpen, onClose, roleId }: ImportFromCodeModalProps) {
+export function ImportFromCodeModal({ isOpen, onClose, roleId, roleType }: ImportFromCodeModalProps) {
   const [shareCode, setShareCode] = useState('');
   const [selectedPersons, setSelectedPersons] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [groupedSelections, setGroupedSelections] = useState<PersonGroupSelection[]>([]);
   const [importSuccess, setImportSuccess] = useState(false);
   const [importedItemName, setImportedItemName] = useState('');
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
+  const isTeacherMode = roleType === 'TEACHER';
+
   const { data: persons } = trpc.person.list.useQuery(
     { roleId },
-    { enabled: isOpen }
+    { enabled: isOpen && !isTeacherMode }
   );
 
   const { data: groups } = trpc.group.list.useQuery(
@@ -59,6 +64,7 @@ export function ImportFromCodeModal({ isOpen, onClose, roleId }: ImportFromCodeM
     setShareCode('');
     setSelectedPersons([]);
     setSelectedGroups([]);
+    setGroupedSelections([]);
     setImportSuccess(false);
     setImportedItemName('');
     onClose();
@@ -90,32 +96,59 @@ export function ImportFromCodeModal({ isOpen, onClose, roleId }: ImportFromCodeM
       return;
     }
 
-    const targets = [
-      ...selectedPersons.map((id) => ({ id, type: 'PERSON' as const })),
-      ...selectedGroups.map((id) => ({ id, type: 'GROUP' as const })),
-    ];
+    // For teacher mode, use grouped selections; otherwise use flat selections
+    if (isTeacherMode) {
+      if (groupedSelections.length === 0) {
+        toast({
+          title: 'Error',
+          description: 'Please select at least one person',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    if (targets.length === 0) {
-      toast({
-        title: 'Error',
-        description: 'Please select at least one person or group',
-        variant: 'destructive',
-      });
-      return;
-    }
+      // Deduplicate personIds (same person can be selected in multiple classrooms)
+      const uniquePersonIds = [...new Set(groupedSelections.map(s => s.personId))];
 
-    // Import to each selected target
-    for (const target of targets) {
-      await importMutation.mutateAsync({
-        shareCode: shareCode.trim(),
-        roleId,
-        targetId: target.id,
-        targetType: target.type,
-      });
+      // Import to each unique person
+      for (const personId of uniquePersonIds) {
+        await importMutation.mutateAsync({
+          shareCode: shareCode.trim(),
+          roleId,
+          targetId: personId,
+          targetType: 'PERSON',
+        });
+      }
+    } else {
+      const targets = [
+        ...selectedPersons.map((id) => ({ id, type: 'PERSON' as const })),
+        ...selectedGroups.map((id) => ({ id, type: 'GROUP' as const })),
+      ];
+
+      if (targets.length === 0) {
+        toast({
+          title: 'Error',
+          description: 'Please select at least one person or group',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Import to each selected target
+      for (const target of targets) {
+        await importMutation.mutateAsync({
+          shareCode: shareCode.trim(),
+          roleId,
+          targetId: target.id,
+          targetType: target.type,
+        });
+      }
     }
   };
 
-  const totalSelected = selectedPersons.length + selectedGroups.length;
+  const totalSelected = isTeacherMode
+    ? groupedSelections.length
+    : selectedPersons.length + selectedGroups.length;
   const codeValid = shareCode.trim().length > 0;
 
   return (
@@ -168,85 +201,99 @@ export function ImportFromCodeModal({ isOpen, onClose, roleId }: ImportFromCodeM
                   </h3>
                 </div>
 
-                {/* Persons Section */}
-                {persons && persons.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-600 mb-3">
-                      Individuals ({persons.length})
-                    </h4>
-                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                      {persons.map((person: any) => (
-                        <label
-                          key={person.id}
-                          className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                        >
-                          <Checkbox
-                            checked={selectedPersons.includes(person.id)}
-                            onChange={() => handleTogglePerson(person.id)}
-                          />
-                          <div className="flex items-center gap-2">
-                            {person.avatarUrl && (
-                              <img
-                                src={person.avatarUrl}
-                                alt={person.name}
-                                className="w-6 h-6 rounded-full"
+                {/* Teacher Mode: Grouped by Classroom */}
+                {isTeacherMode && groups && (
+                  <GroupedPersonSelector
+                    groups={groups}
+                    selectedItems={groupedSelections}
+                    onSelectionChange={setGroupedSelections}
+                  />
+                )}
+
+                {/* Parent Mode: Flat Lists */}
+                {!isTeacherMode && (
+                  <>
+                    {/* Persons Section */}
+                    {persons && persons.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-600 mb-3">
+                          Individuals ({persons.length})
+                        </h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                          {persons.map((person: any) => (
+                            <label
+                              key={person.id}
+                              className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={selectedPersons.includes(person.id)}
+                                onChange={() => handleTogglePerson(person.id)}
                               />
-                            )}
-                            <span className="text-sm font-medium text-gray-900">
-                              {person.name}
-                            </span>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                              <div className="flex items-center gap-2">
+                                {person.avatarUrl && (
+                                  <img
+                                    src={person.avatarUrl}
+                                    alt={person.name}
+                                    className="w-6 h-6 rounded-full"
+                                  />
+                                )}
+                                <span className="text-sm font-medium text-gray-900">
+                                  {person.name}
+                                </span>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                {/* Groups Section */}
-                {groups && groups.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-600 mb-3">
-                      Groups ({groups.length})
-                    </h4>
-                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                      {groups.map((group: any) => (
-                        <label
-                          key={group.id}
-                          className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                        >
-                          <Checkbox
-                            checked={selectedGroups.includes(group.id)}
-                            onChange={() => handleToggleGroup(group.id)}
-                          />
-                          <div className="flex items-center gap-2">
-                            {group.icon && (
-                              <span className="text-lg">{group.icon}</span>
-                            )}
-                            <div>
-                              <span className="text-sm font-medium text-gray-900">
-                                {group.name}
-                              </span>
-                              <span className="text-xs text-gray-500 ml-2">
-                                ({group._count?.members || 0} members)
-                              </span>
-                            </div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                    {/* Groups Section */}
+                    {groups && groups.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-600 mb-3">
+                          Groups ({groups.length})
+                        </h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                          {groups.map((group: any) => (
+                            <label
+                              key={group.id}
+                              className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={selectedGroups.includes(group.id)}
+                                onChange={() => handleToggleGroup(group.id)}
+                              />
+                              <div className="flex items-center gap-2">
+                                {group.icon && (
+                                  <span className="text-lg">{group.icon}</span>
+                                )}
+                                <div>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {group.name}
+                                  </span>
+                                  <span className="text-xs text-gray-500 ml-2">
+                                    ({group._count?.members || 0} members)
+                                  </span>
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                {/* No persons or groups message */}
-                {(!persons || persons.length === 0) &&
-                  (!groups || groups.length === 0) && (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No individuals or groups found.</p>
-                      <p className="text-sm mt-2">
-                        Please create a person or group first.
-                      </p>
-                    </div>
-                  )}
+                    {/* No persons or groups message */}
+                    {(!persons || persons.length === 0) &&
+                      (!groups || groups.length === 0) && (
+                        <div className="text-center py-8 text-gray-500">
+                          <p>No individuals or groups found.</p>
+                          <p className="text-sm mt-2">
+                            Please create a person or group first.
+                          </p>
+                        </div>
+                      )}
+                  </>
+                )}
 
                 {/* Actions */}
                 <div className="flex gap-3 pt-4 border-t">

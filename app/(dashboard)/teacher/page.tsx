@@ -101,6 +101,7 @@ export default function TeacherDashboard() {
         isOpen={showGetRoutines}
         onClose={() => setShowGetRoutines(false)}
         roleId={teacherRole.id}
+        roleType="TEACHER"
       />
     </div>
   );

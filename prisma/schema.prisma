@@ -33,20 +33,20 @@ model User {
   twoFactorBackupCodes String[]
 
   // Relations
-  roles                   Role[]
-  verificationCodes       VerificationCode[]
-  invitations             Invitation[]            @relation("InviterUser")
-  acceptedInvitations     Invitation[]            @relation("AcceptedUser")
-  marketplaceRatings      MarketplaceRating[]
-  marketplaceComments     MarketplaceComment[]
-  commentFlags            CommentFlag[]
-  marketplaceShareCodes   MarketplaceShareCode[]  // Share codes created by this user
-  marketplaceImports      MarketplaceImport[]     // Items imported by this user
-  routineShareCodes       RoutineShareCode[]      // Routine share codes created by this user
-  auditLogs               AuditLog[]
-  moderationLogs          ModerationLog[]         @relation("ModerationLogs")
-  sharedWithConnections   PersonSharingConnection[] @relation("SharedWithUserSharingConnections")
-  blogLikes               BlogLike[]
+  roles                 Role[]
+  verificationCodes     VerificationCode[]
+  invitations           Invitation[]              @relation("InviterUser")
+  acceptedInvitations   Invitation[]              @relation("AcceptedUser")
+  marketplaceRatings    MarketplaceRating[]
+  marketplaceComments   MarketplaceComment[]
+  commentFlags          CommentFlag[]
+  marketplaceShareCodes MarketplaceShareCode[] // Share codes created by this user
+  marketplaceImports    MarketplaceImport[] // Items imported by this user
+  routineShareCodes     RoutineShareCode[] // Routine share codes created by this user
+  auditLogs             AuditLog[]
+  moderationLogs        ModerationLog[]           @relation("ModerationLogs")
+  sharedWithConnections PersonSharingConnection[] @relation("SharedWithUserSharingConnections")
+  blogLikes             BlogLike[]
 
   @@index([isAdmin])
   @@map("users")
@@ -57,8 +57,8 @@ model Role {
   userId               String
   type                 RoleType
   tier                 Tier      @default(FREE)
-  color                String?   // UI color for this role mode (hex code)
-  tierOverride         Json?     // Admin-set tier limits override
+  color                String? // UI color for this role mode (hex code)
+  tierOverride         Json? // Admin-set tier limits override
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?   @unique
   subscriptionStatus   String?   @default("ACTIVE")
@@ -68,30 +68,30 @@ model Role {
   updatedAt            DateTime  @updatedAt
 
   // Relations
-  user                        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  persons                     Person[]
-  groups                      Group[]
-  routines                    Routine[]
-  goals                       Goal[]
-  codes                       Code[]
-  invitations                 Invitation[]               @relation("InviterRole")
-  primaryCoParents            CoParent[]                 @relation("PrimaryRole")
-  coParentRelationships       CoParent[]                 @relation("CoParentRole")
-  primaryCoTeachers           CoTeacher[]                @relation("PrimaryTeacherRole")
-  coTeacherRelationships      CoTeacher[]                @relation("CoTeacherRole")
-  teacherConnections          StudentParentConnection[]  @relation("TeacherRole")
-  parentConnections           StudentParentConnection[]  @relation("ParentRole")
-  connectionCodes             ConnectionCode[]
-  marketplaceItems            MarketplaceItem[]
-  schoolMemberships           SchoolMember[]
-  ownerSharingInvites         PersonSharingInvite[]      @relation("OwnerRoleSharingInvites")
-  ownerSharingConnections     PersonSharingConnection[]  @relation("OwnerRoleSharingConnections")
-  sharedWithConnections       PersonSharingConnection[]  @relation("SharedWithRoleSharingConnections")
+  user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persons                 Person[]
+  groups                  Group[]
+  routines                Routine[]
+  goals                   Goal[]
+  codes                   Code[]
+  invitations             Invitation[]              @relation("InviterRole")
+  primaryCoParents        CoParent[]                @relation("PrimaryRole")
+  coParentRelationships   CoParent[]                @relation("CoParentRole")
+  primaryCoTeachers       CoTeacher[]               @relation("PrimaryTeacherRole")
+  coTeacherRelationships  CoTeacher[]               @relation("CoTeacherRole")
+  teacherConnections      StudentParentConnection[] @relation("TeacherRole")
+  parentConnections       StudentParentConnection[] @relation("ParentRole")
+  connectionCodes         ConnectionCode[]
+  marketplaceItems        MarketplaceItem[]
+  schoolMemberships       SchoolMember[]
+  ownerSharingInvites     PersonSharingInvite[]     @relation("OwnerRoleSharingInvites")
+  ownerSharingConnections PersonSharingConnection[] @relation("OwnerRoleSharingConnections")
+  sharedWithConnections   PersonSharingConnection[] @relation("SharedWithRoleSharingConnections")
 
   // Person Connection relations (cross-account observation)
-  originConnections           PersonConnection[]         @relation("OriginRoleConnections")
-  targetConnections           PersonConnection[]         @relation("TargetRoleConnections")
-  originConnectionCodes       PersonConnectionCode[]     @relation("OriginRoleConnectionCodes")
+  originConnections     PersonConnection[]     @relation("OriginRoleConnections")
+  targetConnections     PersonConnection[]     @relation("TargetRoleConnections")
+  originConnectionCodes PersonConnectionCode[] @relation("OriginRoleConnectionCodes")
 
   @@unique([userId, type])
   @@index([userId])
@@ -118,18 +118,19 @@ enum Tier {
 // ============================================================================
 
 model Person {
-  id                  String       @id @default(cuid())
-  roleId              String
-  name                String
-  birthDate           DateTime?
-  avatar              String?
-  notes               String?
-  isAccountOwner      Boolean      @default(false) // True for the "Me" person (account owner)
-  status              EntityStatus @default(ACTIVE)
-  archivedAt          DateTime?
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  kioskLastUpdatedAt  DateTime     @default(now())
+  id                 String       @id @default(cuid())
+  roleId             String
+  name               String
+  birthDate          DateTime?
+  avatar             String?
+  notes              String?
+  isAccountOwner     Boolean      @default(false) // True for the "Me" person (account owner)
+  isTeacher          Boolean      @default(false) // True for teacher/parent persons in classrooms (not students)
+  status             EntityStatus @default(ACTIVE)
+  archivedAt         DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  kioskLastUpdatedAt DateTime     @default(now())
 
   // Relations
   role                    Role                      @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -140,14 +141,14 @@ model Person {
   studentConnections      StudentParentConnection[] @relation("StudentPerson")
   parentConnections       StudentParentConnection[] @relation("ParentPerson")
   connectionCodes         ConnectionCode[]
-  codes                   Code[]                    // Individual kiosk codes for this person
+  codes                   Code[] // Individual kiosk codes for this person
   ownerSharingInvites     PersonSharingInvite[]     @relation("OwnerPersonSharingInvites")
   ownerSharingConnections PersonSharingConnection[] @relation("OwnerPersonSharingConnections")
 
   // Person Connection relations (cross-account observation)
-  originConnections       PersonConnection[]        @relation("OriginPersonConnections")
-  targetConnections       PersonConnection[]        @relation("TargetPersonConnections")
-  originConnectionCodes   PersonConnectionCode[]    @relation("OriginPersonConnectionCodes")
+  originConnections     PersonConnection[]     @relation("OriginPersonConnections")
+  targetConnections     PersonConnection[]     @relation("TargetPersonConnections")
+  originConnectionCodes PersonConnectionCode[] @relation("OriginPersonConnectionCodes")
 
   @@index([roleId])
   @@index([status])
@@ -157,26 +158,26 @@ model Person {
 }
 
 model Group {
-  id                  String       @id @default(cuid())
-  roleId              String
-  name                String
-  description         String?
-  type                GroupType    @default(FAMILY)
-  isClassroom         Boolean      @default(false)
-  emoji               String?      // Emoji or icon for the group/classroom
-  color               String?      // Hex color for group/classroom border
-  status              EntityStatus @default(ACTIVE)
-  archivedAt          DateTime?
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  kioskLastUpdatedAt  DateTime     @default(now())
+  id                 String       @id @default(cuid())
+  roleId             String
+  name               String
+  description        String?
+  type               GroupType    @default(FAMILY)
+  isClassroom        Boolean      @default(false)
+  emoji              String? // Emoji or icon for the group/classroom
+  color              String? // Hex color for group/classroom border
+  status             EntityStatus @default(ACTIVE)
+  archivedAt         DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  kioskLastUpdatedAt DateTime     @default(now())
 
   // Relations
-  role        Role          @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  role        Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
   members     GroupMember[]
   assignments RoutineAssignment[]
   coTeachers  CoTeacher[]
-  codes       Code[]        // Kiosk codes for this specific group/classroom
+  codes       Code[] // Kiosk codes for this specific group/classroom
 
   @@index([roleId])
   @@index([type])
@@ -220,37 +221,37 @@ enum EntityStatus {
 // ============================================================================
 
 model Routine {
-  id                      String         @id @default(cuid())
+  id                      String       @id @default(cuid())
   roleId                  String
   name                    String
   description             String?
-  type                    RoutineType    @default(REGULAR)
-  resetPeriod             ResetPeriod    @default(DAILY)
-  resetDay                Int?           // 0-6 for WEEKLY (0=Sun), 1-31 for MONTHLY
-  visibility              Visibility     @default(ALWAYS)
-  visibleDays             Int[]          // For DAYS_OF_WEEK visibility
-  startDate               DateTime?      // For DATE_RANGE visibility
-  endDate                 DateTime?      // For DATE_RANGE visibility
-  startTime               String?        // For limited daily routines (HH:MM format)
-  endTime                 String?        // For limited daily routines (HH:MM format)
-  color                   String?        // Hex color for routine border
-  isTeacherOnly           Boolean        @default(false) // Teacher-only routines: visible only to teacher/co-teacher, not to students or in kiosk
-  isProtected             Boolean        @default(false) // Protected routines cannot be deleted or renamed (e.g., default "Daily Routine")
-  status                  EntityStatus   @default(ACTIVE)
+  type                    RoutineType  @default(REGULAR)
+  resetPeriod             ResetPeriod  @default(DAILY)
+  resetDay                Int? // 0-6 for WEEKLY (0=Sun), 1-31 for MONTHLY
+  visibility              Visibility   @default(ALWAYS)
+  visibleDays             Int[] // For DAYS_OF_WEEK visibility
+  startDate               DateTime? // For DATE_RANGE visibility
+  endDate                 DateTime? // For DATE_RANGE visibility
+  startTime               String? // For limited daily routines (HH:MM format)
+  endTime                 String? // For limited daily routines (HH:MM format)
+  color                   String? // Hex color for routine border
+  isTeacherOnly           Boolean      @default(false) // Teacher-only routines: visible only to teacher/co-teacher, not to students or in kiosk
+  isProtected             Boolean      @default(false) // Protected routines cannot be deleted or renamed (e.g., default "Daily Routine")
+  status                  EntityStatus @default(ACTIVE)
   archivedAt              DateTime?
   sourceMarketplaceItemId String?
-  createdAt               DateTime       @default(now())
-  updatedAt               DateTime       @updatedAt
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
 
   // Relations
-  role                      Role                   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  tasks                     Task[]
-  assignments               RoutineAssignment[]
-  conditions                Condition[]            @relation("RoutineConditions")
-  targetConditionChecks     ConditionCheck[]       @relation("TargetRoutineConditionChecks")
-  goalLinks                 GoalRoutineLink[]
-  visibilityOverrides       VisibilityOverride[]
-  shareCodes                RoutineShareCode[]
+  role                  Role                 @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tasks                 Task[]
+  assignments           RoutineAssignment[]
+  conditions            Condition[]          @relation("RoutineConditions")
+  targetConditionChecks ConditionCheck[]     @relation("TargetRoutineConditionChecks")
+  goalLinks             GoalRoutineLink[]
+  visibilityOverrides   VisibilityOverride[]
+  shareCodes            RoutineShareCode[]
 
   @@index([roleId])
   @@index([type])
@@ -284,14 +285,14 @@ enum Visibility {
 model RoutineAssignment {
   id        String   @id @default(cuid())
   routineId String
-  personId  String?  // Assign to person
-  groupId   String?  // OR assign to group
+  personId  String? // Assign to person
+  groupId   String? // OR assign to group
   createdAt DateTime @default(now())
 
   // Relations
   routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  person  Person?  @relation(fields: [personId], references: [id], onDelete: Cascade)
-  group   Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  person  Person? @relation(fields: [personId], references: [id], onDelete: Cascade)
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@index([routineId])
   @@index([personId])
@@ -300,29 +301,29 @@ model RoutineAssignment {
 }
 
 model Task {
-  id                      String       @id @default(cuid())
-  routineId               String
-  name                    String
-  description             String?
-  type                    TaskType     @default(SIMPLE)
-  isSmart                 Boolean      @default(false)
-  conditionId             String?      // Links to shared or unique condition
-  order                   Int          @default(0)
-  unit                    String?      // For PROGRESS type (e.g., "pages", "minutes")
-  emoji                   String?      // Emoji or icon identifier (e.g., "✅" or "icon:Star")
-  color                   String?      // Hex color code for task styling
-  status                  EntityStatus @default(ACTIVE)
-  archivedAt              DateTime?
-  version                 Int          @default(0) // For optimistic locking
-  createdAt               DateTime     @default(now())
-  updatedAt               DateTime     @updatedAt
+  id          String       @id @default(cuid())
+  routineId   String
+  name        String
+  description String?
+  type        TaskType     @default(SIMPLE)
+  isSmart     Boolean      @default(false)
+  conditionId String? // Links to shared or unique condition
+  order       Int          @default(0)
+  unit        String? // For PROGRESS type (e.g., "pages", "minutes")
+  emoji       String? // Emoji or icon identifier (e.g., "✅" or "icon:Star")
+  color       String? // Hex color code for task styling
+  status      EntityStatus @default(ACTIVE)
+  archivedAt  DateTime?
+  version     Int          @default(0) // For optimistic locking
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   // Relations
-  routine              Routine           @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  condition            Condition?        @relation(fields: [conditionId], references: [id], onDelete: SetNull)
-  completions          TaskCompletion[]
+  routine               Routine          @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  condition             Condition?       @relation(fields: [conditionId], references: [id], onDelete: SetNull)
+  completions           TaskCompletion[]
   targetConditionChecks ConditionCheck[] @relation("TargetTaskConditionChecks")
-  goalLinks            GoalTaskLink[]
+  goalLinks             GoalTaskLink[]
 
   @@index([routineId])
   @@index([type])
@@ -342,22 +343,22 @@ enum TaskType {
 }
 
 model TaskCompletion {
-  id             String   @id @default(cuid())
-  taskId         String
-  personId       String
-  completedAt    DateTime @default(now())
-  value          String?  // For PROGRESS type - stores integer as string
-  notes          String?
-  entryNumber    Int      @default(1) // Sequential number within period (1-9 for MULTI, 1-20 for PROGRESS)
-  summedValue    Float?   // Cumulative sum for PROGRESS type within period
+  id          String   @id @default(cuid())
+  taskId      String
+  personId    String
+  completedAt DateTime @default(now())
+  value       String? // For PROGRESS type - stores integer as string
+  notes       String?
+  entryNumber Int      @default(1) // Sequential number within period (1-9 for MULTI, 1-20 for PROGRESS)
+  summedValue Float? // Cumulative sum for PROGRESS type within period
 
   // Coordination fields
-  idempotencyKey String?  @unique // Prevent duplicate submissions
-  deviceId       String?  // Track which device created this
-  sessionId      String?  // Link to KioskSession
-  version        Int      @default(1) // Completion version
+  idempotencyKey String? @unique // Prevent duplicate submissions
+  deviceId       String? // Track which device created this
+  sessionId      String? // Link to KioskSession
+  version        Int     @default(1) // Completion version
 
-  createdAt      DateTime @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
   task    Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -378,33 +379,33 @@ model TaskCompletion {
 // ============================================================================
 
 model Goal {
-  id                      String       @id @default(uuid())
-  roleId                  String
-  name                    String
-  description             String?
-  icon                    String?      // Serialized icon/emoji data
-  color                   String?      // Hex color code
+  id          String  @id @default(uuid())
+  roleId      String
+  name        String
+  description String?
+  icon        String? // Serialized icon/emoji data
+  color       String? // Hex color code
 
   // Goal Configuration (Phase 1 - Basic)
-  type                    GoalType     @default(COMPLETION_COUNT)
-  target                  Float
-  unit                    String?      // e.g., "tasks", "minutes", "books"
-  period                  ResetPeriod  @default(WEEKLY)
-  resetDay                Int?
+  type     GoalType    @default(COMPLETION_COUNT)
+  target   Float
+  unit     String? // e.g., "tasks", "minutes", "books"
+  period   ResetPeriod @default(WEEKLY)
+  resetDay Int?
 
   // Simple Goal Configuration
-  simpleCondition         String?      // 'complete' or 'not_complete' for SIMPLE tasks
-  comparisonOperator      String?      // 'gte' or 'lte' for comparison
-  comparisonValue         Float?       // Value to compare against for MULTI/PROGRESS tasks
+  simpleCondition    String? // 'complete' or 'not_complete' for SIMPLE tasks
+  comparisonOperator String? // 'gte' or 'lte' for comparison
+  comparisonValue    Float? // Value to compare against for MULTI/PROGRESS tasks
 
   // Goal Scope (Phase 1 - Simple)
-  personIds               String[]     @default([])
-  groupIds                String[]     @default([])
+  personIds String[] @default([])
+  groupIds  String[] @default([])
 
   // Progress Tracking (Phase 1 - Basic)
-  currentStreak           Int          @default(0)
-  longestStreak           Int          @default(0)
-  lastAchievedAt          DateTime?
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastAchievedAt DateTime?
 
   // Metadata
   status                  EntityStatus @default(ACTIVE)
@@ -463,16 +464,16 @@ model GoalRoutineLink {
 
 // Track goal progress for each person
 model GoalProgress {
-  id          String   @id @default(uuid())
-  goalId      String
-  personId    String
-  currentValue Float   @default(0)    // Current progress value
-  achieved    Boolean  @default(false) // Whether goal was achieved this period
-  periodStart DateTime // Start of the tracking period
-  periodEnd   DateTime // End of the tracking period
-  achievedAt  DateTime? // When the goal was achieved (if achieved)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String    @id @default(uuid())
+  goalId       String
+  personId     String
+  currentValue Float     @default(0) // Current progress value
+  achieved     Boolean   @default(false) // Whether goal was achieved this period
+  periodStart  DateTime // Start of the tracking period
+  periodEnd    DateTime // End of the tracking period
+  achievedAt   DateTime? // When the goal was achieved (if achieved)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Relations
   goal   Goal   @relation(fields: [goalId], references: [id], onDelete: Cascade)
@@ -485,26 +486,26 @@ model GoalProgress {
 }
 
 enum GoalType {
-  COMPLETION_COUNT     // Count of task/routine completions (Phase 1)
-  STREAK              // Consecutive days/weeks/months (Phase 1)
-  TIME_BASED          // Total time spent (Phase 2)
-  VALUE_BASED         // Sum of values (Phase 2)
-  PERCENTAGE          // % of routines completed (Phase 2)
+  COMPLETION_COUNT // Count of task/routine completions (Phase 1)
+  STREAK // Consecutive days/weeks/months (Phase 1)
+  TIME_BASED // Total time spent (Phase 2)
+  VALUE_BASED // Sum of values (Phase 2)
+  PERCENTAGE // % of routines completed (Phase 2)
 }
 
 model Condition {
   id              String         @id @default(cuid())
-  routineId       String?        // Optional: can be standalone for Phase 2
-  name            String?        // Optional name for complex conditions
-  description     String?        // Help text explaining the condition
+  routineId       String? // Optional: can be standalone for Phase 2
+  name            String? // Optional name for complex conditions
+  description     String? // Help text explaining the condition
   controlsRoutine Boolean        @default(false) // true = controls routine visibility, false = controls task(s)
-  logic           ConditionLogic @default(AND)   // AND or OR between checks
+  logic           ConditionLogic @default(AND) // AND or OR between checks
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
   // Relations
   routine         Routine?         @relation("RoutineConditions", fields: [routineId], references: [id], onDelete: Cascade)
-  controlledTasks Task[]           // Multiple tasks can share this condition (via Task.conditionId)
+  controlledTasks Task[] // Multiple tasks can share this condition (via Task.conditionId)
   checks          ConditionCheck[] // Individual condition checks
 
   @@index([routineId])
@@ -518,12 +519,12 @@ enum ConditionLogic {
 }
 
 model ConditionCheck {
-  id              String            @id @default(cuid())
-  conditionId     String
-  negate          Boolean           @default(false) // NOT operator
-  operator        ConditionOperator
-  value           String?           // Comparison value (for count, percentage, etc.)
-  value2          String?           // For range operators (Phase 2)
+  id          String            @id @default(cuid())
+  conditionId String
+  negate      Boolean           @default(false) // NOT operator
+  operator    ConditionOperator
+  value       String? // Comparison value (for count, percentage, etc.)
+  value2      String? // For range operators (Phase 2)
 
   // Targets
   targetTaskId    String?
@@ -531,18 +532,18 @@ model ConditionCheck {
   targetGoalId    String?
 
   // Time-based conditions (Phase 1)
-  timeOperator    TimeOperator?
-  timeValue       String?           // Time in HH:MM format
-  dayOfWeek       Int[]            @default([]) // 0-6 for specific days
+  timeOperator TimeOperator?
+  timeValue    String? // Time in HH:MM format
+  dayOfWeek    Int[]         @default([]) // 0-6 for specific days
 
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  condition      Condition @relation(fields: [conditionId], references: [id], onDelete: Cascade)
-  targetTask     Task?     @relation("TargetTaskConditionChecks", fields: [targetTaskId], references: [id], onDelete: Cascade)
-  targetRoutine  Routine?  @relation("TargetRoutineConditionChecks", fields: [targetRoutineId], references: [id], onDelete: Cascade)
-  targetGoal     Goal?     @relation("TargetGoalConditionChecks", fields: [targetGoalId], references: [id], onDelete: Cascade)
+  condition     Condition @relation(fields: [conditionId], references: [id], onDelete: Cascade)
+  targetTask    Task?     @relation("TargetTaskConditionChecks", fields: [targetTaskId], references: [id], onDelete: Cascade)
+  targetRoutine Routine?  @relation("TargetRoutineConditionChecks", fields: [targetRoutineId], references: [id], onDelete: Cascade)
+  targetGoal    Goal?     @relation("TargetGoalConditionChecks", fields: [targetGoalId], references: [id], onDelete: Cascade)
 
   @@index([conditionId])
   @@index([targetTaskId])
@@ -553,12 +554,12 @@ model ConditionCheck {
 
 enum ConditionOperator {
   // Task operators
-  TASK_COMPLETED       // Check if task is completed
-  TASK_NOT_COMPLETED   // Check if task is not completed
-  TASK_COUNT_EQUALS    // Check task completion count
-  TASK_COUNT_GT        // Greater than
-  TASK_COUNT_LT        // Less than
-  TASK_VALUE_EQUALS    // For PROGRESS tasks
+  TASK_COMPLETED // Check if task is completed
+  TASK_NOT_COMPLETED // Check if task is not completed
+  TASK_COUNT_EQUALS // Check task completion count
+  TASK_COUNT_GT // Greater than
+  TASK_COUNT_LT // Less than
+  TASK_VALUE_EQUALS // For PROGRESS tasks
   TASK_VALUE_GT
   TASK_VALUE_LT
 
@@ -568,14 +569,14 @@ enum ConditionOperator {
   ROUTINE_PERCENT_LT
 
   // Goal operators
-  GOAL_ACHIEVED        // Check if goal is achieved
+  GOAL_ACHIEVED // Check if goal is achieved
   GOAL_NOT_ACHIEVED
-  GOAL_PROGRESS_GT     // Check goal progress (Phase 1)
+  GOAL_PROGRESS_GT // Check goal progress (Phase 1)
   GOAL_PROGRESS_LT
 
   // Time operators (Phase 1)
-  TIME_OF_DAY         // Current time check
-  DAY_OF_WEEK         // Current day check
+  TIME_OF_DAY // Current time check
+  DAY_OF_WEEK // Current day check
 }
 
 enum TimeOperator {
@@ -607,17 +608,17 @@ model VisibilityOverride {
 // ============================================================================
 
 model Code {
-  id                  String         @id @default(cuid())
-  code                String         @unique
+  id                  String     @id @default(cuid())
+  code                String     @unique
   roleId              String
-  groupId             String?        // Optional: links kiosk code to specific classroom/group
-  personId            String?        // Optional: links kiosk code to specific person (individual code)
-  type                CodeType       @default(KIOSK)
+  groupId             String? // Optional: links kiosk code to specific classroom/group
+  personId            String? // Optional: links kiosk code to specific person (individual code)
+  type                CodeType   @default(KIOSK)
   expiresAt           DateTime
   usedAt              DateTime?
-  status              CodeStatus     @default(ACTIVE)
-  sessionDurationDays Int            @default(90) // Default session duration in days
-  createdAt           DateTime       @default(now())
+  status              CodeStatus @default(ACTIVE)
+  sessionDurationDays Int        @default(90) // Default session duration in days
+  createdAt           DateTime   @default(now())
 
   // Relations
   role     Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -651,20 +652,20 @@ enum CodeStatus {
 model KioskSession {
   id                String    @id @default(cuid())
   codeId            String
-  deviceId          String    // Unique device identifier
+  deviceId          String // Unique device identifier
   startedAt         DateTime  @default(now())
   lastActiveAt      DateTime  @default(now())
   expiresAt         DateTime
   endedAt           DateTime?
   ipAddress         String?
   userAgent         String?
-  terminatedBy      String?   // User ID who terminated the session
+  terminatedBy      String? // User ID who terminated the session
   terminatedAt      DateTime?
   terminationReason String?
 
   // Relations
-  code              Code             @relation(fields: [codeId], references: [id], onDelete: Cascade)
-  completions       TaskCompletion[] // Track completions per session
+  code        Code             @relation(fields: [codeId], references: [id], onDelete: Cascade)
+  completions TaskCompletion[] // Track completions per session
 
   @@index([codeId])
   @@index([deviceId])
@@ -676,14 +677,14 @@ model KioskSession {
 }
 
 model ConnectionCode {
-  id              String      @id @default(cuid())
-  code            String      @unique
+  id              String     @id @default(cuid())
+  code            String     @unique
   teacherRoleId   String
   studentPersonId String
   expiresAt       DateTime
   usedAt          DateTime?
-  status          CodeStatus  @default(ACTIVE)
-  createdAt       DateTime    @default(now())
+  status          CodeStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now())
 
   // Relations
   teacherRole   Role   @relation(fields: [teacherRoleId], references: [id], onDelete: Cascade)
@@ -701,25 +702,25 @@ model ConnectionCode {
 // ============================================================================
 
 model Invitation {
-  id             String         @id @default(cuid())
-  token          String         @unique @default(cuid())
-  inviteCode     String?        @unique // 4-word code for easy sharing
-  inviterUserId  String
-  inviterRoleId  String
-  inviteeEmail   String
-  type           InvitationType
-  permissions    String         @default("READ_ONLY")
-  personIds      String[]       @default([])
-  groupIds       String[]       @default([])
-  expiresAt      DateTime
-  status         InvitationStatus @default(PENDING)
-  acceptedAt     DateTime?
+  id               String           @id @default(cuid())
+  token            String           @unique @default(cuid())
+  inviteCode       String?          @unique // 4-word code for easy sharing
+  inviterUserId    String
+  inviterRoleId    String
+  inviteeEmail     String
+  type             InvitationType
+  permissions      String           @default("READ_ONLY")
+  personIds        String[]         @default([])
+  groupIds         String[]         @default([])
+  expiresAt        DateTime
+  status           InvitationStatus @default(PENDING)
+  acceptedAt       DateTime?
   acceptedByUserId String?
-  createdAt      DateTime       @default(now())
+  createdAt        DateTime         @default(now())
 
   // Relations
-  inviterUser  User  @relation("InviterUser", fields: [inviterUserId], references: [id], onDelete: Cascade)
-  inviterRole  Role  @relation("InviterRole", fields: [inviterRoleId], references: [id], onDelete: Cascade)
+  inviterUser    User  @relation("InviterUser", fields: [inviterUserId], references: [id], onDelete: Cascade)
+  inviterRole    Role  @relation("InviterRole", fields: [inviterRoleId], references: [id], onDelete: Cascade)
   acceptedByUser User? @relation("AcceptedUser", fields: [acceptedByUserId], references: [id])
 
   @@index([token])
@@ -744,26 +745,26 @@ enum InvitationStatus {
 }
 
 enum ShareType {
-  PERSON              // Share a specific person (kid, student, etc.)
-  ROUTINE_ACCESS      // Share routine viewing/editing for a person
-  FULL_ROLE           // Share entire role access (co-parent/co-teacher)
+  PERSON // Share a specific person (kid, student, etc.)
+  ROUTINE_ACCESS // Share routine viewing/editing for a person
+  FULL_ROLE // Share entire role access (co-parent/co-teacher)
 }
 
 enum PermissionLevel {
-  VIEW                // View task completions only
-  EDIT                // View + complete tasks
-  MANAGE              // View + Edit + manage routines/settings
+  VIEW // View task completions only
+  EDIT // View + complete tasks
+  MANAGE // View + Edit + manage routines/settings
 }
 
 model CoParent {
-  id              String   @id @default(cuid())
-  primaryRoleId   String
-  coParentRoleId  String
-  permissions     String   @default("READ_ONLY")
-  personIds       String[] @default([])
-  status          String   @default("ACTIVE")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  primaryRoleId  String
+  coParentRoleId String
+  permissions    String   @default("READ_ONLY")
+  personIds      String[] @default([])
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   primaryRole  Role @relation("PrimaryRole", fields: [primaryRoleId], references: [id], onDelete: Cascade)
@@ -777,19 +778,19 @@ model CoParent {
 }
 
 model CoTeacher {
-  id                    String   @id @default(cuid())
-  groupId               String
-  primaryTeacherRoleId  String
-  coTeacherRoleId       String
-  permissions           String   @default("VIEW")
-  status                String   @default("ACTIVE")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  groupId              String
+  primaryTeacherRoleId String
+  coTeacherRoleId      String
+  permissions          String   @default("VIEW")
+  status               String   @default("ACTIVE")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   // Relations
-  group               Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  primaryTeacherRole  Role  @relation("PrimaryTeacherRole", fields: [primaryTeacherRoleId], references: [id], onDelete: Cascade)
-  coTeacherRole       Role  @relation("CoTeacherRole", fields: [coTeacherRoleId], references: [id], onDelete: Cascade)
+  group              Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  primaryTeacherRole Role  @relation("PrimaryTeacherRole", fields: [primaryTeacherRoleId], references: [id], onDelete: Cascade)
+  coTeacherRole      Role  @relation("CoTeacherRole", fields: [coTeacherRoleId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, coTeacherRoleId])
   @@index([groupId])
@@ -826,32 +827,32 @@ model StudentParentConnection {
 }
 
 model PersonSharingInvite {
-  id              String          @id @default(cuid())
-  inviteCode      String          @unique // 3-word code (e.g., "happy-turtle-jump")
+  id         String @id @default(cuid())
+  inviteCode String @unique // 3-word code (e.g., "happy-turtle-jump")
 
   // Who is sharing
-  ownerRoleId     String
-  ownerPersonId   String?         // Optional: specific person being shared
+  ownerRoleId   String
+  ownerPersonId String? // Optional: specific person being shared
 
   // What is being shared
-  shareType       ShareType
-  permissions     PermissionLevel @default(VIEW)
+  shareType   ShareType
+  permissions PermissionLevel @default(VIEW)
 
   // Context for what's being shared
-  contextData     Json?           // Flexible data (e.g., specific routine IDs)
+  contextData Json? // Flexible data (e.g., specific routine IDs)
 
   // Invite metadata
-  expiresAt       DateTime        // 90 days from creation
-  maxUses         Int?            // null = unlimited, 1 = single use
-  useCount        Int             @default(0)
-  status          CodeStatus      @default(ACTIVE) // ACTIVE, USED, EXPIRED, REVOKED
+  expiresAt DateTime // 90 days from creation
+  maxUses   Int? // null = unlimited, 1 = single use
+  useCount  Int        @default(0)
+  status    CodeStatus @default(ACTIVE) // ACTIVE, USED, EXPIRED, REVOKED
 
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  ownerRole         Role                      @relation("OwnerRoleSharingInvites", fields: [ownerRoleId], references: [id], onDelete: Cascade)
-  ownerPerson       Person?                   @relation("OwnerPersonSharingInvites", fields: [ownerPersonId], references: [id], onDelete: Cascade)
+  ownerRole          Role                      @relation("OwnerRoleSharingInvites", fields: [ownerRoleId], references: [id], onDelete: Cascade)
+  ownerPerson        Person?                   @relation("OwnerPersonSharingInvites", fields: [ownerPersonId], references: [id], onDelete: Cascade)
   claimedConnections PersonSharingConnection[] @relation("ClaimedFromInvite")
 
   @@index([inviteCode])
@@ -863,34 +864,34 @@ model PersonSharingInvite {
 }
 
 model PersonSharingConnection {
-  id                String          @id @default(cuid())
+  id String @id @default(cuid())
 
   // Who is sharing
-  ownerRoleId       String
-  ownerPersonId     String?         // null for role-level sharing
+  ownerRoleId   String
+  ownerPersonId String? // null for role-level sharing
 
   // Who it's shared with
-  sharedWithRoleId  String
-  sharedWithUserId  String
+  sharedWithRoleId String
+  sharedWithUserId String
 
   // What is being shared
-  shareType         ShareType
-  permissions       PermissionLevel @default(VIEW)
+  shareType   ShareType
+  permissions PermissionLevel @default(VIEW)
 
   // Metadata
-  contextData       Json?           // Flexible: classroom ID, routine IDs, etc.
-  inviteCodeId      String?         // Track which invite created this
-  status            String          @default("ACTIVE") // ACTIVE, REVOKED, EXPIRED
+  contextData  Json? // Flexible: classroom ID, routine IDs, etc.
+  inviteCodeId String? // Track which invite created this
+  status       String  @default("ACTIVE") // ACTIVE, REVOKED, EXPIRED
 
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  ownerRole         Role                  @relation("OwnerRoleSharingConnections", fields: [ownerRoleId], references: [id], onDelete: Cascade)
-  ownerPerson       Person?               @relation("OwnerPersonSharingConnections", fields: [ownerPersonId], references: [id], onDelete: Cascade)
-  sharedWithRole    Role                  @relation("SharedWithRoleSharingConnections", fields: [sharedWithRoleId], references: [id], onDelete: Cascade)
-  sharedWithUser    User                  @relation("SharedWithUserSharingConnections", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
-  claimedFromInvite PersonSharingInvite?  @relation("ClaimedFromInvite", fields: [inviteCodeId], references: [id], onDelete: SetNull)
+  ownerRole         Role                 @relation("OwnerRoleSharingConnections", fields: [ownerRoleId], references: [id], onDelete: Cascade)
+  ownerPerson       Person?              @relation("OwnerPersonSharingConnections", fields: [ownerPersonId], references: [id], onDelete: Cascade)
+  sharedWithRole    Role                 @relation("SharedWithRoleSharingConnections", fields: [sharedWithRoleId], references: [id], onDelete: Cascade)
+  sharedWithUser    User                 @relation("SharedWithUserSharingConnections", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  claimedFromInvite PersonSharingInvite? @relation("ClaimedFromInvite", fields: [inviteCodeId], references: [id], onDelete: SetNull)
 
   @@unique([ownerRoleId, ownerPersonId, sharedWithRoleId, shareType]) // Prevent duplicate shares
   @@index([ownerRoleId])
@@ -908,35 +909,35 @@ model PersonSharingConnection {
 // Connection between two persons across different accounts
 // Origin person (being observed) -> Target person (observer)
 model PersonConnection {
-  id                    String    @id @default(cuid())
+  id String @id @default(cuid())
 
   // Origin side (person being observed - their tasks are shown)
-  originRoleId          String
-  originPersonId        String
+  originRoleId   String
+  originPersonId String
 
   // Target side (observer - sees origin's tasks in their dashboard)
-  targetRoleId          String
-  targetPersonId        String
+  targetRoleId   String
+  targetPersonId String
 
   // Connection status
-  status                String    @default("ACTIVE") // ACTIVE, DISCONNECTED
+  status String @default("ACTIVE") // ACTIVE, DISCONNECTED
 
   // Scope control (what routines/goals are visible to target)
-  scopeMode             String    @default("ALL") // ALL, SELECTED
-  visibleRoutineIds     String[]  @default([])    // When scopeMode=SELECTED, which routines are visible
-  visibleGoalIds        String[]  @default([])    // When scopeMode=SELECTED, which goals are visible
+  scopeMode         String   @default("ALL") // ALL, SELECTED
+  visibleRoutineIds String[] @default([]) // When scopeMode=SELECTED, which routines are visible
+  visibleGoalIds    String[] @default([]) // When scopeMode=SELECTED, which goals are visible
 
   // Timestamps
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  disconnectedAt        DateTime?
-  disconnectedBy        String?   // UserId who disconnected
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  disconnectedAt DateTime?
+  disconnectedBy String? // UserId who disconnected
 
   // Relations
-  originRole            Role      @relation("OriginRoleConnections", fields: [originRoleId], references: [id], onDelete: Cascade)
-  originPerson          Person    @relation("OriginPersonConnections", fields: [originPersonId], references: [id], onDelete: Cascade)
-  targetRole            Role      @relation("TargetRoleConnections", fields: [targetRoleId], references: [id], onDelete: Cascade)
-  targetPerson          Person    @relation("TargetPersonConnections", fields: [targetPersonId], references: [id], onDelete: Cascade)
+  originRole   Role   @relation("OriginRoleConnections", fields: [originRoleId], references: [id], onDelete: Cascade)
+  originPerson Person @relation("OriginPersonConnections", fields: [originPersonId], references: [id], onDelete: Cascade)
+  targetRole   Role   @relation("TargetRoleConnections", fields: [targetRoleId], references: [id], onDelete: Cascade)
+  targetPerson Person @relation("TargetPersonConnections", fields: [targetPersonId], references: [id], onDelete: Cascade)
 
   @@unique([originPersonId, targetPersonId]) // Prevent duplicate connections between same persons
   @@index([originRoleId])
@@ -949,12 +950,12 @@ model PersonConnection {
 
 // Connection codes for establishing person connections
 model PersonConnectionCode {
-  id                String      @id @default(cuid())
-  code              String      @unique  // 4-word code (e.g., "happy-turtle-jump-blue")
+  id   String @id @default(cuid())
+  code String @unique // 4-word code (e.g., "happy-turtle-jump-blue")
 
   // Origin side (who generates the code)
-  originRoleId      String
-  originPersonId    String
+  originRoleId   String
+  originPersonId String
 
   // Type constraint - what type of person can claim this code
   // KID = only kids (parent's non-account-owner persons)
@@ -964,15 +965,15 @@ model PersonConnectionCode {
   allowedTargetType String
 
   // Code metadata
-  expiresAt         DateTime    // 24 hours from creation
-  usedAt            DateTime?
-  status            CodeStatus  @default(ACTIVE)
+  expiresAt DateTime // 24 hours from creation
+  usedAt    DateTime?
+  status    CodeStatus @default(ACTIVE)
 
-  createdAt         DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  originRole        Role        @relation("OriginRoleConnectionCodes", fields: [originRoleId], references: [id], onDelete: Cascade)
-  originPerson      Person      @relation("OriginPersonConnectionCodes", fields: [originPersonId], references: [id], onDelete: Cascade)
+  originRole   Role   @relation("OriginRoleConnectionCodes", fields: [originRoleId], references: [id], onDelete: Cascade)
+  originPerson Person @relation("OriginPersonConnectionCodes", fields: [originPersonId], references: [id], onDelete: Cascade)
 
   @@index([code])
   @@index([originRoleId])
@@ -987,13 +988,13 @@ model PersonConnectionCode {
 // ============================================================================
 
 model School {
-  id          String   @id @default(cuid())
-  name        String
-  address     String?
-  website     String?
-  status      String   @default("ACTIVE")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  website   String?
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   members SchoolMember[]
@@ -1010,8 +1011,8 @@ model SchoolMember {
   createdAt DateTime @default(now())
 
   // Relations
-  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  userRole Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  userRole Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([schoolId, roleId])
   @@index([schoolId])
@@ -1024,34 +1025,34 @@ model SchoolMember {
 // ============================================================================
 
 model MarketplaceItem {
-  id             String   @id @default(cuid())
-  type           String   // ROUTINE or GOAL
-  sourceId       String   // ID of original routine/goal
+  id             String    @id @default(cuid())
+  type           String // ROUTINE or GOAL
+  sourceId       String // ID of original routine/goal
   authorRoleId   String
   name           String
-  description    String   @default("")
-  visibility     String   @default("PUBLIC") // PUBLIC or PRIVATE (removed UNLISTED)
-  targetAudience String   @default("PARENT") // PARENT or TEACHER - filters marketplace by role type
+  description    String    @default("")
+  visibility     String    @default("PUBLIC") // PUBLIC or PRIVATE (removed UNLISTED)
+  targetAudience String    @default("PARENT") // PARENT or TEACHER - filters marketplace by role type
   category       String?
   ageGroup       String?
-  tags           String[] @default([])
-  version        String   @default("1.0.0")
-  content        String   // JSON snapshot of routine/goal
+  tags           String[]  @default([])
+  version        String    @default("1.0.0")
+  content        String // JSON snapshot of routine/goal
   rating         Float     @default(0)
   ratingCount    Int       @default(0)
   forkCount      Int       @default(0)
   hidden         Boolean   @default(false) // Admin moderation
   hiddenAt       DateTime? // When item was hidden
-  hiddenBy       String?   // Admin user ID who hid it
+  hiddenBy       String? // Admin user ID who hid it
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   // Relations
-  authorRole  Role                    @relation(fields: [authorRoleId], references: [id], onDelete: Cascade)
-  ratings     MarketplaceRating[]
-  comments    MarketplaceComment[]
-  shareCodes  MarketplaceShareCode[]  // For private sharing with codes
-  imports     MarketplaceImport[]     // Track who imported this item
+  authorRole Role                   @relation(fields: [authorRoleId], references: [id], onDelete: Cascade)
+  ratings    MarketplaceRating[]
+  comments   MarketplaceComment[]
+  shareCodes MarketplaceShareCode[] // For private sharing with codes
+  imports    MarketplaceImport[] // Track who imported this item
 
   @@index([authorRoleId])
   @@index([type])
@@ -1067,7 +1068,7 @@ model MarketplaceRating {
   id                String   @id @default(cuid())
   marketplaceItemId String
   userId            String
-  rating            Int      // 1-5 stars
+  rating            Int // 1-5 stars
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -1125,7 +1126,7 @@ model MarketplaceShareCode {
   createdBy         String
   useCount          Int       @default(0)
   active            Boolean   @default(true)
-  maxUses           Int?      // null = unlimited
+  maxUses           Int? // null = unlimited
   expiresAt         DateTime? // null = never expires
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -1142,16 +1143,16 @@ model MarketplaceShareCode {
 }
 
 model RoutineShareCode {
-  id           String    @id @default(cuid())
-  routineId    String
-  shareCode    String    @unique // e.g., "happy-turtle-jump" (3-word lowercase code)
-  createdBy    String
-  useCount     Int       @default(0)
-  active       Boolean   @default(true)
-  maxUses      Int?      // null = unlimited
-  expiresAt    DateTime? // null = never expires
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id        String    @id @default(cuid())
+  routineId String
+  shareCode String    @unique // e.g., "happy-turtle-jump" (3-word lowercase code)
+  createdBy String
+  useCount  Int       @default(0)
+  active    Boolean   @default(true)
+  maxUses   Int? // null = unlimited
+  expiresAt DateTime? // null = never expires
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
   routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
@@ -1166,8 +1167,8 @@ model MarketplaceImport {
   id                String   @id @default(cuid())
   marketplaceItemId String
   importedBy        String
-  targetId          String   // personId or groupId
-  targetType        String   // PERSON or GROUP
+  targetId          String // personId or groupId
+  targetType        String // PERSON or GROUP
   viaCode           Boolean  @default(false) // true if imported via share code, false if from marketplace
   createdAt         DateTime @default(now())
 
@@ -1189,8 +1190,8 @@ model MarketplaceImport {
 model VerificationCode {
   id           String    @id @default(cuid())
   userId       String
-  email        String?   // Email address for verification
-  code         String    // 6-digit code (hashed)
+  email        String? // Email address for verification
+  code         String // 6-digit code (hashed)
   type         String    @default("EMAIL_VERIFICATION")
   status       String    @default("PENDING") // PENDING, USED, EXPIRED
   expiresAt    DateTime
@@ -1227,15 +1228,15 @@ model SystemSettings {
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String
-  action      String   // USER_CREATED, USER_UPDATED, TIER_CHANGED, SETTINGS_CHANGED, etc.
-  entityType  String?  // User, Role, SystemSettings, etc.
-  entityId    String?
-  changes     Json?    // Before/after changes
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  action     String // USER_CREATED, USER_UPDATED, TIER_CHANGED, SETTINGS_CHANGED, etc.
+  entityType String? // User, Role, SystemSettings, etc.
+  entityId   String?
+  changes    Json? // Before/after changes
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1248,25 +1249,25 @@ model AuditLog {
 }
 
 model ModerationLog {
-  id            String   @id @default(cuid())
-  adminUserId   String   // Who performed the action
+  id          String @id @default(cuid())
+  adminUserId String // Who performed the action
 
   // What was affected
-  entityType    String   // 'MARKETPLACE_ITEM', 'COMMENT', 'USER', 'ROLE', etc.
-  entityId      String   // ID of the affected entity
+  entityType String // 'MARKETPLACE_ITEM', 'COMMENT', 'USER', 'ROLE', etc.
+  entityId   String // ID of the affected entity
 
   // Action details
-  action        String   // 'HIDE_ITEM', 'UNHIDE_ITEM', 'DELETE_ITEM', 'HIDE_COMMENT', 'UNHIDE_COMMENT', 'BULK_HIDE_ITEMS', 'BULK_UNHIDE_ITEMS', etc.
-  reason        String?  // Optional reason for the action
-  metadata      Json?    // Additional context (e.g., item IDs for bulk actions, original values)
+  action   String // 'HIDE_ITEM', 'UNHIDE_ITEM', 'DELETE_ITEM', 'HIDE_COMMENT', 'UNHIDE_COMMENT', 'BULK_HIDE_ITEMS', 'BULK_UNHIDE_ITEMS', etc.
+  reason   String? // Optional reason for the action
+  metadata Json? // Additional context (e.g., item IDs for bulk actions, original values)
 
   // Audit trail
-  timestamp     DateTime @default(now())
-  ipAddress     String?  // IP address of admin
-  userAgent     String?  // Browser/client info
+  timestamp DateTime @default(now())
+  ipAddress String? // IP address of admin
+  userAgent String? // Browser/client info
 
   // Relations
-  adminUser     User     @relation("ModerationLogs", fields: [adminUserId], references: [id])
+  adminUser User @relation("ModerationLogs", fields: [adminUserId], references: [id])
 
   @@index([adminUserId])
   @@index([entityType, entityId])
@@ -1283,8 +1284,8 @@ model BlogPost {
   id          String    @id @default(cuid())
   slug        String    @unique
   title       String
-  content     String    // Markdown content
-  excerpt     String?   // Short description for listing
+  content     String // Markdown content
+  excerpt     String? // Short description for listing
   published   Boolean   @default(false)
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -1320,14 +1321,14 @@ model BlogLike {
 // ============================================================================
 
 model RateLimit {
-  id         String   @id @default(cuid())
-  identifier String   // User ID, Role ID, or IP address
-  action     String   // Action being rate limited (e.g., 'code_generation', 'code_claim', 'invitation_send')
-  count      Int      @default(1)
+  id          String   @id @default(cuid())
+  identifier  String // User ID, Role ID, or IP address
+  action      String // Action being rate limited (e.g., 'code_generation', 'code_claim', 'invitation_send')
+  count       Int      @default(1)
   windowStart DateTime @default(now())
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([identifier, action])
   @@index([identifier])

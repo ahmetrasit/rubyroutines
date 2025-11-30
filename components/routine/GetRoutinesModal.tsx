@@ -11,9 +11,10 @@ interface GetRoutinesModalProps {
   isOpen: boolean;
   onClose: () => void;
   roleId: string;
+  roleType?: 'PARENT' | 'TEACHER';
 }
 
-export function GetRoutinesModal({ isOpen, onClose, roleId }: GetRoutinesModalProps) {
+export function GetRoutinesModal({ isOpen, onClose, roleId, roleType }: GetRoutinesModalProps) {
   const router = useRouter();
   const [showImportCode, setShowImportCode] = useState(false);
 
@@ -112,6 +113,7 @@ export function GetRoutinesModal({ isOpen, onClose, roleId }: GetRoutinesModalPr
         isOpen={showImportCode}
         onClose={handleImportCodeClose}
         roleId={roleId}
+        roleType={roleType}
       />
     </>
   );

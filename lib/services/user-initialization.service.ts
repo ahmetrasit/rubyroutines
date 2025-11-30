@@ -34,6 +34,7 @@ async function createDefaultPerson(
       name: userName,
       avatar: JSON.stringify(avatarConfig),
       isAccountOwner: true, // Mark as account owner
+      isTeacher: true, // Account owner is always a teacher/parent (not a student)
       status: 'ACTIVE',
     },
   });

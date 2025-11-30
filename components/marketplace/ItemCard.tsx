@@ -29,9 +29,10 @@ interface MarketplaceItem {
 interface ItemCardProps {
   item: MarketplaceItem;
   roleId: string;
+  roleType?: 'PARENT' | 'TEACHER';
 }
 
-export function ItemCard({ item, roleId }: ItemCardProps) {
+export function ItemCard({ item, roleId, roleType }: ItemCardProps) {
   const [showForkModal, setShowForkModal] = useState(false);
 
   return (
@@ -127,6 +128,7 @@ export function ItemCard({ item, roleId }: ItemCardProps) {
           type: item.type,
         }}
         roleId={roleId}
+        roleType={roleType}
       />
     </Card>
   );

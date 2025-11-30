@@ -155,7 +155,7 @@ function MarketplacePageContent({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {data.items.map((item: any) => (
-                <ItemCard key={item.id} item={item} roleId={roleId} />
+                <ItemCard key={item.id} item={item} roleId={roleId} roleType={roleType} />
               ))}
             </div>
 

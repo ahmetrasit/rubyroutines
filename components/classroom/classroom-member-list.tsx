@@ -78,8 +78,9 @@ export function ClassroomMemberList({
     .sort((a, b) => (memberMap.get(a.id) || 0) - (memberMap.get(b.id) || 0)) || [];
 
   // Separate teachers (Me) from students
-  const teachers = members.filter((person) => person.isAccountOwner);
-  const allStudents = members.filter((person) => !person.isAccountOwner);
+  // Teachers are identified by isTeacher OR isAccountOwner (original account owner)
+  const teachers = members.filter((person) => person.isTeacher || person.isAccountOwner);
+  const allStudents = members.filter((person) => !person.isTeacher && !person.isAccountOwner);
 
   // Check tier limits using effective limits from database
   const studentLimit = getTierLimit(effectiveLimits, 'students_per_classroom');

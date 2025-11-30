@@ -109,6 +109,7 @@ export default function ParentDashboard() {
         isOpen={showGetRoutines}
         onClose={() => setShowGetRoutines(false)}
         roleId={parentRole.id}
+        roleType="PARENT"
       />
     </div>
   );
