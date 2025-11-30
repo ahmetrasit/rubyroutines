@@ -19,29 +19,37 @@ Generated: 2025-11-30
 | 9. Routine Config | 6 | 4 | 4 | 2 |
 | 10. Admin | 9 | 3 | 7 | 2 |
 
-**Critical Gaps:** 3 | **High Priority:** 8 | **Medium:** 15 | **Low:** 20+
+**Critical Gaps:** ~~3~~ 0 ✅ | **High Priority:** 8 | **Medium:** 15 | **Low:** 20+
 
 ---
 
 ## Critical Gaps (Security/Functionality Broken)
 
-### 1. 2FA Not Integrated Into Login Flow
-- **Location:** `lib/trpc/routers/auth.ts:142-225`
-- **Issue:** Users with 2FA enabled can log in WITHOUT entering 2FA code
-- **Impact:** Security bypass - 2FA provides no protection
-- **Fix:** Add 2FA verification step in `auth.signIn` mutation
+### 1. ✅ FIXED: 2FA Not Integrated Into Login Flow
+- **Location:** `lib/trpc/routers/auth.ts`
+- **Status:** FIXED in commit `1a452aa`
+- **Solution:**
+  - `signIn` now checks `twoFactorEnabled` and returns `requiresTwoFactor: true`
+  - New `verifyTwoFactorLogin` mutation verifies TOTP code
+  - Login page shows 2FA input when required
+  - Supports backup codes
 
-### 2. Password Reset Missing
-- **Location:** `app/(auth)/login/page.tsx:97-100` references `/reset-password`
-- **Issue:** Link exists but page doesn't - results in 404
-- **Impact:** Users cannot recover accounts
-- **Fix:** Implement password reset flow
+### 2. ✅ FIXED: Password Reset Missing
+- **Location:** `app/(auth)/reset-password/`
+- **Status:** FIXED in commit `1a452aa`
+- **Solution:**
+  - New `/reset-password` page for requesting reset email
+  - New `/reset-password/confirm` page for setting new password
+  - Uses Supabase `resetPasswordForEmail()` and `updateUser()`
 
-### 3. Failed Login Tracking Not Called
-- **Location:** `lib/auth/verification.ts` has `recordFailedLogin()`, `checkLoginRateLimit()`
-- **Issue:** Functions exist but never invoked in auth.signIn
-- **Impact:** Unlimited password guessing attempts
-- **Fix:** Call rate limit functions in signIn mutation
+### 3. ✅ FIXED: Failed Login Tracking Not Called
+- **Location:** `lib/trpc/routers/auth.ts`
+- **Status:** FIXED in commit `1a452aa`
+- **Solution:**
+  - `checkLoginRateLimit(email)` called before login attempt
+  - `recordFailedLogin(email)` called on failed attempts
+  - `clearFailedLogins(email)` called on success
+  - Account locks after 5 failed attempts
 
 ---
 
@@ -86,10 +94,10 @@ Generated: 2025-11-30
 
 ### Section 1: Authentication
 
-**Missing:**
-- Password reset flow (link exists, page doesn't)
-- 2FA integration in login
-- Failed login tracking
+**Missing:** ~~3~~ 0 ✅
+- ~~Password reset flow (link exists, page doesn't)~~ ✅ FIXED
+- ~~2FA integration in login~~ ✅ FIXED
+- ~~Failed login tracking~~ ✅ FIXED
 
 **Undocumented:**
 - Seed data migration logic
