@@ -57,14 +57,36 @@ export function RoutineActionsModal({
   };
 
   const handleCopyCode = async () => {
-    if (shareCode) {
-      await navigator.clipboard.writeText(shareCode);
+    if (!shareCode) return;
+
+    try {
+      // Try modern clipboard API first
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareCode);
+      } else {
+        // Fallback for older browsers or non-HTTPS contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = shareCode;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast({
         title: 'Copied!',
         description: 'Share code copied to clipboard.',
         variant: 'success',
+      });
+    } catch (error) {
+      toast({
+        title: 'Copy failed',
+        description: 'Please select and copy the code manually.',
+        variant: 'destructive',
       });
     }
   };
