@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { ChevronLeft, User, Mail, Palette } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/toast';
+import { HomeButton } from '@/components/home-button';
 
 export default function AccountSettingsPage() {
   const router = useRouter();
@@ -57,14 +58,17 @@ export default function AccountSettingsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back link */}
-        <Link
-          href="/settings"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back to Settings
-        </Link>
+        {/* Navigation */}
+        <div className="flex items-center gap-4 mb-6">
+          <HomeButton />
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Settings
+          </Link>
+        </div>
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Account Settings</h1>

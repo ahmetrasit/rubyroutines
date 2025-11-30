@@ -20,6 +20,7 @@ import { Activity, Calendar, User, Download, Shield, Search } from 'lucide-react
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { useToast } from '@/components/ui/toast';
+import { HomeButton } from '@/components/home-button';
 
 export default function AdminModerationLogsPage() {
   return (
@@ -119,12 +120,15 @@ function ModerationLogsContent() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-              <Shield className="h-8 w-8" />
-              Moderation Logs
-            </h1>
-            <p className="text-muted-foreground">Track all marketplace moderation actions</p>
+          <div className="flex items-center gap-3">
+            <HomeButton />
+            <div>
+              <h1 className="text-3xl font-bold mb-1 flex items-center gap-2">
+                <Shield className="h-8 w-8" />
+                Moderation Logs
+              </h1>
+              <p className="text-muted-foreground">Track all marketplace moderation actions</p>
+            </div>
           </div>
           <Link href="/admin">
             <Button variant="outline">Back to Dashboard</Button>

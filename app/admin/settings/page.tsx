@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Settings as SettingsIcon } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { HomeButton } from '@/components/home-button';
 
 export default function AdminSettingsPage() {
   return (
@@ -25,9 +26,12 @@ function SettingsContent() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">System Settings</h1>
-            <p className="text-muted-foreground">Configure system-wide settings</p>
+          <div className="flex items-center gap-3">
+            <HomeButton />
+            <div>
+              <h1 className="text-3xl font-bold mb-1">System Settings</h1>
+              <p className="text-muted-foreground">Configure system-wide settings</p>
+            </div>
           </div>
           <Link href="/admin">
             <Button variant="outline">Back to Dashboard</Button>

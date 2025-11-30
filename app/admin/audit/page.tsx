@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { HomeButton } from '@/components/home-button';
 
 export default function AdminAuditPage() {
   return (
@@ -42,9 +43,12 @@ function AuditContent() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Audit Log</h1>
-            <p className="text-muted-foreground">Track all administrative actions</p>
+          <div className="flex items-center gap-3">
+            <HomeButton />
+            <div>
+              <h1 className="text-3xl font-bold mb-1">Audit Log</h1>
+              <p className="text-muted-foreground">Track all administrative actions</p>
+            </div>
           </div>
           <Link href="/admin">
             <Button variant="outline">Back to Dashboard</Button>

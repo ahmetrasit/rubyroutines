@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BarChart3, DollarSign } from 'lucide-react';
 import Link from 'next/link';
+import { HomeButton } from '@/components/home-button';
 
 export default function AdminTiersPage() {
   return (
@@ -84,9 +85,12 @@ function TiersContent() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Tier Configuration</h1>
-            <p className="text-muted-foreground">Manage system-wide tier limits and pricing</p>
+          <div className="flex items-center gap-3">
+            <HomeButton />
+            <div>
+              <h1 className="text-3xl font-bold mb-1">Tier Configuration</h1>
+              <p className="text-muted-foreground">Manage system-wide tier limits and pricing</p>
+            </div>
           </div>
           <Link href="/admin">
             <Button variant="outline">Back to Dashboard</Button>

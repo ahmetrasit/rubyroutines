@@ -6,6 +6,7 @@ import { trpc } from '@/lib/trpc/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Shield, CreditCard, HelpCircle, BookOpen, ChevronRight, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { HomeButton } from '@/components/home-button';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -72,8 +73,11 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
+          <div className="flex items-center gap-3 mb-2">
+            <HomeButton />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400">
             Manage your account and preferences
           </p>
         </div>

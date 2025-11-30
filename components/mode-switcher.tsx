@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { RealtimeStatus } from '@/components/realtime-status';
 import { ROLE_COLORS } from '@/lib/constants/theme';
+import { saveLastModeToStorage } from '@/lib/hooks/useLastMode';
 
 interface ModeSwitcherProps {
   currentMode: 'parent' | 'teacher' | 'admin';
@@ -32,6 +33,9 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
   const adminColor = ROLE_COLORS.PRINCIPAL; // Using principal color for admin
 
   const handleModeSwitch = (mode: 'parent' | 'teacher' | 'admin') => {
+    // Save the mode to localStorage for home button navigation
+    saveLastModeToStorage(mode);
+
     if (mode === 'parent') {
       router.push('/parent');
     } else if (mode === 'teacher') {

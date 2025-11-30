@@ -7,6 +7,7 @@ import { PricingTable } from '@/components/billing/PricingTable';
 import { BillingPortal } from '@/components/billing/BillingPortal';
 import { CheckoutButton } from '@/components/billing/CheckoutButton';
 import { useToast } from '@/components/ui/toast';
+import { HomeButton } from '@/components/home-button';
 
 export default function BillingPage() {
   const router = useRouter();
@@ -94,8 +95,11 @@ function BillingPageContent({ roleId }: BillingPageContentProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Billing & Subscription</h1>
-          <p className="text-gray-600 mt-2">
+          <div className="flex items-center gap-3 mb-2">
+            <HomeButton />
+            <h1 className="text-3xl font-bold text-gray-900">Billing & Subscription</h1>
+          </div>
+          <p className="text-gray-600">
             Manage your subscription and view available plans
           </p>
         </div>

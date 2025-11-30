@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import { HomeButton } from '@/components/home-button';
 
 export default function AdminBlogPage() {
   return (
@@ -267,15 +268,18 @@ function BlogManagement() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <div>
-            <Link href="/admin">
-              <Button variant="ghost" className="mb-2">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Admin
-              </Button>
-            </Link>
-            <h1 className="text-3xl font-bold">Blog Management</h1>
-            <p className="text-gray-600">Create and manage blog posts</p>
+          <div className="flex items-center gap-3">
+            <HomeButton />
+            <div>
+              <Link href="/admin">
+                <Button variant="ghost" size="sm" className="mb-1 -ml-2">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Admin
+                </Button>
+              </Link>
+              <h1 className="text-3xl font-bold">Blog Management</h1>
+              <p className="text-gray-600">Create and manage blog posts</p>
+            </div>
           </div>
           <Button onClick={handleCreate}>
             <Plus className="h-4 w-4 mr-2" />
