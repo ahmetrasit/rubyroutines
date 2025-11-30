@@ -5,7 +5,10 @@ import {
   createVerificationCode,
   verifyCode,
   canResendCode,
-  incrementResendCount
+  incrementResendCount,
+  checkLoginRateLimit,
+  recordFailedLogin,
+  clearFailedLogins,
 } from '@/lib/auth/verification';
 import { CodeType } from '@/lib/types/prisma-enums';
 import { logger } from '@/lib/utils/logger';
@@ -18,6 +21,12 @@ import {
   AUDIT_ACTIONS,
 } from '@/lib/services/audit-log';
 import { createDefaultRoles, ensureUserHasRoles } from '@/lib/services/user-initialization.service';
+import {
+  verifyTwoFactorToken,
+  verifyBackupCode,
+  decryptTwoFactorData,
+} from '@/lib/services/two-factor';
+import { createAuditLog } from '@/lib/services/audit-log';
 
 export const authRouter = router({
   signUp: authRateLimitedProcedure
@@ -145,6 +154,22 @@ export const authRouter = router({
       password: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Check rate limiting for failed login attempts
+      const rateLimitCheck = await checkLoginRateLimit(input.email);
+      if (!rateLimitCheck.allowed) {
+        logger.warn('Login blocked due to rate limit', { email: input.email });
+
+        await logAuthEvent(AUDIT_ACTIONS.AUTH_FAILED_LOGIN, 'anonymous', false, {
+          email: input.email,
+          errorMessage: 'Account temporarily locked',
+        });
+
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: rateLimitCheck.error || 'Account temporarily locked due to too many failed attempts. Please try again later.',
+        });
+      }
+
       const { data, error } = await ctx.supabase.auth.signInWithPassword({
         email: input.email,
         password: input.password,
@@ -153,10 +178,40 @@ export const authRouter = router({
       if (error) {
         logger.warn('Failed login attempt', { email: input.email, error: error.message });
 
+        // Record failed login attempt
+        await recordFailedLogin(input.email);
+
+        await logAuthEvent(AUDIT_ACTIONS.AUTH_FAILED_LOGIN, 'anonymous', false, {
+          email: input.email,
+          errorMessage: error.message,
+        });
+
         throw new TRPCError({
           code: 'UNAUTHORIZED',
           message: 'Invalid credentials',
         });
+      }
+
+      // Clear failed login attempts on successful authentication
+      await clearFailedLogins(input.email);
+
+      // Check if user has 2FA enabled
+      const dbUserFor2FA = await ctx.prisma.user.findUnique({
+        where: { id: data.user.id },
+        select: { twoFactorEnabled: true },
+      });
+
+      if (dbUserFor2FA?.twoFactorEnabled) {
+        // User has 2FA enabled - sign them out and require 2FA verification
+        await ctx.supabase.auth.signOut();
+
+        logger.info('2FA required for login', { email: input.email });
+
+        return {
+          success: false,
+          requiresTwoFactor: true,
+          userId: data.user.id,
+        };
       }
 
       // Check for seed data migration
@@ -376,6 +431,212 @@ export const authRouter = router({
       if (process.env.NODE_ENV === 'development') {
         logger.debug('Verification code resent', { email: input.email, code });
       }
+
+      return { success: true };
+    }),
+
+  // Complete login with 2FA verification
+  verifyTwoFactorLogin: authRateLimitedProcedure
+    .input(z.object({
+      email: z.string().email(),
+      password: z.string(),
+      token: z.string().min(6),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Check rate limiting for failed login attempts
+      const rateLimitCheck = await checkLoginRateLimit(input.email);
+      if (!rateLimitCheck.allowed) {
+        logger.warn('Login blocked due to rate limit', { email: input.email });
+
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: rateLimitCheck.error || 'Account temporarily locked due to too many failed attempts. Please try again later.',
+        });
+      }
+
+      // First authenticate with password
+      const { data, error } = await ctx.supabase.auth.signInWithPassword({
+        email: input.email,
+        password: input.password,
+      });
+
+      if (error) {
+        logger.warn('Failed 2FA login attempt - invalid password', { email: input.email });
+        await recordFailedLogin(input.email);
+
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid credentials',
+        });
+      }
+
+      // Verify user has 2FA enabled and get their secret
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: data.user.id },
+        select: {
+          twoFactorEnabled: true,
+          twoFactorSecret: true,
+          twoFactorBackupCodes: true,
+        },
+      });
+
+      if (!user?.twoFactorEnabled || !user.twoFactorSecret) {
+        // 2FA not actually enabled, complete login normally
+        await clearFailedLogins(input.email);
+        await logAuthEvent(AUDIT_ACTIONS.AUTH_LOGIN, data.user.id, true, {
+          email: input.email,
+        });
+        return { success: true, userId: data.user.id };
+      }
+
+      // Verify the TOTP token
+      let isValid = false;
+      let usedBackupCode = false;
+
+      try {
+        const secret = decryptTwoFactorData(user.twoFactorSecret);
+        isValid = verifyTwoFactorToken(secret, input.token);
+      } catch (err) {
+        logger.error('Failed to verify 2FA token', { error: err });
+      }
+
+      // If token verification failed, try backup code
+      if (!isValid && user.twoFactorBackupCodes && user.twoFactorBackupCodes.length > 0) {
+        const encryptedCodes = user.twoFactorBackupCodes[0];
+        if (encryptedCodes) {
+          try {
+            const hashedCodes: string[] = JSON.parse(decryptTwoFactorData(encryptedCodes));
+
+            const matchIndex = hashedCodes.findIndex((hashedCode) =>
+              verifyBackupCode(input.token, hashedCode)
+            );
+
+            if (matchIndex !== -1) {
+              isValid = true;
+              usedBackupCode = true;
+
+              // Remove used backup code
+              hashedCodes.splice(matchIndex, 1);
+              const { encryptTwoFactorData } = await import('@/lib/services/two-factor');
+              const updatedEncryptedCodes = encryptTwoFactorData(JSON.stringify(hashedCodes));
+
+              await ctx.prisma.user.update({
+                where: { id: data.user.id },
+                data: {
+                  twoFactorBackupCodes: [updatedEncryptedCodes],
+                },
+              });
+            }
+          } catch (err) {
+            logger.error('Failed to verify backup code', { error: err });
+          }
+        }
+      }
+
+      if (!isValid) {
+        // Invalid 2FA token - sign out and record failed attempt
+        await ctx.supabase.auth.signOut();
+        await recordFailedLogin(input.email);
+
+        await createAuditLog({
+          userId: data.user.id,
+          action: AUDIT_ACTIONS.AUTH_2FA_VERIFY_FAILED,
+          changes: { reason: 'Invalid token during login' },
+        });
+
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'Invalid verification code',
+        });
+      }
+
+      // Clear failed login attempts on successful 2FA verification
+      await clearFailedLogins(input.email);
+
+      // Log successful 2FA verification
+      await createAuditLog({
+        userId: data.user.id,
+        action: AUDIT_ACTIONS.AUTH_2FA_VERIFIED,
+        changes: { usedBackupCode, context: 'login' },
+      });
+
+      // Complete the login flow - handle user sync
+      const existingUserByEmail = await ctx.prisma.user.findUnique({
+        where: { email: data.user.email! },
+        include: { roles: true },
+      });
+
+      if (existingUserByEmail && existingUserByEmail.id !== data.user.id) {
+        // Migrate from seed data ID to Supabase Auth ID
+        const existingRoles = existingUserByEmail.roles;
+
+        await ctx.prisma.user.delete({
+          where: { id: existingUserByEmail.id },
+        });
+
+        await ctx.prisma.user.create({
+          data: {
+            id: data.user.id,
+            email: data.user.email!,
+            name: existingUserByEmail.name,
+            emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
+            roles: {
+              create: existingRoles.map((role) => ({
+                type: role.type,
+                tier: role.tier,
+                color: role.color || (
+                  role.type === 'PARENT' ? '#9333ea' :
+                  role.type === 'TEACHER' ? '#3b82f6' :
+                  role.type === 'PRINCIPAL' ? '#f59e0b' : '#10b981'
+                ),
+              })),
+            },
+          },
+        });
+
+        await ensureUserHasRoles(data.user.id, existingUserByEmail.name || data.user.user_metadata?.name || data.user.email!.split('@')[0], ctx.prisma);
+      } else {
+        const syncedUser = await ctx.prisma.user.upsert({
+          where: { id: data.user.id },
+          update: {
+            email: data.user.email!,
+            emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
+          },
+          create: {
+            id: data.user.id,
+            email: data.user.email!,
+            name: data.user.user_metadata?.name || data.user.email!.split('@')[0],
+            emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : null,
+          },
+        });
+
+        await ensureUserHasRoles(syncedUser.id, syncedUser.name || data.user.user_metadata?.name || data.user.email!.split('@')[0], ctx.prisma);
+      }
+
+      await logAuthEvent(AUDIT_ACTIONS.AUTH_LOGIN, data.user.id, true, {
+        email: input.email,
+      });
+
+      return { success: true, userId: data.user.id, usedBackupCode };
+    }),
+
+  // Request password reset email
+  requestPasswordReset: authRateLimitedProcedure
+    .input(z.object({
+      email: z.string().email(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.auth.resetPasswordForEmail(input.email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password/confirm`,
+      });
+
+      if (error) {
+        logger.warn('Password reset request failed', { email: input.email, error: error.message });
+        // Don't reveal if email exists or not for security
+      }
+
+      // Always return success to prevent email enumeration
+      logger.info('Password reset requested', { email: input.email });
 
       return { success: true };
     }),
