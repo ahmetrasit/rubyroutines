@@ -14,17 +14,25 @@ interface CreateDefaultDataOptions {
 }
 
 /**
- * Create default "Me" person for a role
+ * Create default account owner person for a role
+ * Uses user's actual name and role-specific avatar
  */
-async function createDefaultPerson(roleId: string, prisma: any) {
+async function createDefaultPerson(
+  roleId: string,
+  roleType: 'PARENT' | 'TEACHER',
+  userName: string,
+  prisma: any
+) {
+  // Role-specific avatar configuration
+  const avatarConfig = roleType === 'PARENT'
+    ? { color: '#9333ea', emoji: '💫' }  // Purple with dizzy star for parent
+    : { color: '#3b82f6', emoji: '🏫' }; // Blue with school for teacher
+
   return prisma.person.create({
     data: {
       roleId,
-      name: 'Me',
-      avatar: JSON.stringify({
-        color: '#BAE1FF', // Light blue matching auth/callback
-        emoji: '👤',
-      }),
+      name: userName,
+      avatar: JSON.stringify(avatarConfig),
       isAccountOwner: true, // Mark as account owner
       status: 'ACTIVE',
     },
@@ -88,14 +96,16 @@ async function createDefaultClassroom(
 async function initializeRole(
   roleId: string,
   roleType: 'PARENT' | 'TEACHER',
+  userName: string,
   prisma: any
 ) {
   try {
-    // Create "Me" person
-    const mePerson = await createDefaultPerson(roleId, prisma);
-    logger.debug(`Created "Me" person for ${roleType} role`, {
+    // Create account owner person with user's actual name
+    const mePerson = await createDefaultPerson(roleId, roleType, userName, prisma);
+    logger.debug(`Created account owner person for ${roleType} role`, {
       roleId,
-      personId: mePerson.id
+      personId: mePerson.id,
+      userName
     });
 
     // Create default routine
@@ -158,10 +168,10 @@ export async function createDefaultRoles({
       throw new Error('Failed to create default roles');
     }
 
-    // Initialize each role with default data
+    // Initialize each role with default data using user's actual name
     await Promise.all([
-      initializeRole(parentRole.id, 'PARENT', prisma),
-      initializeRole(teacherRole.id, 'TEACHER', prisma),
+      initializeRole(parentRole.id, 'PARENT', name, prisma),
+      initializeRole(teacherRole.id, 'TEACHER', name, prisma),
     ]);
 
     logger.info('Created default roles and data for new user', { userId });
@@ -179,6 +189,7 @@ export async function createDefaultRoles({
  */
 export async function ensureUserHasRoles(
   userId: string,
+  userName: string,
   prisma: any
 ): Promise<void> {
   const existingRoles = await prisma.role.findMany({
@@ -236,7 +247,7 @@ export async function ensureUserHasRoles(
   if (rolesToInitialize.length > 0) {
     await Promise.all(
       rolesToInitialize.map((role: any) =>
-        initializeRole(role.id, role.type, prisma)
+        initializeRole(role.id, role.type, userName, prisma)
       )
     );
 

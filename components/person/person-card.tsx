@@ -131,16 +131,13 @@ export const PersonCard = memo(function PersonCard({
   const routineCount = personDetails?.assignments?.length || 0;
   const taskCount = personDetails?.assignments?.flatMap((a: any) => a.routine.tasks).length || 0;
 
-  // Goal statistics
+  // Goal statistics - split by period (daily vs weekly)
   const activeGoals = goals?.filter(g => g.status === 'ACTIVE') || [];
-  const goalCount = activeGoals.length;
-  const goalsAccomplished = activeGoals.filter(g => g.progress?.achieved).length;
-  const goalProgress = goalCount > 0 ? (goalsAccomplished / goalCount) * 100 : 0;
+  const dailyGoals = activeGoals.filter(g => g.period === 'DAILY');
+  const weeklyGoals = activeGoals.filter(g => g.period === 'WEEKLY');
 
-  // Calculate average goal progress
-  const avgGoalProgress = activeGoals.length > 0
-    ? activeGoals.reduce((sum, g) => sum + (g.progress?.percentage || 0), 0) / activeGoals.length
-    : 0;
+  const dailyAccomplished = dailyGoals.filter(g => g.progress?.achieved).length;
+  const weeklyAccomplished = weeklyGoals.filter(g => g.progress?.achieved).length;
 
   // Calculate connection counts
   const classroomCount = personDetails?.groupMembers?.length || 0;
@@ -170,7 +167,7 @@ export const PersonCard = memo(function PersonCard({
         style={{ borderTopColor: color }}
         onClick={() => onSelect?.(person)}
       >
-        {/* Avatar and Name */}
+        {/* Avatar, Name, and Edit/Delete buttons */}
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-shrink-0">
             <div
@@ -185,80 +182,138 @@ export const PersonCard = memo(function PersonCard({
             <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 truncate">
               {person.name}
             </h3>
-            <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-xs text-gray-600 dark:text-gray-400 truncate font-medium flex-1">
-                {connectionStatus}
-              </p>
-              {roleId && roleType && userId && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowConnection(true);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded hover:bg-gray-100"
-                  title="Manage connections"
-                >
-                  <Link2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-400 truncate font-medium mt-0.5">
+              {connectionStatus}
+            </p>
+          </div>
+
+          {/* Connection, Edit and Delete buttons */}
+          <div className="flex gap-2 flex-shrink-0">
+            {roleId && roleType && userId && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowConnection(true);
+                }}
+                className="px-3"
+                title="Manage connections"
+              >
+                <Link2 className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEdit(true);
+              }}
+              className="px-3"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            {!person.isAccountOwner && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                disabled={isDeleting || isRemoving}
+                className="px-3 text-red-600 hover:text-red-700 hover:bg-red-50 border-gray-300 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Stats and Progress */}
-        <div className="space-y-2 mb-4">
-          {/* First row: Counts */}
-          <div className="flex items-center justify-around text-center">
-            <div className="flex-1">
-              <div className="text-2xl font-bold text-gray-900">{routineCount}</div>
-              <div className="text-xs text-gray-500">{routineCount === 1 ? 'Routine' : 'Routines'}</div>
+        {/* Stats and Progress - Single row: Goals progress (flex-1), Routines (~40px), Tasks (~40px) */}
+        <div className="flex items-center gap-2 mb-4">
+          {/* Goals progress bars - flex-1 - Two stacked bars (daily and weekly) */}
+          <div className="flex-1 flex flex-col gap-1">
+            {/* Daily goals progress bar */}
+            <div
+              className="h-5 bg-gray-100 rounded-full overflow-hidden relative"
+              style={{ border: `1px solid ${color}` }}
+            >
+              {dailyGoals.length > 0 ? (
+                <>
+                  <div className="h-full flex">
+                    {[...dailyGoals]
+                      .sort((a, b) => (b.progress?.achieved ? 1 : 0) - (a.progress?.achieved ? 1 : 0))
+                      .map((goal, index) => (
+                        <div
+                          key={goal.id}
+                          className="flex-1 transition-all"
+                          style={{
+                            backgroundColor: goal.progress?.achieved ? `${color}B3` : 'transparent',
+                            borderRight: index < dailyGoals.length - 1 ? '1px solid white' : 'none'
+                          }}
+                        />
+                      ))}
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-[10px] font-medium text-gray-700">
+                      Daily: {dailyAccomplished}/{dailyGoals.length}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <span className="text-[10px] text-gray-400">no daily goals</span>
+                </div>
+              )}
             </div>
-            <div className="flex-1">
-              <div className="text-2xl font-bold text-gray-900">{taskCount}</div>
-              <div className="text-xs text-gray-500">{taskCount === 1 ? 'Task' : 'Tasks'}</div>
-            </div>
-            <div className="flex-1">
-              <div className="text-2xl font-bold text-gray-900">{goalCount}</div>
-              <div className="text-xs text-gray-500">{goalCount === 1 ? 'Goal' : 'Goals'}</div>
+
+            {/* Weekly goals progress bar */}
+            <div
+              className="h-5 bg-gray-100 rounded-full overflow-hidden relative"
+              style={{ border: `1px solid ${color}` }}
+            >
+              {weeklyGoals.length > 0 ? (
+                <>
+                  <div className="h-full flex">
+                    {[...weeklyGoals]
+                      .sort((a, b) => (b.progress?.achieved ? 1 : 0) - (a.progress?.achieved ? 1 : 0))
+                      .map((goal, index) => (
+                        <div
+                          key={goal.id}
+                          className="flex-1 transition-all"
+                          style={{
+                            backgroundColor: goal.progress?.achieved ? `${color}B3` : 'transparent',
+                            borderRight: index < weeklyGoals.length - 1 ? '1px solid white' : 'none'
+                          }}
+                        />
+                      ))}
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-[10px] font-medium text-gray-700">
+                      Weekly: {weeklyAccomplished}/{weeklyGoals.length}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <span className="text-[10px] text-gray-400">no weekly goals</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Second row: Goal completion progress bar with segments */}
-          <div className="h-6 bg-gray-200 rounded-full overflow-hidden relative">
-            {goalCount > 0 ? (
-              <>
-                {/* Segmented progress bar - completed goals first (from left) */}
-                <div className="h-full flex gap-0.5">
-                  {[...activeGoals]
-                    .sort((a, b) => {
-                      // Sort completed goals first
-                      const aCompleted = a.progress?.achieved ? 1 : 0;
-                      const bCompleted = b.progress?.achieved ? 1 : 0;
-                      return bCompleted - aCompleted;
-                    })
-                    .map((goal, index) => (
-                      <div
-                        key={goal.id}
-                        className="flex-1 transition-all"
-                        style={{
-                          backgroundColor: goal.progress?.achieved
-                            ? color // Use person's card color
-                            : 'transparent'
-                        }}
-                      />
-                    ))}
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <span className="text-xs font-medium text-gray-700 bg-white/70 px-2 rounded">
-                    Goals: {goalsAccomplished}/{goalCount}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <span className="text-xs text-gray-500">no goals yet</span>
-              </div>
-            )}
+          {/* Routines count */}
+          <div className="ml-2 flex flex-col items-center flex-shrink-0">
+            <div className="text-lg font-bold text-gray-900">{routineCount}</div>
+            <div className="text-xs text-gray-900">{routineCount === 1 ? 'Routine' : 'Routines'}</div>
+          </div>
+
+          {/* Tasks count */}
+          <div className="flex flex-col items-center flex-shrink-0">
+            <div className="text-lg font-bold text-gray-900">{taskCount}</div>
+            <div className="text-xs text-gray-900">{taskCount === 1 ? 'Task' : 'Tasks'}</div>
           </div>
         </div>
 
@@ -285,31 +340,6 @@ export const PersonCard = memo(function PersonCard({
             >
               <Users className="h-4 w-4 mr-1" />
               Bulk Check-in
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowEdit(true);
-            }}
-            className="px-3"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          {!person.isAccountOwner && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete();
-              }}
-              disabled={isDeleting || isRemoving}
-              className="px-3 text-red-600 hover:text-red-700 hover:bg-red-50 border-gray-300 disabled:opacity-50"
-            >
-              <Trash2 className="h-4 w-4" />
             </Button>
           )}
         </div>

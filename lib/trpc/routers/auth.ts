@@ -120,7 +120,7 @@ export const authRouter = router({
 
         if (existingUser) {
           // User exists, ensure they have roles
-          await ensureUserHasRoles(data.user.id, ctx.prisma);
+          await ensureUserHasRoles(data.user.id, existingUser.name || input.name, ctx.prisma);
         } else {
           // Something went wrong, re-throw the error
           logger.error('Failed to create user and default data', {
@@ -195,7 +195,7 @@ export const authRouter = router({
         });
 
         // Ensure migrated user has default persons, routines, and groups for their roles
-        await ensureUserHasRoles(data.user.id, ctx.prisma);
+        await ensureUserHasRoles(data.user.id, existingUserByEmail.name || data.user.user_metadata?.name || data.user.email!.split('@')[0], ctx.prisma);
       } else {
         // Normal flow - upsert user
         const user = await ctx.prisma.user.upsert({
@@ -213,7 +213,7 @@ export const authRouter = router({
         });
 
         // Ensure user has both PARENT and TEACHER roles with default data
-        await ensureUserHasRoles(user.id, ctx.prisma);
+        await ensureUserHasRoles(user.id, user.name || data.user.user_metadata?.name || data.user.email!.split('@')[0], ctx.prisma);
       }
 
       // Log successful login

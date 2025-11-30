@@ -33,6 +33,7 @@ interface Task {
   isTeacherOnly?: boolean;
   routineName?: string;
   order?: number;
+  emoji?: string | null;
   completions?: Array<{
     id: string;
     completedAt: Date;
@@ -171,32 +172,35 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
     .sort((a, b) => {
       // First: incomplete tasks on top
       if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
-      // Second: group by routine name
+
+      // For completed tasks: sort by completedAt DESC (most recent at top)
+      if (a.isComplete && b.isComplete) {
+        const aCompletedAt = a.completions?.[0]?.completedAt ? new Date(a.completions[0].completedAt).getTime() : 0;
+        const bCompletedAt = b.completions?.[0]?.completedAt ? new Date(b.completions[0].completedAt).getTime() : 0;
+        return bCompletedAt - aCompletedAt; // DESC (most recent first)
+      }
+
+      // For uncompleted tasks: sort alphabetically by routine name, then task name
       const routineCompare = (a.routineName || '').localeCompare(b.routineName || '');
       if (routineCompare !== 0) return routineCompare;
-      // Third: by task order within routine
-      return (a.order || 0) - (b.order || 0);
+      return a.name.localeCompare(b.name);
     });
 
   const multiTasks = regularTasks
     .filter((t) => t.type === TaskType.MULTIPLE_CHECKIN)
     .sort((a, b) => {
-      // Multi tasks should maintain their position regardless of completion status
-      // First: group by routine name
+      // Maintain original order - no reordering after recording
       const routineCompare = (a.routineName || '').localeCompare(b.routineName || '');
       if (routineCompare !== 0) return routineCompare;
-      // Second: by task order within routine
       return (a.order || 0) - (b.order || 0);
     });
 
   const progressTasks = regularTasks
     .filter((t) => t.type === TaskType.PROGRESS)
     .sort((a, b) => {
-      // Progress tasks should maintain their position regardless of completion status
-      // First: group by routine name
+      // Maintain original order - no reordering after recording
       const routineCompare = (a.routineName || '').localeCompare(b.routineName || '');
       if (routineCompare !== 0) return routineCompare;
-      // Second: by task order within routine
       return (a.order || 0) - (b.order || 0);
     });
 
@@ -232,6 +236,9 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
   // State for animating tasks (visual feedback)
   const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
 
+  // State for recently added progress values (to show +value animation)
+  const [recentProgressEntries, setRecentProgressEntries] = useState<Record<string, { value: string; unit: string }>>({});
+
   // State for undo timers
   const [undoTimers, setUndoTimers] = useState<Record<string, number>>({});
 
@@ -257,30 +264,23 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[420px] h-auto max-h-[90vh] p-0 gap-0 rounded-[24px]">
+      <DialogContent className="max-w-[420px] h-auto max-h-[90vh] p-0 gap-0 rounded-[24px] !overflow-hidden [&>button]:hidden">
         {/* Header */}
-        <div className="border-b border-[#ECEFF1] p-6 flex flex-col" style={{
+        <div className="border-b border-[#ECEFF1] p-6 flex items-center justify-between" style={{
           background: 'linear-gradient(135deg, rgba(77, 182, 172, 0.05), rgba(38, 166, 154, 0.05))'
         }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h1 className="text-[26px] font-bold leading-tight" style={{ color: '#1F2937' }}>
-                {personName}'s Check-in
-              </h1>
-              <NetworkStatusBadge />
-            </div>
-            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
-              <X className="h-5 w-5" />
-            </Button>
+          <div className="flex items-center gap-2">
+            <h1 className="text-[26px] font-bold leading-tight" style={{ color: '#1F2937' }}>
+              {personName}'s Check-in
+            </h1>
+            <NetworkStatusBadge />
           </div>
-          {simpleCompleted > 0 && (
-            <div className="mt-1 text-[15px] font-semibold" style={{ color: 'var(--warm-complete-secondary)' }}>
-              ✨ {simpleCompleted} tasks done today
-            </div>
-          )}
-          <div className="mt-1 text-[14px]" style={{ color: '#6B7280' }}>
-            You're doing great!
-          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
         </div>
 
         {/* Content */}
@@ -377,6 +377,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                       // Capture task data in block scope to prevent closure issues
                       const taskId = task.id;
                       const taskName = task.name;
+                      const taskEmoji = task.emoji;
                       const undoTime = undoTimers[taskId];
                       const canUndo = task.isComplete && undoTime !== undefined && undoTime > 0;
                       const isLocked = task.isComplete && !canUndo;
@@ -409,17 +410,20 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                             }}
                           />
 
-                          {/* Task Content */}
+                          {/* Task Content with Emoji */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
-                              <div
-                                className="font-semibold mb-0.5 leading-[1.3]"
-                                style={{
-                                  fontSize: taskName.length > 16 ? `${16 * (16 / taskName.length)}px` : '16px',
-                                  color: task.isComplete ? 'var(--warm-complete-secondary)' : 'var(--warm-incomplete-secondary)'
-                                }}
-                              >
-                                {taskName}
+                              <div className="flex items-center gap-2">
+                                {taskEmoji && <span className="text-[18px] flex-shrink-0">{taskEmoji}</span>}
+                                <div
+                                  className="font-semibold mb-0.5 leading-[1.3]"
+                                  style={{
+                                    fontSize: taskName.length > 16 ? `${16 * (16 / taskName.length)}px` : '16px',
+                                    color: task.isComplete ? 'var(--warm-complete-secondary)' : 'var(--warm-incomplete-secondary)'
+                                  }}
+                                >
+                                  {taskName}
+                                </div>
                               </div>
                               {canUndo && (
                                 <div className="text-[11px] font-semibold px-2 py-0.5 rounded-md" style={{
@@ -452,28 +456,37 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                       // Capture task data in block scope to prevent closure issues
                       const taskId = task.id;
                       const taskName = task.name;
+                      const taskEmoji = task.emoji;
+                      const hasCheckins = (task.completionCount || 0) > 0;
 
                       return (
                         <div
                           key={taskId}
                           className="rounded-[14px] p-[14px_16px] transition-all duration-1000"
                           style={{
-                            background: animatingTasks.has(taskId) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
+                            background: animatingTasks.has(taskId) ? 'var(--warm-complete-bg)' : hasCheckins ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
                           }}
                         >
                           <div className="flex items-center flex-wrap gap-2">
-                            <span className="text-[20px] flex-shrink-0">✔️</span>
+                            {/* Square checkbox - empty or filled/rotated 45° based on checkin count */}
+                            <div
+                              className="w-3 h-3 flex-shrink-0 transition-all duration-[250ms]"
+                              style={{
+                                border: `2.5px solid ${hasCheckins ? 'var(--warm-complete-primary)' : 'var(--warm-incomplete-primary)'}`,
+                                background: hasCheckins ? 'var(--warm-complete-primary)' : 'transparent',
+                                transform: hasCheckins ? 'rotate(45deg)' : 'rotate(0deg)',
+                                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
+                              }}
+                            />
+                            {taskEmoji && <span className="text-[18px] flex-shrink-0">{taskEmoji}</span>}
                             <div
                               className="font-semibold"
                               style={{
                                 fontSize: taskName.length > 16 ? `${15 * (16 / taskName.length)}px` : '15px',
-                                color: 'var(--warm-progress-secondary)'
+                                color: hasCheckins ? 'var(--warm-complete-secondary)' : 'var(--warm-progress-secondary)'
                               }}
                             >
-                              {taskName}
-                            </div>
-                            <div className="text-[13px] font-semibold" style={{ color: 'var(--warm-progress-primary)' }}>
-                              {task.completionCount || 0}x
+                              {taskName} <span style={{ fontSize: 'inherit' }}>({task.completionCount || 0}x)</span>
                             </div>
                             {/* Goal Badges */}
                             {activeGoals
@@ -537,6 +550,8 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                       const taskId = task.id;
                       const taskName = task.name;
                       const taskUnit = task.unit;
+                      const taskEmoji = task.emoji;
+                      const totalValue = task.summedValue || task.totalValue || 0;
 
                       return (
                         <div
@@ -546,8 +561,9 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                             background: animatingTasks.has(taskId) ? 'var(--warm-complete-bg)' : 'var(--warm-progress-bg)'
                           }}
                         >
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-[20px] flex-shrink-0">📊</span>
+                          {/* Row: [emoji] Task Name [input] [Add] with subtitle for sum */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {taskEmoji && <span className="text-[18px] flex-shrink-0">{taskEmoji}</span>}
                             <div className="flex-1 min-w-0">
                               <div
                                 className="font-semibold"
@@ -558,24 +574,33 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                               >
                                 {taskName}
                               </div>
+                              <div
+                                className="text-[12px] transition-all duration-300"
+                                style={{
+                                  color: recentProgressEntries[taskId] ? 'var(--warm-complete-primary)' : 'var(--warm-progress-primary)',
+                                  fontWeight: recentProgressEntries[taskId] ? '600' : '400'
+                                }}
+                              >
+                                {recentProgressEntries[taskId]
+                                  ? `(+${recentProgressEntries[taskId].value} ${recentProgressEntries[taskId].unit})`
+                                  : `(${totalValue} ${taskUnit})`
+                                }
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-3 mb-2">
                             <input
                               type="number"
                               min="1"
-                              max="999"
+                              max="99"
                               value={progressValues[taskId] || ''}
                               onChange={(e) => {
                                 console.log('📊 [Progress Task] Input changed:', { taskId, taskName, value: e.target.value });
                                 setProgressValues(prev => ({ ...prev, [taskId]: e.target.value }));
                               }}
                               placeholder="0"
-                              className="flex-1 px-[10px] py-[6px] rounded-[8px] text-[13px] font-semibold text-center"
+                              className="w-12 px-[6px] py-[6px] rounded-[8px] text-[13px] font-semibold text-center flex-shrink-0"
                               style={{
                                 border: '1px solid var(--warm-progress-primary)',
-                                color: 'var(--warm-progress-secondary)',
-                                width: '70px'
+                                color: 'var(--warm-progress-secondary)'
                               }}
                             />
                             <button
@@ -591,6 +616,19 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                                   toast({ title: 'Error', description: 'Please enter a value', variant: 'destructive' });
                                   return;
                                 }
+                                // Show the +value animation
+                                setRecentProgressEntries(prev => ({
+                                  ...prev,
+                                  [taskId]: { value, unit: taskUnit || '' }
+                                }));
+                                // Clear after 2 seconds
+                                setTimeout(() => {
+                                  setRecentProgressEntries(prev => {
+                                    const newEntries = { ...prev };
+                                    delete newEntries[taskId];
+                                    return newEntries;
+                                  });
+                                }, 2000);
                                 handleCompleteWithAnimation(taskId, value);
                                 setProgressValues(prev => {
                                   const newValues = { ...prev };
@@ -599,7 +637,7 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                                 });
                               }}
                               disabled={completeMutation.isPending}
-                              className="px-[14px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95"
+                              className="px-[10px] py-[6px] rounded-[10px] text-[13px] font-semibold bg-white transition-all duration-200 active:scale-95 flex-shrink-0"
                               style={{
                                 border: '1px solid var(--warm-progress-primary)',
                                 color: 'var(--warm-progress-secondary)'
@@ -607,9 +645,6 @@ export function PersonCheckinModal({ personId, personName, isOpen, onClose }: Pe
                             >
                               Add
                             </button>
-                            <div className="text-[13px] font-semibold min-w-[70px] text-right" style={{ color: 'var(--warm-progress-primary)' }}>
-                              {task.summedValue || task.totalValue || 0} {taskUnit}
-                            </div>
                           </div>
 
                           {/* Goal Badges */}

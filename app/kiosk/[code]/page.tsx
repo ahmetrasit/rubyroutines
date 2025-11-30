@@ -780,38 +780,35 @@ export default function KioskModePage() {
                       .sort((a: Task, b: Task) => {
                         // First: incomplete tasks on top
                         if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
-                        // Second: group by routine name
+
+                        // For completed tasks: sort by completedAt DESC (most recent at top)
+                        if (a.isComplete && b.isComplete) {
+                          const aCompletedAt = a.completions?.[0]?.completedAt ? new Date(a.completions[0].completedAt).getTime() : 0;
+                          const bCompletedAt = b.completions?.[0]?.completedAt ? new Date(b.completions[0].completedAt).getTime() : 0;
+                          return bCompletedAt - aCompletedAt; // DESC (most recent first)
+                        }
+
+                        // For uncompleted tasks: sort alphabetically by routine name, then task name
                         const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
                         if (routineCompare !== 0) return routineCompare;
-                        // Third: by task order within routine
-                        return ((a as any).order || 0) - ((b as any).order || 0);
+                        return a.name.localeCompare(b.name);
                       });
 
                     const multiTasks = tasks
                       .filter((t: Task) => t.type === TaskType.MULTIPLE_CHECKIN)
                       .sort((a: Task, b: Task) => {
-                        // First: tasks with 0 completions on top
-                        const aIncomplete = (a.completionCount || 0) === 0;
-                        const bIncomplete = (b.completionCount || 0) === 0;
-                        if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
-                        // Second: group by routine name
+                        // Maintain original order - no reordering after recording
                         const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
                         if (routineCompare !== 0) return routineCompare;
-                        // Third: by task order within routine
                         return ((a as any).order || 0) - ((b as any).order || 0);
                       });
 
                     const progressTasks = tasks
                       .filter((t: Task) => t.type === TaskType.PROGRESS)
                       .sort((a: Task, b: Task) => {
-                        // First: tasks with 0 progress on top
-                        const aIncomplete = (a.totalValue || 0) === 0;
-                        const bIncomplete = (b.totalValue || 0) === 0;
-                        if (aIncomplete !== bIncomplete) return aIncomplete ? -1 : 1;
-                        // Second: group by routine name
+                        // Maintain original order - no reordering after recording
                         const routineCompare = ((a as any).routine?.name || '').localeCompare((b as any).routine?.name || '');
                         if (routineCompare !== 0) return routineCompare;
-                        // Third: by task order within routine
                         return ((a as any).order || 0) - ((b as any).order || 0);
                       });
 

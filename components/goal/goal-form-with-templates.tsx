@@ -390,7 +390,6 @@ export function GoalFormWithTemplates({ roleId, roleType, goal, personId, onClos
                       >
                         <option value={ResetPeriod.DAILY}>Daily</option>
                         <option value={ResetPeriod.WEEKLY}>Weekly</option>
-                        <option value={ResetPeriod.MONTHLY}>Monthly</option>
                       </select>
                     </div>
                   </div>

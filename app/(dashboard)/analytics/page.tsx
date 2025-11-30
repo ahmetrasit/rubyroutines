@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import { Select } from '@/components/ui/select';
 import { CompletionChart } from '@/components/analytics/CompletionChart';
 import { GoalProgressChart } from '@/components/analytics/GoalProgressChart';
 import { TaskHeatmap } from '@/components/analytics/TaskHeatmap';
@@ -174,8 +173,8 @@ function AnalyticsPageContent({
               goalData?.map((g: any) => ({
                 goalId: g.goalId,
                 goalName: g.goalName,
-                progress: g.progress,
-                status: g.status,
+                progress: g.percentage || g.progress || 0,
+                status: (g.status?.toUpperCase() || 'NOT_STARTED') as 'NOT_STARTED' | 'IN_PROGRESS' | 'ACHIEVED',
               })) || []
             }
             isLoading={goalLoading}
@@ -184,11 +183,13 @@ function AnalyticsPageContent({
           {/* Task Heatmap */}
           <TaskHeatmap
             data={
-              heatmapData?.map((h: any) => ({
-                date: new Date(h.date),
-                taskName: h.taskName,
-                count: h.count,
-              })) || []
+              heatmapData?.flatMap((task: any) =>
+                task.completions?.map((c: any) => ({
+                  date: new Date(c.date),
+                  taskName: task.taskName,
+                  count: c.count,
+                })) || []
+              ) || []
             }
             isLoading={heatmapLoading}
           />

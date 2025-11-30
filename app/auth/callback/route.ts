@@ -104,14 +104,17 @@ export async function GET(request: Request) {
           },
         });
 
-        // Auto-create "Me" person for both parent and teacher roles
+        // Auto-create account owner person for both parent and teacher roles
+        // Use user's actual name and role-specific emoji
+        const userName = user.name || data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User';
+
         const parentMePerson = await prisma.person.create({
           data: {
             roleId: parentRole.id,
-            name: 'Me',
+            name: userName,
             avatar: JSON.stringify({
-              color: '#BAE1FF',
-              emoji: '👤',
+              color: '#9333ea', // Purple for parent
+              emoji: '💫',      // Dizzy star for parent
             }),
             isAccountOwner: true,
             status: 'ACTIVE',
@@ -138,10 +141,10 @@ export async function GET(request: Request) {
         const teacherMePerson = await prisma.person.create({
           data: {
             roleId: teacherRole.id,
-            name: 'Me',
+            name: userName,
             avatar: JSON.stringify({
-              color: '#BAE1FF',
-              emoji: '👤',
+              color: '#3b82f6', // Blue for teacher
+              emoji: '🏫',      // School for teacher
             }),
             isAccountOwner: true,
             status: 'ACTIVE',
@@ -214,30 +217,33 @@ export async function GET(request: Request) {
             });
           }
 
-        // Ensure "Me" person exists for parent role
+        // Get user name for account owner creation
+        const existingUserName = user.name || data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User';
+
+        // Ensure account owner person exists for parent role
         if (parentRole) {
-          const mePersonExists = await prisma.person.findFirst({
+          const accountOwnerExists = await prisma.person.findFirst({
             where: {
               roleId: parentRole.id,
-              name: 'Me',
+              isAccountOwner: true,
             },
           });
 
-          if (!mePersonExists) {
+          if (!accountOwnerExists) {
             const parentMePerson = await prisma.person.create({
               data: {
                 roleId: parentRole.id,
-                name: 'Me',
+                name: existingUserName,
                 avatar: JSON.stringify({
-                  color: '#BAE1FF',
-                  emoji: '👤',
+                  color: '#9333ea', // Purple for parent
+                  emoji: '💫',      // Dizzy star for parent
                 }),
                 isAccountOwner: true,
                 status: 'ACTIVE',
               },
             });
 
-            // Create default "Daily Routine" for parent "Me"
+            // Create default "Daily Routine" for parent
             await prisma.routine.create({
               data: {
                 roleId: parentRole.id,
@@ -256,30 +262,30 @@ export async function GET(request: Request) {
           }
         }
 
-        // Ensure "Me" person exists for teacher role
+        // Ensure account owner person exists for teacher role
         if (teacherRole) {
-          const mePersonExists = await prisma.person.findFirst({
+          const accountOwnerExists = await prisma.person.findFirst({
             where: {
               roleId: teacherRole.id,
-              name: 'Me',
+              isAccountOwner: true,
             },
           });
 
-          if (!mePersonExists) {
+          if (!accountOwnerExists) {
             const teacherMePerson = await prisma.person.create({
               data: {
                 roleId: teacherRole.id,
-                name: 'Me',
+                name: existingUserName,
                 avatar: JSON.stringify({
-                  color: '#BAE1FF',
-                  emoji: '👤',
+                  color: '#3b82f6', // Blue for teacher
+                  emoji: '🏫',      // School for teacher
                 }),
                 isAccountOwner: true,
                 status: 'ACTIVE',
               },
             });
 
-            // Create default "Daily Routine" for teacher "Me"
+            // Create default "Daily Routine" for teacher
             await prisma.routine.create({
               data: {
                 roleId: teacherRole.id,
