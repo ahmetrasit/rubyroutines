@@ -195,11 +195,22 @@ export const authRouter = router({
       // Clear failed login attempts on successful authentication
       await clearFailedLogins(input.email);
 
-      // Check if user has 2FA enabled
+      // Check if user has 2FA enabled or is banned
       const dbUserFor2FA = await ctx.prisma.user.findUnique({
         where: { id: data.user.id },
-        select: { twoFactorEnabled: true },
+        select: { twoFactorEnabled: true, bannedAt: true },
       });
+
+      // Check if user is banned
+      if (dbUserFor2FA?.bannedAt) {
+        await ctx.supabase.auth.signOut();
+        logger.warn('Banned user attempted to login', { email: input.email });
+
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Your account has been suspended. Please contact support.',
+        });
+      }
 
       if (dbUserFor2FA?.twoFactorEnabled) {
         // User has 2FA enabled - sign them out and require 2FA verification
@@ -352,11 +363,15 @@ export const authRouter = router({
         CodeType.EMAIL_VERIFICATION
       );
 
-      // FEATURE: Email service integration pending
-      // Configure RESEND_API_KEY in environment to enable email sending
-      // See: lib/services/email.service.ts (to be implemented)
-      if (process.env.NODE_ENV === 'development') {
-        logger.debug('Verification code generated', { email: input.email, code });
+      // Send verification email
+      const { sendVerificationEmail } = await import('@/lib/email/email.service');
+      const emailSent = await sendVerificationEmail(input.email, code);
+
+      if (!emailSent) {
+        // Log the code in development mode for testing
+        if (process.env.NODE_ENV === 'development') {
+          logger.debug('Verification code generated (email not sent)', { email: input.email, code });
+        }
       }
 
       return { success: true };
@@ -425,11 +440,15 @@ export const authRouter = router({
         CodeType.EMAIL_VERIFICATION
       );
 
-      // FEATURE: Email service integration pending
-      // Configure RESEND_API_KEY in environment to enable email sending
-      // See: lib/services/email.service.ts (to be implemented)
-      if (process.env.NODE_ENV === 'development') {
-        logger.debug('Verification code resent', { email: input.email, code });
+      // Send verification email
+      const { sendVerificationEmail } = await import('@/lib/email/email.service');
+      const emailSent = await sendVerificationEmail(input.email, code);
+
+      if (!emailSent) {
+        // Log the code in development mode for testing
+        if (process.env.NODE_ENV === 'development') {
+          logger.debug('Verification code resent (email not sent)', { email: input.email, code });
+        }
       }
 
       return { success: true };

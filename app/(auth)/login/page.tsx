@@ -1,12 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+const LAST_MODE_KEY = 'rubyroutines_last_mode';
+
+function getRedirectPath(): string {
+  if (typeof window === 'undefined') return '/parent';
+  const lastMode = localStorage.getItem(LAST_MODE_KEY);
+  return lastMode === 'teacher' ? '/teacher' : '/parent';
+}
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -16,6 +24,12 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [redirectPath, setRedirectPath] = useState('/parent');
+
+  // Determine redirect path on mount
+  useEffect(() => {
+    setRedirectPath(getRedirectPath());
+  }, []);
 
   const signInMutation = trpc.auth.signIn.useMutation({
     onSuccess: (data) => {
@@ -25,7 +39,8 @@ export default function LoginPage() {
         setError('');
       } else {
         // Use window.location.href to force full page reload and pick up session cookies
-        window.location.href = '/parent';
+        // Redirect to last visited mode (parent or teacher)
+        window.location.href = redirectPath;
       }
     },
     onError: (err) => {
@@ -40,7 +55,8 @@ export default function LoginPage() {
         alert('You used a backup code. Please regenerate your backup codes in settings.');
       }
       // Use window.location.href to force full page reload and pick up session cookies
-      window.location.href = '/parent';
+      // Redirect to last visited mode (parent or teacher)
+      window.location.href = redirectPath;
     },
     onError: (err) => {
       setError(err.message);

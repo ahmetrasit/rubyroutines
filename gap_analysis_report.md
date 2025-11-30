@@ -313,9 +313,9 @@ Generated: 2025-11-30
 11. Implement row-level locking for task completion
 
 ### Documentation Updates Needed
-- Add undocumented features to app_ux_flow.md
-- Correct rate limit values
-- Document Phase 2 features as "Not Implemented"
+- ~~Add undocumented features to app_ux_flow.md~~ ✅ DONE
+- ~~Correct rate limit values~~ ✅ DONE (5/2min)
+- Document Phase 2 features as "Not Implemented" (noted in goals section)
 
 ---
 

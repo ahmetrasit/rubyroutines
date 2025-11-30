@@ -10,10 +10,23 @@ import { Download, BarChart3, Settings } from 'lucide-react';
 import { GetRoutinesModal } from '@/components/routine/GetRoutinesModal';
 import Link from 'next/link';
 
+const LAST_MODE_KEY = 'rubyroutines_last_mode';
+
 export default function TeacherDashboard() {
   const router = useRouter();
   const { data: session, isLoading } = trpc.auth.getSession.useQuery();
   const [showGetRoutines, setShowGetRoutines] = useState(false);
+
+  // Store 'teacher' as last visited mode on mount (both localStorage and cookie for OAuth)
+  useEffect(() => {
+    try {
+      localStorage.setItem(LAST_MODE_KEY, 'teacher');
+      // Also set cookie for OAuth callback (server-side redirect)
+      document.cookie = `${LAST_MODE_KEY}=teacher; path=/; max-age=31536000`; // 1 year
+    } catch {
+      // localStorage/cookie may be unavailable
+    }
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !session?.user) {

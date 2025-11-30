@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cookies } from 'next/headers';
+
+const LAST_MODE_COOKIE = 'rubyroutines_last_mode';
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -12,6 +15,11 @@ export async function GET(request: Request) {
   const host = request.headers.get('host');
   const protocol = process.env.NODE_ENV === 'production' ? 'https:' : 'http:';
   const redirectBase = `${protocol}//${host || 'localhost:3000'}`;
+
+  // Get last visited mode from cookie
+  const cookieStore = await cookies();
+  const lastMode = cookieStore.get(LAST_MODE_COOKIE)?.value;
+  const redirectPath = lastMode === 'teacher' ? '/teacher' : '/parent';
 
   // Handle OAuth errors
   if (error) {
@@ -338,6 +346,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Redirect to parent mode by default
-  return NextResponse.redirect(`${redirectBase}/parent`);
+  // Redirect to last visited mode (parent or teacher)
+  return NextResponse.redirect(`${redirectBase}${redirectPath}`);
 }

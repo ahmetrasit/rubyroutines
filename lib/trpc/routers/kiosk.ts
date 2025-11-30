@@ -20,6 +20,7 @@ import {
 } from '@/lib/services/kiosk-session';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { completeTaskCoordinated } from '@/lib/services/task-completion-coordinated';
+import { canUndoCompletion } from '@/lib/services/task-completion';
 import { TRPCError } from '@trpc/server';
 import { kioskSessionRateLimitedProcedure } from '../middleware/ratelimit';
 
@@ -416,7 +417,7 @@ export const kioskRouter = router({
     }),
 
   /**
-   * Undo task completion (if completed within last 5 minutes) (public)
+   * Undo task completion (if completed within 10 seconds and is SIMPLE task) (public)
    * Rate limited by kiosk code
    */
   undoCompletion: kioskSessionRateLimitedProcedure
@@ -426,7 +427,12 @@ export const kioskRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const completion = await ctx.prisma.taskCompletion.findUnique({
-        where: { id: input.completionId }
+        where: { id: input.completionId },
+        include: {
+          task: {
+            select: { type: true }
+          }
+        }
       });
 
       if (!completion) {
@@ -445,12 +451,11 @@ export const kioskRouter = router({
         });
       }
 
-      // Check if within 5 minutes
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      if (completion.completedAt < fiveMinutesAgo) {
+      // Check if undo is allowed (SIMPLE tasks only, within 10 second window)
+      if (!canUndoCompletion(completion.completedAt, completion.task.type)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Can only undo completions from last 5 minutes'
+          message: 'Can only undo SIMPLE task completions within 10 seconds'
         });
       }
 

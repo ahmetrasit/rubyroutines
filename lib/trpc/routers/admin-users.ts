@@ -13,6 +13,11 @@ import {
   deleteUserAccount,
   permanentlyDeleteUserAccount,
   verifyUserEmail,
+  banUser,
+  unbanUser,
+  startImpersonation,
+  endImpersonation,
+  validateImpersonationToken,
 } from '@/lib/services/admin/user-management.service';
 
 // Flexible ID validator that accepts both UUID and CUID formats
@@ -217,5 +222,90 @@ export const adminUsersRouter = router({
       );
 
       return { success: true };
+    }),
+
+  // Ban user (prevents login)
+  banUser: adminProcedure
+    .input(
+      z.object({
+        userId: idValidator,
+        reason: z.string().max(500).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await banUser(
+        input.userId,
+        ctx.user.id,
+        input.reason,
+        ctx.ipAddress,
+        ctx.userAgent
+      );
+
+      return { success: true };
+    }),
+
+  // Unban user
+  unbanUser: adminProcedure
+    .input(
+      z.object({
+        userId: idValidator,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await unbanUser(
+        input.userId,
+        ctx.user.id,
+        ctx.ipAddress,
+        ctx.userAgent
+      );
+
+      return { success: true };
+    }),
+
+  // Start impersonating a user
+  startImpersonation: adminProcedure
+    .input(
+      z.object({
+        userId: idValidator,
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await startImpersonation(
+        input.userId,
+        ctx.user.id,
+        ctx.ipAddress,
+        ctx.userAgent
+      );
+
+      return result;
+    }),
+
+  // End impersonation
+  endImpersonation: adminProcedure
+    .input(
+      z.object({
+        token: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await endImpersonation(
+        input.token,
+        ctx.user.id,
+        ctx.ipAddress,
+        ctx.userAgent
+      );
+
+      return { success: true };
+    }),
+
+  // Validate impersonation token
+  validateImpersonation: adminProcedure
+    .input(
+      z.object({
+        token: z.string().min(1),
+      })
+    )
+    .query(async ({ input }) => {
+      return await validateImpersonationToken(input.token);
     }),
 });

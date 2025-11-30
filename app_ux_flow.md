@@ -58,6 +58,44 @@
 
 **Files:** `lib/trpc/routers/two-factor.ts`, `app/settings/security/page.tsx`
 
+### 1.4 Password Reset Flow
+```
+/login → "Forgot password?" link
+              ↓
+/reset-password → Enter email
+              ↓
+requestPasswordReset → Supabase sends email
+              ↓
+/reset-password/confirm → Enter new password
+              ↓
+supabase.updateUser() → Redirect to login
+```
+
+### 1.5 Login Rate Limiting
+```
+signIn attempt → checkLoginRateLimit(email)
+                        ↓
+              ┌─────────┼─────────┐
+              ↓                   ↓
+         Allowed              Locked out
+              ↓                   ↓
+      Try login           Return TOO_MANY_REQUESTS
+              ↓
+    ┌─────────┼─────────┐
+    ↓                   ↓
+ Success              Failed
+    ↓                   ↓
+clearFailedLogins  recordFailedLogin
+```
+**Config:** 5 attempts per 2 minutes, 15-minute lockout
+
+### 1.6 Implementation Details
+- **Seed data migration:** Handles users with different IDs (seed vs Supabase Auth)
+- **Email verification:** 6-digit code, 15-min expiry, 3 attempts max, bcrypt hashed
+- **isTeacher flag:** Account owners have `isTeacher=true` to distinguish from students
+- **Protected routines:** "Daily Routine" has `isProtected=true` (cannot delete/rename)
+- **Last mode redirect:** Login redirects to last visited mode (parent/teacher) via localStorage/cookie
+
 ---
 
 ## 2. Parent Mode
@@ -68,20 +106,22 @@
               ↓
     ┌─────────┼─────────┐
     ↓         ↓         ↓
- Persons   Routines   Goals
-    ↓         ↓         ↓
- PersonCard  RoutineCard  GoalCard
+ Persons   Routines   (Goals via /parent/goals)
+    ↓         ↓
+ PersonCard  RoutineCard
     ↓
  /parent/[personId] → Person Detail
     ↓
  /parent/[personId]/[routineId] → Routine Tasks
+
+Goals: Accessed via /parent/goals page (not on main dashboard)
 ```
 
 ### 2.2 Person Management
 ```
 Add Person → PersonForm Modal
                 ↓
-         name, avatar, birthDate
+         name, avatar
                 ↓
          person.create mutation
                 ↓
@@ -90,7 +130,38 @@ Add Person → PersonForm Modal
 
 **Actions:** Create, Edit, Archive, Restore, Delete (soft)
 
-### 2.3 Routine Management
+### 2.3 Additional Parent Pages
+```
+/parent/connections → PersonConnectionsManager
+                           ↓
+              View/manage cross-account connections
+                           ↓
+              ConnectedPersonsSection displays linked persons
+
+/parent/goals → Goal management page
+                     ↓
+         Create, edit, track goals for children
+```
+
+### 2.4 Co-Parent Feature
+```
+Primary Parent → Invite co-parent via email
+                      ↓
+         CoParent record with permission level
+                      ↓
+         Shared access to persons and routines
+```
+
+### 2.5 Smart Routines
+```
+Routine with type=SMART + Conditions
+              ↓
+isSmartRoutineVisible() evaluates conditions
+              ↓
+Show/hide based on time, day, goal progress, etc.
+```
+
+### 2.6 Routine Management
 ```
 Create Routine → RoutineForm
                     ↓
@@ -145,6 +216,21 @@ Bulk check-in available (teacher-bulk-checkin.tsx)
 
 **Files:** `app/(dashboard)/teacher/page.tsx`, `components/classroom/classroom-member-list.tsx`
 
+### 3.4 Real-time & Performance Features
+- **`useDashboardRealtime` hook:** Subscribes to Supabase realtime for live updates
+- **`person.getBatch` query:** Efficiently fetches multiple persons in one request
+- **Optimistic updates:** Bulk check-in uses optimistic UI for instant feedback
+- **`kioskLastUpdatedAt` timestamp:** Tracks when role/group data changed for kiosk polling
+
+### 3.5 Classroom Customization
+```
+Classroom → Edit Modal
+              ↓
+    emoji (icon picker) + color (color picker)
+              ↓
+    Visual distinction between classrooms
+```
+
 ---
 
 ## 4. Kiosk Mode
@@ -189,6 +275,25 @@ KioskCodeManager → generateCode mutation
 **Idempotency:** `SHA256(taskId + personId + value + deviceId + timestamp)`
 
 **Files:** `app/kiosk/page.tsx`, `app/kiosk/[code]/page.tsx`, `lib/services/task-completion-coordinated.ts`
+
+### 4.4 Real-time & UI Features
+- **`useKioskRealtime` hook:** Subscribes to task completion changes
+- **`useOptimisticKioskCheckin` hook:** Instant UI feedback before server confirms
+- **Dynamic column layout:** Adjusts grid based on number of persons
+- **Progress calculation:** Person cards show completion percentage
+- **Animated task completion:** Visual feedback on check-in
+- **`checkRoleUpdates` polling:** Detects classroom/role changes
+
+### 4.5 Session Management
+```
+Session created → 90-day validity
+                    ↓
+         Track session termination
+                    ↓
+         Admin-configurable inactivity timeout
+                    ↓
+         Auto-logout on timeout
+```
 
 ---
 
@@ -263,6 +368,14 @@ routine.checkCopyConflicts → Detect naming conflicts
 
 **Files:** `lib/trpc/routers/marketplace.ts`, `lib/services/marketplace.service.ts`, `components/marketplace/`
 
+### 5.5 Implementation Details
+- **`targetAudience` auto-detection:** Infers audience from routine/goal content
+- **`userRoleType` filter:** Search filters by PARENT/TEACHER content
+- **`hasUserImportedItem` check:** Prevents duplicate imports
+- **Semantic versioning:** Updates increment version on marketplace items
+- **`MarketplaceImport` tracking:** Records who imported what and when
+- **Comments pagination:** Large comment threads load incrementally
+
 ---
 
 ## 6. Connections & Sharing
@@ -318,6 +431,13 @@ Invitee → Accept → Role auto-created if needed
 ```
 
 **Files:** `lib/trpc/routers/person-connection.ts`, `lib/services/person-connection.service.ts`, `components/sharing/PersonConnectionModal.tsx`
+
+### 6.4 Implementation Details
+- **`revokeConnectionCode` function:** Invalidates active connection codes
+- **`getActiveConnectionCodes` query:** Lists pending connection invitations
+- **`disconnectedBy` tracking:** Records who terminated a connection
+- **`determineAllowedTargetType` helper:** Validates connection type constraints
+- **Permission mapping:** Co-parent uses `TASK_COMPLETION` permission level
 
 ---
 
@@ -400,6 +520,15 @@ Show/hide individual task
 
 **Files:** `lib/trpc/routers/goal.ts`, `lib/services/goal-progress-enhanced.ts`, `lib/services/condition-evaluator.service.ts`
 
+### 7.6 Implementation Details
+- **`detectCircularDependency` function:** Prevents goals that depend on each other in loops
+- **`evaluateBatch` function:** Evaluates multiple conditions efficiently
+- **`getAvailableTargets` query:** Returns valid targets for goal linking
+- **`calculateGoalProgressBatchEnhanced`:** Optimized batch progress calculation
+- **`batchCreate` mutation:** Teachers can assign goals to multiple students at once
+
+**Note:** STREAK type exists in schema but streak calculation service not yet implemented.
+
 ---
 
 ## 8. Task Types & Completion
@@ -441,6 +570,12 @@ canUndoCompletion() → Delete record
 ```
 
 **Files:** `lib/trpc/routers/task.ts`, `lib/services/task-completion.ts`, `lib/services/task-completion-coordinated.ts`
+
+### 8.4 Helper Functions
+- **`getTaskAggregation` helper:** Calculates completion status per task type
+- **`getRemainingUndoTime` function:** Returns seconds until undo window expires
+- **`validateProgressValue` function:** Ensures PROGRESS values are integers 1-999
+- **Smart task handling:** Aggregation respects task visibility conditions
 
 ---
 
@@ -489,6 +624,13 @@ Can only edit: color, description
 
 **Files:** `lib/trpc/routers/routine.ts`, `lib/services/reset-period.ts`, `lib/validation/routine.ts`
 
+### 9.6 UI Components
+- **Color picker:** HexColorPicker with preset color groups
+- **Emoji/Icon picker:** IconEmojiPicker component for routine/person avatars
+- **Duration presets:** Visibility override limited to preset durations (10-60 min)
+
+**Note:** MONTHLY period exists in schema but UI only shows DAILY/WEEKLY. CUSTOM reset period throws error if selected.
+
 ---
 
 ## 10. Admin Features
@@ -533,13 +675,49 @@ Can only edit: color, description
 
 **Files:** `app/admin/`, `lib/trpc/routers/admin-*.ts`
 
+### 10.5 Ban User Feature
+```
+/admin/users → Select User → Ban Button
+                                ↓
+                    banUser mutation (with optional reason)
+                                ↓
+                    Set bannedAt timestamp
+                                ↓
+                    User cannot log in (checked in signIn)
+                                ↓
+                    Unban via unbanUser mutation
+```
+
+### 10.6 Impersonate User Feature
+```
+/admin/users → Select User → Impersonate Button
+                                ↓
+                    startImpersonation mutation
+                                ↓
+                    Create temp session token (1 hour)
+                                ↓
+                    Admin views app as target user
+                                ↓
+                    endImpersonation to return
+```
+**Safeguards:** Cannot impersonate other admins. All actions logged.
+
+### 10.7 Additional Admin Features
+- **GDPR permanent delete:** Comprehensive user data deletion
+- **TierBadgeSelect:** Inline tier editing in user list
+- **Role-level tier statistics:** View tier distribution per role type
+- **Self-revocation prevention:** Admins cannot remove their own admin status
+- **Admin deletion prevention:** Cannot delete admin users
+- **`/admin/blog`:** Blog post management
+- **`/admin/rate-limits`:** View and configure rate limits
+
 ---
 
 ## Quick Reference: Key Files
 
 | Feature | Router | Service | UI |
 |---------|--------|---------|-----|
-| Auth | `auth.ts` | `user-initialization.service.ts` | `app/(auth)/` |
+| Auth | `auth.ts` | `user-initialization.service.ts`, `email.service.ts` | `app/(auth)/` |
 | Tasks | `task.ts` | `task-completion*.ts` | `components/task/` |
 | Routines | `routine.ts` | `reset-period.ts` | `components/routine/` |
 | Goals | `goal.ts` | `goal-progress-enhanced.ts` | `components/goal/` |
@@ -555,7 +733,7 @@ Can only edit: color, description
 
 | Action | Limit | Window |
 |--------|-------|--------|
-| Auth attempts | 5 | 15 min |
+| Auth attempts | 5 | 2 min |
 | Code generation (kiosk) | 10 | 1 hour |
 | Code generation (connection) | 10 | 1 hour |
 | Code claim failures | 5 | 1 hour |
