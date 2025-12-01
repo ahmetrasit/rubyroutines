@@ -1,4 +1,5 @@
 import { router, authorizedProcedure, verifiedProcedure, verifyRoleOwnership } from '../init';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import {
   publishToMarketplace,
@@ -50,7 +51,17 @@ export const marketplaceRouter = router({
         tags: z.array(z.string()).optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      // First, verify ownership
+      const existingItem = await ctx.prisma.marketplaceItem.findUnique({
+        where: { id: input.itemId },
+        include: { authorRole: true }
+      });
+
+      if (!existingItem || existingItem.authorRole.userId !== ctx.user.id) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'You can only update your own marketplace items' });
+      }
+
       const item = await updateMarketplaceItem(input);
       return item;
     }),
