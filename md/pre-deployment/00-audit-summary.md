@@ -37,7 +37,7 @@
 ### Security (3)
 1. ~~**sendVerificationCode accepts arbitrary userId/email**~~ - ✅ FIXED: Added ownership validation (protectedProcedure)
 2. ~~**Invitation token lookup exposes data**~~ - ✅ FIXED: Added invitationTokenRateLimitedProcedure (10/min)
-3. ~~**CSP allows unsafe-eval/unsafe-inline**~~ - ✅ FIXED: Removed unsafe-eval in production, kept only for dev (Next.js hot reload)
+3. ~~**CSP allows unsafe-eval/unsafe-inline**~~ - ✅ FIXED: Removed unsafe-eval in production (kept unsafe-inline for Next.js hydration)
 
 ### Build (1)
 4. ~~**ESLint config circular reference**~~ - ✅ FIXED: Downgraded eslint-config-next to v14.2.33
