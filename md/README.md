@@ -2,6 +2,17 @@
 
 All project documentation organized by category.
 
+## Deployment
+
+**[DEPLOYMENT.md](./DEPLOYMENT.md)** - Complete production deployment guide covering:
+- Environment setup (all variables documented)
+- Database migrations (including CoParent/CoTeacher)
+- Vercel deployment steps
+- Stripe, Supabase, and OAuth configuration
+- Go-live checklist and troubleshooting
+
+---
+
 ## Folders
 
 | Folder | Description | Files |
