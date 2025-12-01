@@ -50,6 +50,7 @@ model User {
   blogLikes             BlogLike[]
 
   @@index([isAdmin])
+  @@index([bannedAt])
   @@map("users")
 }
 
@@ -378,6 +379,7 @@ model TaskCompletion {
   @@index([personId])
   @@index([completedAt])
   @@index([taskId, personId, completedAt]) // Composite index for period queries
+  @@index([personId, completedAt]) // Composite index for completion queries by person
   @@index([idempotencyKey])
   @@index([sessionId])
   @@map("task_completions")

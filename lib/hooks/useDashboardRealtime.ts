@@ -119,7 +119,7 @@ export function useDashboardRealtime(options: UseDashboardRealtimeOptions) {
     };
   }, [
     enabled,
-    personIds.join(','), // Join to create stable dependency
+    JSON.stringify(personIds), // Use JSON.stringify for stable array comparison
     handleTaskCompletion,
     handleError
   ]);

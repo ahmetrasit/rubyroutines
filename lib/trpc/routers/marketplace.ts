@@ -80,7 +80,7 @@ export const marketplaceRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) {
-        throw new Error('User not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
       }
 
       const result = await forkMarketplaceItem({
@@ -128,7 +128,7 @@ export const marketplaceRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) {
-        throw new Error('User not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
       }
 
       const result = await rateMarketplaceItem({
@@ -152,7 +152,7 @@ export const marketplaceRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) {
-        throw new Error('User not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
       }
 
       const comment = await addComment({
@@ -176,7 +176,7 @@ export const marketplaceRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) {
-        throw new Error('User not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
       }
 
       const result = await flagComment({
@@ -202,7 +202,7 @@ export const marketplaceRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) {
-        throw new Error('User not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
       }
 
       const result = await importFromShareCode({
@@ -229,7 +229,7 @@ export const marketplaceRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) {
-        throw new Error('User not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
       }
 
       const code = await generateMarketplaceShareCode(

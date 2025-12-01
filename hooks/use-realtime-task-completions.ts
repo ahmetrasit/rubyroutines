@@ -32,7 +32,7 @@ export function useRealtimeTaskCompletions(personIds: string[]) {
         unsubscribe(channelRef.current);
       }
     };
-  }, [personIds.join(','), utils]);
+  }, [JSON.stringify(personIds), utils]);
 
   return channelRef.current;
 }

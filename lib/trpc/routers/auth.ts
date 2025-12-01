@@ -32,7 +32,7 @@ export const authRouter = router({
   signUp: authRateLimitedProcedure
     .input(z.object({
       email: z.string().email('Please enter a valid email address'),
-      password: z.string().min(6, 'Password must be at least 6 characters'),
+      password: z.string().min(8, 'Password must be at least 8 characters'),
       name: z.string().min(2, 'Name must be at least 2 characters'),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -53,7 +53,7 @@ export const authRouter = router({
         if (error.message.includes('already registered') || error.message.includes('User already registered')) {
           message = 'This email is already registered. Please log in instead.';
         } else if (error.message.includes('password')) {
-          message = 'Password is too weak. Please use at least 6 characters.';
+          message = 'Password is too weak. Please use at least 8 characters.';
         } else if (error.message.includes('invalid') && error.message.includes('email')) {
           message = 'This email format is not accepted. Please use a real email address from a common provider (Gmail, Outlook, Yahoo, etc.). Test/temporary email addresses are not allowed.';
         } else if (error.message.includes('email')) {

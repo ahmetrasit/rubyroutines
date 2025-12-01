@@ -1,4 +1,5 @@
 import { router, authorizedProcedure, verifiedProcedure } from '../init';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { Tier } from '@/lib/types/prisma-enums';
 import {
@@ -96,7 +97,7 @@ export const billingRouter = router({
       });
 
       if (!role) {
-        throw new Error('Role not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
       }
 
       return {

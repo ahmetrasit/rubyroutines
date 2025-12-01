@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { router, protectedProcedure } from '../init';
 import { invitationTokenRateLimitedProcedure } from '../middleware/ratelimit';
 import { acceptInvitation, rejectInvitation, SharedPerson } from '@/lib/services/invitation.service';
@@ -32,15 +33,15 @@ export const invitationRouter = router({
       });
 
       if (!invitation) {
-        throw new Error('Invalid invitation');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Invalid invitation' });
       }
 
       if (invitation.status !== 'PENDING') {
-        throw new Error('Invitation already processed');
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invitation already processed' });
       }
 
       if (new Date() > invitation.expiresAt) {
-        throw new Error('Invitation expired');
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invitation expired' });
       }
 
       // For CO_PARENT and CO_TEACHER invitations, enrich sharedPersons with person and routine names

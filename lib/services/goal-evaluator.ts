@@ -17,6 +17,11 @@ interface GoalEvaluation {
   streak?: number;
 }
 
+interface BatchEvaluationResult {
+  evaluations: Map<string, GoalEvaluation>;
+  failures: { goalId: string; error: string }[];
+}
+
 interface PeriodBounds {
   start: Date;
   end: Date;
@@ -324,12 +329,14 @@ export class GoalEvaluator {
 
   /**
    * Batch evaluate multiple goals for performance
+   * Returns both successful evaluations and a list of failures
    */
   async evaluateBatch(
     goalIds: string[],
     personId: string
-  ): Promise<Map<string, GoalEvaluation>> {
+  ): Promise<BatchEvaluationResult> {
     const evaluations = new Map<string, GoalEvaluation>();
+    const failures: { goalId: string; error: string }[] = [];
 
     // Process in parallel for performance
     const promises = goalIds.map(async (goalId) => {
@@ -337,12 +344,14 @@ export class GoalEvaluator {
         const evaluation = await this.evaluateGoal(goalId, personId);
         evaluations.set(goalId, evaluation);
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error(`Failed to evaluate goal ${goalId}:`, error);
+        failures.push({ goalId, error: errorMessage });
       }
     });
 
     await Promise.all(promises);
-    return evaluations;
+    return { evaluations, failures };
   }
 }
 
