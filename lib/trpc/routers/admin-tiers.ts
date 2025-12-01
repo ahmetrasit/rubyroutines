@@ -67,19 +67,24 @@ export const adminTiersRouter = router({
   }),
 
   // Update tier prices
+  // Teacher tiers: FREE (3 students), TINY (7), SMALL (15), MEDIUM (23), LARGE (24+)
   updatePrices: adminProcedure
     .input(
       z.object({
         prices: z.object({
-          BRONZE: z.object({
+          TINY: z.object({
             parent: z.number().int().min(0),
             teacher: z.number().int().min(0),
           }),
-          GOLD: z.object({
+          SMALL: z.object({
             parent: z.number().int().min(0),
             teacher: z.number().int().min(0),
           }),
-          PRO: z.object({
+          MEDIUM: z.object({
+            parent: z.number().int().min(0),
+            teacher: z.number().int().min(0),
+          }),
+          LARGE: z.object({
             parent: z.number().int().min(0),
             teacher: z.number().int().min(0),
           }),

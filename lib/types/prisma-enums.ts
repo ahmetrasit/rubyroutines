@@ -9,11 +9,13 @@ export enum RoleType {
 }
 
 // Note: This file is deprecated. Use Tier from '@prisma/client' instead.
+// Teacher mode tiers based on max student cards
 export enum Tier {
-  FREE = 'FREE',
-  BRONZE = 'BRONZE',
-  GOLD = 'GOLD',
-  PRO = 'PRO',
+  FREE = 'FREE',       // Up to 3 students
+  TINY = 'TINY',       // Up to 7 students
+  SMALL = 'SMALL',     // Up to 15 students
+  MEDIUM = 'MEDIUM',   // Up to 23 students
+  LARGE = 'LARGE',     // 24+ students (base + per-student pricing)
 }
 
 export enum GroupType {

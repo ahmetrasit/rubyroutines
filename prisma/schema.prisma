@@ -95,6 +95,12 @@ model Role {
   targetConnections     PersonConnection[]     @relation("TargetRoleConnections")
   originConnectionCodes PersonConnectionCode[] @relation("OriginRoleConnectionCodes")
 
+  // Teacher student linking (same teacher, different classrooms)
+  teacherStudentLinks TeacherStudentLink[]
+
+  // School student links created by this principal
+  createdSchoolStudentLinks SchoolStudentLink[] @relation("SchoolLinkCreatedBy")
+
   @@unique([userId, type])
   @@index([userId])
   @@index([type])
@@ -108,11 +114,13 @@ enum RoleType {
   SUPPORT
 }
 
+// Teacher mode tiers based on max student cards
 enum Tier {
-  FREE
-  BRONZE
-  GOLD
-  PRO
+  FREE    // Up to 3 students
+  TINY    // Up to 7 students
+  SMALL   // Up to 15 students
+  MEDIUM  // Up to 23 students
+  LARGE   // 24+ students (base + per-student pricing)
 }
 
 // ============================================================================
@@ -160,6 +168,14 @@ model Person {
   primaryCoTeacherLinks CoTeacherStudentLink[] @relation("PrimaryCoTeacherStudent")
   linkedCoTeacherLinks  CoTeacherStudentLink[] @relation("LinkedCoTeacherStudent")
 
+  // Teacher student linking relations (same teacher, different classrooms)
+  primaryTeacherLinks TeacherStudentLink[] @relation("PrimaryTeacherStudent")
+  linkedTeacherLinks  TeacherStudentLink[] @relation("LinkedTeacherStudent")
+
+  // School student linking relations (principal links across teachers)
+  primarySchoolLinks SchoolStudentLink[] @relation("PrimarySchoolStudent")
+  linkedSchoolLinks  SchoolStudentLink[] @relation("LinkedSchoolStudent")
+
   @@index([roleId])
   @@index([status])
   @@index([roleId, status]) // Composite index for filtered person queries
@@ -170,6 +186,7 @@ model Person {
 model Group {
   id                 String       @id @default(cuid())
   roleId             String
+  schoolId           String?      // Optional school connection for billing (classroom billed to school)
   name               String
   description        String?
   type               GroupType    @default(FAMILY)
@@ -184,12 +201,14 @@ model Group {
 
   // Relations
   role        Role                @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  school      School?             @relation(fields: [schoolId], references: [id], onDelete: SetNull)
   members     GroupMember[]
   assignments RoutineAssignment[]
   coTeachers  CoTeacher[]
   codes       Code[] // Kiosk codes for this specific group/classroom
 
   @@index([roleId])
+  @@index([schoolId])
   @@index([type])
   @@index([status])
   @@index([roleId, status]) // Composite index for filtered group queries
@@ -724,6 +743,8 @@ model Invitation {
   personIds        String[]         @default([]) // Deprecated for CO_PARENT: Use sharedPersons instead
   groupIds         String[]         @default([])
   sharedPersons    Json             @default("[]") // For CO_PARENT: [{personId, routineIds}] - per-kid routine selection
+  schoolId         String?          // For SCHOOL_TEACHER/SCHOOL_SUPPORT: the school being invited to
+  schoolRole       String?          // For school invites: TEACHER or SUPPORT
   expiresAt        DateTime
   status           InvitationStatus @default(PENDING)
   acceptedAt       DateTime?
@@ -731,14 +752,16 @@ model Invitation {
   createdAt        DateTime         @default(now())
 
   // Relations
-  inviterUser    User  @relation("InviterUser", fields: [inviterUserId], references: [id], onDelete: Cascade)
-  inviterRole    Role  @relation("InviterRole", fields: [inviterRoleId], references: [id], onDelete: Cascade)
-  acceptedByUser User? @relation("AcceptedUser", fields: [acceptedByUserId], references: [id])
+  inviterUser    User    @relation("InviterUser", fields: [inviterUserId], references: [id], onDelete: Cascade)
+  inviterRole    Role    @relation("InviterRole", fields: [inviterRoleId], references: [id], onDelete: Cascade)
+  acceptedByUser User?   @relation("AcceptedUser", fields: [acceptedByUserId], references: [id])
+  school         School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([inviteCode])
   @@index([inviteeEmail])
   @@index([status])
+  @@index([schoolId])
   @@map("invitations")
 }
 
@@ -754,6 +777,7 @@ enum InvitationStatus {
   ACCEPTED
   REJECTED
   EXPIRED
+  CANCELLED
 }
 
 enum ShareType {
@@ -862,6 +886,54 @@ model CoTeacherStudentLink {
   @@index([primaryStudentId])
   @@index([linkedStudentId])
   @@map("co_teacher_student_links")
+}
+
+// Teacher Student Link - same teacher links students across different classrooms
+model TeacherStudentLink {
+  id               String   @id @default(cuid())
+  roleId           String // Teacher's role who owns both students
+  primaryStudentId String // First student card
+  linkedStudentId  String // Second student card
+  routineIds       String[] @default([]) // Optional: limit to specific routines
+  status           String   @default("ACTIVE") // ACTIVE, REVOKED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  role           Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  primaryStudent Person @relation("PrimaryTeacherStudent", fields: [primaryStudentId], references: [id], onDelete: Cascade)
+  linkedStudent  Person @relation("LinkedTeacherStudent", fields: [linkedStudentId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, primaryStudentId, linkedStudentId])
+  @@index([roleId])
+  @@index([primaryStudentId])
+  @@index([linkedStudentId])
+  @@map("teacher_student_links")
+}
+
+// School Student Link - principal links students across different teachers within school
+model SchoolStudentLink {
+  id              String   @id @default(cuid())
+  schoolId        String
+  primaryPersonId String // The "canonical" student card
+  linkedPersonId  String // Student card being linked
+  createdById     String? // Principal's roleId who created the link (nullable for SetNull)
+  status          String   @default("ACTIVE") // ACTIVE, REVOKED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  school        School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  primaryPerson Person @relation("PrimarySchoolStudent", fields: [primaryPersonId], references: [id], onDelete: Cascade)
+  linkedPerson  Person @relation("LinkedSchoolStudent", fields: [linkedPersonId], references: [id], onDelete: Cascade)
+  createdBy     Role?  @relation("SchoolLinkCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([schoolId, primaryPersonId, linkedPersonId])
+  @@index([schoolId])
+  @@index([primaryPersonId])
+  @@index([linkedPersonId])
+  @@index([createdById])
+  @@map("school_student_links")
 }
 
 model StudentParentConnection {
@@ -1061,7 +1133,10 @@ model School {
   updatedAt DateTime @updatedAt
 
   // Relations
-  members SchoolMember[]
+  members      SchoolMember[]
+  groups       Group[]            // Classrooms connected to this school for billing
+  studentLinks SchoolStudentLink[] // Student links across teachers in this school
+  invitations  Invitation[]       // Pending invitations to join this school
 
   @@map("schools")
 }

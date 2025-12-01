@@ -316,10 +316,34 @@ export const authRouter = router({
         },
       });
 
-      // Fetch effective tier limits for each role
+      // Fetch effective tier limits for each role and school memberships
       if (dbUser && dbUser.roles) {
         const { getEffectiveTierLimits } = await import('@/lib/services/admin/system-settings.service');
         const { mapDatabaseLimitsToComponentFormat } = await import('@/lib/services/tier-limits');
+
+        // Fetch school memberships for all roles
+        const roleIds = dbUser.roles.map((r) => r.id);
+        const schoolMemberships = await ctx.prisma.schoolMember.findMany({
+          where: {
+            roleId: { in: roleIds },
+            status: 'ACTIVE',
+          },
+          include: {
+            school: {
+              select: { id: true, name: true },
+            },
+          },
+        });
+
+        // Format school memberships
+        const formattedSchoolMemberships = schoolMemberships.map((m) => ({
+          id: m.id,
+          schoolId: m.schoolId,
+          schoolName: m.school?.name,
+          roleId: m.roleId,
+          role: m.role,
+          status: m.status,
+        }));
 
         const rolesWithLimits = await Promise.all(
           dbUser.roles.map(async (role) => {
@@ -344,6 +368,7 @@ export const authRouter = router({
           user: {
             ...dbUser,
             roles: rolesWithLimits,
+            schoolMemberships: formattedSchoolMemberships,
           },
         };
       }

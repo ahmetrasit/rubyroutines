@@ -366,9 +366,10 @@ function UsersContent() {
                 <SelectContent>
                   <SelectItem value="">All tiers</SelectItem>
                   <SelectItem value="FREE">Free</SelectItem>
-                  <SelectItem value="BRONZE">Bronze</SelectItem>
-                  <SelectItem value="GOLD">Gold</SelectItem>
-                  <SelectItem value="PRO">Pro</SelectItem>
+                  <SelectItem value="TINY">Tiny</SelectItem>
+                  <SelectItem value="SMALL">Small</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="LARGE">Large</SelectItem>
                 </SelectContent>
               </Select>
               <Button

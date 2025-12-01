@@ -9,7 +9,7 @@ import { ROLE_COLORS } from '@/lib/constants/theme';
 import { saveLastModeToStorage } from '@/lib/hooks/useLastMode';
 
 interface ModeSwitcherProps {
-  currentMode: 'parent' | 'teacher' | 'admin';
+  currentMode: 'parent' | 'teacher' | 'principal' | 'admin';
 }
 
 export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
@@ -22,17 +22,24 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
     },
   });
 
-  const roles = session?.user?.roles || [];
+  const user = session?.user as any;
+  const roles = user?.roles || [];
   const parentRole = roles.find((role: any) => role.type === 'PARENT');
   const teacherRole = roles.find((role: any) => role.type === 'TEACHER');
-  const isAdmin = session?.user?.isAdmin || false;
+  const isAdmin = user?.isAdmin || false;
+
+  // Check if user has any school memberships as principal
+  const hasPrincipalAccess = user?.schoolMemberships?.some(
+    (m: any) => m.role === 'PRINCIPAL' && m.status === 'ACTIVE'
+  ) || false;
 
   // Default colors if not set
   const parentColor = parentRole?.color || ROLE_COLORS.PARENT; // purple-600
   const teacherColor = teacherRole?.color || ROLE_COLORS.TEACHER; // blue-500
+  const principalColor = ROLE_COLORS.PRINCIPAL; // amber-500
   const adminColor = ROLE_COLORS.PRINCIPAL; // Using principal color for admin
 
-  const handleModeSwitch = (mode: 'parent' | 'teacher' | 'admin') => {
+  const handleModeSwitch = (mode: 'parent' | 'teacher' | 'principal' | 'admin') => {
     // Save the mode to localStorage for home button navigation
     saveLastModeToStorage(mode);
 
@@ -40,13 +47,16 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
       router.push('/parent');
     } else if (mode === 'teacher') {
       router.push('/teacher');
+    } else if (mode === 'principal') {
+      router.push('/principal');
     } else {
       router.push('/admin');
     }
   };
 
-  // Don't show switcher if user doesn't have both roles
-  if (!parentRole || !teacherRole) {
+  // Don't show switcher if user doesn't have multiple roles
+  const hasMultipleModes = (parentRole && teacherRole) || hasPrincipalAccess || isAdmin;
+  if (!hasMultipleModes) {
     return null;
   }
 
@@ -60,6 +70,7 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
 
   const parentRgb = hexToRgb(parentColor);
   const teacherRgb = hexToRgb(teacherColor);
+  const principalRgb = hexToRgb(principalColor);
   const adminRgb = hexToRgb(adminColor);
 
   return (
@@ -119,6 +130,34 @@ export function ModeSwitcher({ currentMode }: ModeSwitcherProps) {
             >
               Teacher Mode
             </button>
+            {hasPrincipalAccess && (
+              <button
+                onClick={() => handleModeSwitch('principal')}
+                className={`
+                  px-6 py-3 font-semibold text-sm transition-all rounded-t-md
+                  ${
+                    currentMode === 'principal'
+                      ? 'border-t-2 border-x-2 -mb-[2px] z-10 relative'
+                      : 'bg-white/50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600'
+                  }
+                `}
+                style={
+                  currentMode === 'principal'
+                    ? {
+                        backgroundColor: `rgba(${principalRgb}, 0.15)`,
+                        borderTopColor: principalColor,
+                        borderLeftColor: principalColor,
+                        borderRightColor: principalColor,
+                        color: principalColor
+                      }
+                    : undefined
+                }
+                aria-label="Switch to principal mode"
+                aria-current={currentMode === 'principal' ? 'page' : undefined}
+              >
+                Principal Mode
+              </button>
+            )}
             {isAdmin && (
               <button
                 onClick={() => handleModeSwitch('admin')}

@@ -52,8 +52,9 @@ export default function BillingPage() {
     return null;
   }
 
-  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
-  const teacherRole = session.user.roles?.find((role: any) => role.type === 'TEACHER');
+  const user = session.user as any;
+  const parentRole = user.roles?.find((role: any) => role.type === 'PARENT');
+  const teacherRole = user.roles?.find((role: any) => role.type === 'TEACHER');
   const activeRole = parentRole || teacherRole;
 
   if (!activeRole) {

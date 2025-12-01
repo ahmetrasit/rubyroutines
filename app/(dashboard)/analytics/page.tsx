@@ -40,8 +40,9 @@ export default function AnalyticsPage() {
   }
 
   // Find the user's primary role (parent or teacher)
-  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
-  const teacherRole = session.user.roles?.find((role: any) => role.type === 'TEACHER');
+  const user = session.user as any;
+  const parentRole = user.roles?.find((role: any) => role.type === 'PARENT');
+  const teacherRole = user.roles?.find((role: any) => role.type === 'TEACHER');
   const activeRole = parentRole || teacherRole;
 
   if (!activeRole) {

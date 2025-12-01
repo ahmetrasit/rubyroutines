@@ -19,12 +19,13 @@ interface TierFeatures {
   support: string;
 }
 
+// Tier names: FREE (3 students), TINY (7), SMALL (15), MEDIUM (23), LARGE (24+)
 const TIER_FEATURES: Record<string, TierFeatures> = {
   FREE: {
     persons: 3,
     groups: 1,
-    routines: 5,
-    tasks: 25,
+    routines: 10,
+    tasks: 10,
     goals: 3,
     smartRoutines: false,
     analytics: false,
@@ -33,25 +34,38 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: false,
     support: 'Community',
   },
-  BRONZE: {
+  TINY: {
     persons: 10,
-    groups: 3,
-    routines: 20,
-    tasks: 100,
+    groups: 5,
+    routines: 50,
+    tasks: 20,
     goals: 10,
     smartRoutines: true,
     analytics: true,
     marketplace: true,
     coparentAccess: true,
-    coteacherAccess: false,
+    coteacherAccess: true,
     support: 'Email',
   },
-  GOLD: {
-    persons: 25,
-    groups: 10,
-    routines: 50,
-    tasks: 250,
-    goals: 25,
+  SMALL: {
+    persons: 50,
+    groups: 20,
+    routines: 200,
+    tasks: 50,
+    goals: 50,
+    smartRoutines: true,
+    analytics: true,
+    marketplace: true,
+    coparentAccess: true,
+    coteacherAccess: true,
+    support: 'Email',
+  },
+  MEDIUM: {
+    persons: 100,
+    groups: 50,
+    routines: 500,
+    tasks: 100,
+    goals: 200,
     smartRoutines: true,
     analytics: true,
     marketplace: true,
@@ -59,16 +73,16 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
     coteacherAccess: true,
     support: 'Priority Email',
   },
-  PRO: {
-    persons: 100,
-    groups: 50,
-    routines: 200,
-    tasks: 1000,
-    goals: 100,
+  LARGE: {
+    persons: 999, // unlimited
+    groups: 999, // unlimited
+    routines: 1000,
+    tasks: 100,
+    goals: 200,
     smartRoutines: true,
     analytics: true,
     marketplace: true,
-    coparentAccess: false,
+    coparentAccess: true,
     coteacherAccess: true,
     support: 'Priority + Phone',
   },
@@ -76,9 +90,19 @@ const TIER_FEATURES: Record<string, TierFeatures> = {
 
 const TIER_PRICES: Record<string, { parent: number; teacher: number }> = {
   FREE: { parent: 0, teacher: 0 },
-  BRONZE: { parent: 1.99, teacher: 4.99 },
-  GOLD: { parent: 3.99, teacher: 9.99 },
-  PRO: { parent: 12.99, teacher: 29.99 },
+  TINY: { parent: 1.99, teacher: 2.99 },
+  SMALL: { parent: 3.99, teacher: 5.99 },
+  MEDIUM: { parent: 7.99, teacher: 9.99 },
+  LARGE: { parent: 12.99, teacher: 9.99 }, // Teacher: $9.99 base + per-student
+};
+
+// Teacher tier descriptions based on max students
+const TIER_DESCRIPTIONS: Record<string, string> = {
+  FREE: 'Up to 3 students',
+  TINY: 'Up to 7 students',
+  SMALL: 'Up to 15 students',
+  MEDIUM: 'Up to 23 students',
+  LARGE: '24+ students',
 };
 
 interface PricingTableProps {
@@ -89,7 +113,7 @@ interface PricingTableProps {
 }
 
 export function PricingTable({ currentTier, onUpgrade, isLoading, roleType = 'PARENT' }: PricingTableProps) {
-  const tiers = ['FREE', 'BRONZE', 'GOLD', 'PRO'];
+  const tiers = ['FREE', 'TINY', 'SMALL', 'MEDIUM', 'LARGE'];
 
   const renderFeature = (label: string, value: string | number | boolean) => {
     if (typeof value === 'boolean') {
@@ -128,21 +152,27 @@ export function PricingTable({ currentTier, onUpgrade, isLoading, roleType = 'PA
             key={tier}
             className={`p-6 ${
               isCurrent ? 'ring-2 ring-blue-500 shadow-lg' : ''
-            } ${tier === 'GOLD' ? 'border-blue-300' : ''}`}
+            } ${tier === 'SMALL' ? 'border-blue-300' : ''}`}
           >
             <div className="space-y-4">
               {/* Header */}
               <div className="text-center pb-4 border-b">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <h3 className="text-xl font-bold text-gray-900">{tier}</h3>
+                  <h3 className="text-xl font-bold text-gray-900 capitalize">{tier.toLowerCase()}</h3>
                   {isCurrent && <Badge variant="default">Current</Badge>}
-                  {tier === 'GOLD' && !isCurrent && (
+                  {tier === 'SMALL' && !isCurrent && (
                     <Badge variant="outline">Popular</Badge>
                   )}
                 </div>
+                {roleType === 'TEACHER' && (
+                  <p className="text-sm text-gray-500 mb-2">{TIER_DESCRIPTIONS[tier]}</p>
+                )}
                 <div className="text-3xl font-bold text-gray-900">
                   ${price}
                   {price > 0 && <span className="text-lg text-gray-600">/month</span>}
+                  {tier === 'LARGE' && roleType === 'TEACHER' && (
+                    <span className="block text-sm text-gray-500 font-normal">+ per-student</span>
+                  )}
                 </div>
               </div>
 

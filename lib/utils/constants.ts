@@ -50,39 +50,49 @@ export const MAX_PAGE_SIZE = 100;
 // Tier Limits
 // ============================================================================
 
+// Teacher tiers: FREE (3 students), TINY (7), SMALL (15), MEDIUM (23), LARGE (24+)
 export const TIER_LIMITS = {
   FREE: {
     persons: 3,
-    routines: 5,
-    goals: 2,
+    routines: 10,
+    goals: 3,
     smartRoutines: 0,
     analytics: false,
     coParents: 0,
     marketplace: false,
   },
-  BRONZE: {
+  TINY: {
     persons: 10,
-    routines: 20,
+    routines: 50,
     goals: 10,
-    smartRoutines: 5,
+    smartRoutines: 2,
     analytics: true,
     coParents: 2,
     marketplace: true,
   },
-  GOLD: {
-    persons: -1, // unlimited
-    routines: -1, // unlimited
-    goals: -1, // unlimited
-    smartRoutines: -1, // unlimited
+  SMALL: {
+    persons: 50,
+    routines: 200,
+    goals: 50,
+    smartRoutines: 10,
     analytics: true,
-    coParents: -1, // unlimited
+    coParents: 5,
     marketplace: true,
   },
-  PRO: {
+  MEDIUM: {
+    persons: 100,
+    routines: 500,
+    goals: 200,
+    smartRoutines: 50,
+    analytics: true,
+    coParents: 10,
+    marketplace: true,
+  },
+  LARGE: {
     persons: -1, // unlimited
-    routines: -1, // unlimited
-    goals: -1, // unlimited
-    smartRoutines: -1, // unlimited
+    routines: 1000,
+    goals: 200,
+    smartRoutines: 100,
     analytics: true,
     coParents: -1, // unlimited
     marketplace: true,

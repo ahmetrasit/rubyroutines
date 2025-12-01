@@ -43,7 +43,8 @@ export default function RoutineDetailPage() {
 
   // Find parent role
   // Cast to include effectiveLimits which is added by auth router
-  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT') as (typeof session.user.roles)[0] & { effectiveLimits?: any } | undefined;
+  const user = session.user as any;
+  const parentRole = user.roles?.find((role: any) => role.type === 'PARENT');
 
   if (!parentRole) {
     return (

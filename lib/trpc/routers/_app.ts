@@ -26,6 +26,8 @@ import { gdprRouter } from './gdpr';
 import { streakRouter } from './streak';
 import { twoFactorRouter } from './two-factor';
 import { blogRouter } from './blog';
+import { teacherStudentLinkRouter } from './teacher-student-link';
+import { schoolRouter } from './school';
 // import { notificationRouter } from './notification';
 
 export const appRouter = router({
@@ -56,6 +58,8 @@ export const appRouter = router({
   gdpr: gdprRouter,
   streak: streakRouter,
   blog: blogRouter,
+  teacherStudentLink: teacherStudentLinkRouter,
+  school: schoolRouter,
   // notification: notificationRouter, // Disabled: Notification table not in schema yet
 });
 

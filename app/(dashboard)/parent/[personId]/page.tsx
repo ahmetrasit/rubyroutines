@@ -21,7 +21,8 @@ export default function PersonDetailPage() {
   );
 
   // Get parent role ID for fetching all persons
-  const parentRoleId = session?.user?.roles?.find((role: any) => role.type === 'PARENT')?.id;
+  const user = session?.user as any;
+  const parentRoleId = user?.roles?.find((role: any) => role.type === 'PARENT')?.id;
 
   // Fetch all persons for this role (needed for connection claiming)
   const { data: allPersons } = trpc.person.list.useQuery(
@@ -48,7 +49,7 @@ export default function PersonDetailPage() {
   }
 
   // Find parent role (cast to include effectiveLimits which is added by auth router)
-  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT') as (typeof session.user.roles)[0] & { effectiveLimits?: any } | undefined;
+  const parentRole = user.roles?.find((role: any) => role.type === 'PARENT');
 
   if (!parentRole) {
     return (

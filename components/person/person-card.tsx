@@ -7,6 +7,8 @@ import { PersonForm } from './person-form';
 import { PersonCheckinModal } from './person-checkin-modal';
 import { PersonConnectionModal } from '@/components/sharing/PersonConnectionModal';
 import { TeacherBulkCheckin } from '@/components/classroom/teacher-bulk-checkin';
+import { LinkedStudentBadge } from '@/components/teacher/LinkedStudentBadge';
+import { StudentLinkModal } from '@/components/teacher/StudentLinkModal';
 import { trpc } from '@/lib/trpc/client';
 import { useAvatar } from '@/lib/hooks';
 import { useDeleteMutation } from '@/lib/hooks';
@@ -34,6 +36,7 @@ export const PersonCard = memo(function PersonCard({
   const [showCheckin, setShowCheckin] = useState(false);
   const [showConnection, setShowConnection] = useState(false);
   const [showBulkCheckin, setShowBulkCheckin] = useState(false);
+  const [showStudentLink, setShowStudentLink] = useState(false);
   const utils = trpc.useUtils();
 
   // Parse avatar data using custom hook
@@ -179,9 +182,19 @@ export const PersonCard = memo(function PersonCard({
           </div>
 
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 truncate">
-              {person.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 truncate">
+                {person.name}
+              </h3>
+              {/* Show linked badge for students in teacher mode */}
+              {roleType === 'TEACHER' && roleId && !person.isTeacher && !person.isAccountOwner && (
+                <LinkedStudentBadge
+                  personId={person.id}
+                  roleId={roleId}
+                  onClick={() => setShowStudentLink(true)}
+                />
+              )}
+            </div>
             <p className="text-xs text-gray-600 dark:text-gray-400 truncate font-medium mt-0.5">
               {connectionStatus}
             </p>
@@ -379,6 +392,16 @@ export const PersonCard = memo(function PersonCard({
           roleId={roleId}
           isOpen={showBulkCheckin}
           onClose={() => setShowBulkCheckin(false)}
+        />
+      )}
+
+      {showStudentLink && roleId && roleType === 'TEACHER' && (
+        <StudentLinkModal
+          isOpen={showStudentLink}
+          onClose={() => setShowStudentLink(false)}
+          roleId={roleId}
+          studentId={person.id}
+          studentName={person.name}
         />
       )}
     </>

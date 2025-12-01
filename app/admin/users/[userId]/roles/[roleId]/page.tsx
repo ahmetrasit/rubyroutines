@@ -259,9 +259,10 @@ function ManageRoleTierContent() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={Tier.FREE}>Free</SelectItem>
-                    <SelectItem value={Tier.BRONZE}>Bronze</SelectItem>
-                    <SelectItem value={Tier.GOLD}>Gold</SelectItem>
-                    <SelectItem value={Tier.PRO}>Pro</SelectItem>
+                    <SelectItem value={Tier.TINY}>Tiny</SelectItem>
+                    <SelectItem value={Tier.SMALL}>Small</SelectItem>
+                    <SelectItem value={Tier.MEDIUM}>Medium</SelectItem>
+                    <SelectItem value={Tier.LARGE}>Large</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -8,7 +8,8 @@ export default function KioskSessionsPage() {
   const { data: session, isLoading } = trpc.auth.getSession.useQuery();
 
   // Get any role that can have kiosk sessions (parent or teacher)
-  const role = session?.user?.roles?.find(
+  const user = session?.user as any;
+  const role = user?.roles?.find(
     (r: any) => r.type === 'PARENT' || r.type === 'TEACHER'
   );
   const roleId = role?.id;

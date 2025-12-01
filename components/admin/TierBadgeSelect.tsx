@@ -20,18 +20,21 @@ interface TierBadgeSelectProps {
   disabled?: boolean;
 }
 
+// Teacher tiers: FREE (3 students), TINY (7), SMALL (15), MEDIUM (23), LARGE (24+)
 const TIER_LABELS: Record<Tier, string> = {
   [Tier.FREE]: 'Free',
-  [Tier.BRONZE]: 'Bronze',
-  [Tier.GOLD]: 'Gold',
-  [Tier.PRO]: 'Pro',
+  [Tier.TINY]: 'Tiny',
+  [Tier.SMALL]: 'Small',
+  [Tier.MEDIUM]: 'Medium',
+  [Tier.LARGE]: 'Large',
 };
 
 const TIER_COLORS: Record<Tier, string> = {
   [Tier.FREE]: 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300',
-  [Tier.BRONZE]: 'bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300',
-  [Tier.GOLD]: 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-300',
-  [Tier.PRO]: 'bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300',
+  [Tier.TINY]: 'bg-blue-100 hover:bg-blue-200 text-blue-800 border-blue-300',
+  [Tier.SMALL]: 'bg-green-100 hover:bg-green-200 text-green-800 border-green-300',
+  [Tier.MEDIUM]: 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-300',
+  [Tier.LARGE]: 'bg-purple-100 hover:bg-purple-200 text-purple-800 border-purple-300',
 };
 
 export function TierBadgeSelect({
