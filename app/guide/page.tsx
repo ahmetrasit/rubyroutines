@@ -125,6 +125,197 @@ export default function GuidePage() {
         </div>
       </section>
 
+      {/* Privacy & Safety */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold mb-6">Privacy-First by Design</h2>
+
+        <div className="not-prose">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">🔒</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
+                  Your Data, Your Control
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  We believe privacy is a fundamental right, especially when it comes to children and families.
+                  Ruby Routines is built with privacy at its core.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-5 border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-xl">🚫</span>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">No Unnecessary Data Collection</h4>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  We only collect what&apos;s essential to provide the service. No tracking pixels, no selling data,
+                  no third-party analytics watching your family&apos;s routines.
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-5 border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-xl">🗑️</span>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Complete Data Deletion</h4>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  When you delete your account or request data removal, we permanently delete everything.
+                  No backups kept, no &quot;anonymized&quot; retention—truly gone.
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-5 border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-xl">👨‍👩‍👧</span>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Adults-Only Accounts</h4>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Only adults (parents, teachers, caregivers) create accounts. Children never need to sign up,
+                  provide email addresses, or create passwords.
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-5 border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-xl">🛡️</span>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">No Social Features for Minors</h4>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Children use Kiosk Mode—a simple checklist with no messaging, no profiles, no interaction
+                  with strangers. Just their tasks, nothing else.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-green-100 dark:bg-green-900/30 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-lg">✓</span>
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  <strong>COPPA & GDPR Compliant:</strong> We follow strict guidelines for children&apos;s privacy.
+                  Parental consent is required, and we never collect more than necessary.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold mb-6">Who Uses Ruby Routines?</h2>
+
+        <div className="not-prose grid md:grid-cols-2 gap-6">
+          {/* Families with Children */}
+          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">👨‍👩‍👧‍👦</span>
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Families with Children</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Help kids build independence with morning routines, homework schedules, and bedtime rituals.
+            </p>
+            <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2">
+                <span className="text-purple-500">•</span>
+                <span>Morning routine (brush teeth, get dressed, pack bag)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-purple-500">•</span>
+                <span>Homework and reading time</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-purple-500">•</span>
+                <span>Chores and responsibilities</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Elder Care */}
+          <div className="bg-teal-50 dark:bg-teal-900/20 rounded-xl p-6 border border-teal-200 dark:border-teal-800">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">👴👵</span>
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Elder Care & Caregivers</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Support aging parents or loved ones with gentle reminders for daily health routines.
+            </p>
+            <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2">
+                <span className="text-teal-500">•</span>
+                <span>Medication schedules (morning, afternoon, evening pills)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-teal-500">•</span>
+                <span>Hydration tracking (glasses of water per day)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-teal-500">•</span>
+                <span>Meal reminders (breakfast, lunch, dinner)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-teal-500">•</span>
+                <span>Exercise and mobility activities</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Schools */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">🏫</span>
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Schools & Classrooms</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Teachers track classroom routines and help students build organizational skills.
+            </p>
+            <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2">
+                <span className="text-blue-500">•</span>
+                <span>Morning check-in and attendance</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-500">•</span>
+                <span>Classroom responsibilities</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-blue-500">•</span>
+                <span>End-of-day pack-up routine</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Special Needs */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-6 border border-amber-200 dark:border-amber-800">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">🧠</span>
+              <h3 className="font-semibold text-lg text-gray-900 dark:text-white">Neurodivergent Support</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Visual structure helps those with ADHD, autism, or executive function challenges.
+            </p>
+            <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-500">•</span>
+                <span>Visual task sequences reduce cognitive load</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-500">•</span>
+                <span>No time pressure or overwhelming notifications</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-500">•</span>
+                <span>Consistent structure without rigidity</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Quick Start */}
       <section className="mb-12">
         <h2 className="text-2xl font-bold mb-6">Quick Start Guides</h2>
