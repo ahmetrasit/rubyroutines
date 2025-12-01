@@ -11,6 +11,7 @@
 8. [Task Types & Completion](#8-task-types--completion)
 9. [Routine Configuration](#9-routine-configuration)
 10. [Admin Features](#10-admin-features)
+11. [School Mode (Principal)](#11-school-mode-principal)
 
 ---
 
@@ -800,6 +801,481 @@ Can only edit: color, description
 
 ---
 
+## 11. School Mode (Principal)
+
+School Mode enables principals to manage schools with teachers and support staff. It provides a hierarchical structure for educational institutions with centralized administration.
+
+### 11.1 Core Concepts
+
+```
+School Hierarchy:
+┌─────────────────────────────────────────────────────────┐
+│                      SCHOOL                             │
+│                         │                               │
+│     ┌───────────────────┼───────────────────┐          │
+│     ↓                   ↓                   ↓          │
+│ PRINCIPAL          TEACHERS           SUPPORT STAFF    │
+│ (Full control)     (Classrooms)       (View access)    │
+│     │                   │                              │
+│     │           ┌───────┼───────┐                      │
+│     │           ↓       ↓       ↓                      │
+│     │      Classroom Classroom Classroom               │
+│     │           │                                      │
+│     │       Students                                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Role Types within School:**
+| Role | Permissions | Created From |
+|------|-------------|--------------|
+| PRINCIPAL | Full school management, invite staff, connect classrooms | School creator |
+| TEACHER | Manage own classrooms, connect to school | Accepts SCHOOL_TEACHER invitation |
+| SUPPORT | View-only access to school data | Accepts SCHOOL_SUPPORT invitation |
+
+**Key Database Models:**
+- `School` - The educational institution
+- `SchoolMember` - Links roles to schools with role type (PRINCIPAL/TEACHER/SUPPORT)
+- `Group.schoolId` - Connects classrooms to schools for billing
+
+### 11.2 School Creation Flow
+
+```
+User (with PARENT or TEACHER role)
+              ↓
+/principal → No schools found → "Create Your First School"
+              ↓
+/principal/create-school → School Creation Form
+              ↓
+    ┌─────────────────────────┐
+    │ name: "Lincoln Elementary" │
+    │ address: "123 Main St"     │
+    │ website: "https://..."     │
+    └─────────────────────────┘
+              ↓
+school.create mutation (transaction):
+    1. Verify role exists
+    2. Create School record
+    3. Create SchoolMember (PRINCIPAL)
+              ↓
+Redirect to /principal dashboard
+              ↓
+Mode switcher now shows "Principal Mode" tab
+```
+
+**Files:** `/principal/create-school/page.tsx`, `lib/trpc/routers/school.ts:create`
+
+### 11.3 Principal Dashboard Flow
+
+```
+/principal → Load Session → Check schoolMemberships
+                                    ↓
+                    ┌───────────────┼───────────────┐
+                    ↓               ↓               ↓
+            Single School    Multi School    No Schools
+                    ↓               ↓               ↓
+            Show Dashboard   School Selector   Create School
+                                    ↓
+                    ┌───────────────┼───────────────┐
+                    ↓               ↓               ↓               ↓
+                Teachers      Classrooms     Support Staff    Invitations
+                    ↓               ↓               ↓               ↓
+              View list      View list       View list       Pending list
+              w/ remove      (read-only)     w/ remove       w/ cancel
+```
+
+**Dashboard Components:**
+```
+┌─────────────────────────────────────────────────────────┐
+│  [School Selector dropdown] (if multiple schools)       │
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  🏫 Lincoln Elementary School                     │  │
+│  │     School Administration                         │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                         │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐          │
+│  │Classrooms│ │Teachers │ │Support │ │Students │          │
+│  │    5     │ │   12    │ │   3    │ │   150   │          │
+│  └────────┘ └────────┘ └────────┘ └────────┘          │
+│                                                         │
+│  ┌─────────────────────┐ ┌─────────────────────┐      │
+│  │ Teachers            │ │ Classrooms           │      │
+│  │ • John Smith        │ │ • Grade 3A (25)      │      │
+│  │ • Jane Doe          │ │ • Grade 3B (22)      │      │
+│  │ [View all]          │ │ [View all]           │      │
+│  └─────────────────────┘ └─────────────────────┘      │
+│                                                         │
+│  ┌─────────────────────┐ ┌─────────────────────┐      │
+│  │ Support Staff       │ │ Pending Invitations  │      │
+│  │ • Admin Assistant   │ │ • teacher@school.edu │      │
+│  │ [View all]          │ │   (Teacher - Pending)│      │
+│  └─────────────────────┘ └─────────────────────┘      │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Files:** `/principal/page.tsx`, `lib/trpc/routers/school.ts:getMembers,getClassrooms,getPendingInvitations`
+
+### 11.4 Teacher Invitation Flow
+
+```
+PRINCIPAL                                TEACHER
+=========                                =======
+
+1. /principal/[schoolId]/invite
+         ↓
+   Select "Teacher" role type
+         ↓
+   Enter email: teacher@school.edu
+         ↓
+   school.inviteTeacher mutation:
+     a. Verify caller is PRINCIPAL
+     b. Create Invitation (type=SCHOOL_TEACHER)
+     c. Update invitation with schoolId, schoolRole='TEACHER'
+     d. Send email with invitation link
+         ↓
+   Invitation appears in pending list
+                                         2. Receive email with invite link
+                                                    ↓
+                                         /invitations/accept?code=...
+                                                    ↓
+                                         acceptSchoolTeacherInvitationTx:
+                                           a. Find/create TEACHER role
+                                           b. Create SchoolMember (role=TEACHER)
+                                                    ↓
+                                         Teacher can now:
+                                           • Access school classrooms
+                                           • Connect classrooms to school
+                                           • See "Principal Mode" in switcher
+
+3. Invitation removed from pending
+   Teacher appears in school members
+```
+
+**Invitation Schema:**
+```typescript
+Invitation {
+  type: InvitationType.SCHOOL_TEACHER
+  schoolId: string           // Target school
+  schoolRole: 'TEACHER'      // Role within school
+  expiresAt: Date            // 7 days from creation
+}
+```
+
+**Files:** `/principal/[schoolId]/invite/page.tsx`, `lib/trpc/routers/school.ts:inviteTeacher`, `lib/services/invitation.service.ts:acceptSchoolTeacherInvitationTx`
+
+### 11.5 Support Staff Invitation Flow
+
+```
+PRINCIPAL                                SUPPORT STAFF
+=========                                =============
+
+1. /principal/[schoolId]/invite
+         ↓
+   Select "Support Staff" role type
+         ↓
+   Enter email: admin@school.edu
+         ↓
+   school.inviteSupport mutation:
+     a. Verify caller is PRINCIPAL
+     b. Create Invitation (type=SCHOOL_SUPPORT)
+     c. Update invitation with schoolId, schoolRole='SUPPORT'
+     d. Send email with invitation link
+         ↓
+   Invitation appears in pending list
+                                         2. Receive email with invite link
+                                                    ↓
+                                         /invitations/accept?code=...
+                                                    ↓
+                                         acceptSchoolSupportInvitationTx:
+                                           a. Find/create PARENT role
+                                           b. Create SchoolMember (role=SUPPORT)
+                                                    ↓
+                                         Support staff can now:
+                                           • View school data (read-only)
+                                           • Access parent/teacher modes
+                                           • NO classroom management
+```
+
+**Note:** Support staff use PARENT role internally but get SUPPORT membership in school. This allows them to use parent features while having limited school access.
+
+### 11.6 Classroom-School Connection Flow
+
+```
+TEACHER (in school)                      PRINCIPAL VIEW
+===================                      ==============
+
+1. Teacher creates classroom normally
+   (/teacher → Create Classroom)
+         ↓
+2. school.connectClassroom:
+   • Teacher must be school member
+   • Classroom must belong to teacher
+   • Updates Group.schoolId
+         ↓
+3. Classroom appears in:                 Sees classroom in:
+   • Teacher's dashboard                 • Principal dashboard
+   • School's classroom list             • /principal/[schoolId]/classrooms
+         ↓
+4. Billing: Classroom counts toward      Can view student counts
+   school's subscription                 and teacher assignments
+```
+
+**Disconnect Flow:**
+```
+Teacher → school.disconnectClassroom
+              ↓
+    Verify teacher owns classroom
+              ↓
+    Set Group.schoolId = null
+              ↓
+    Classroom removed from school
+    (still exists in teacher's dashboard)
+```
+
+### 11.7 School Member Management
+
+```
+/principal/[schoolId]/teachers → Teachers List
+                                       ↓
+                    ┌──────────────────┼──────────────────┐
+                    ↓                  ↓                  ↓
+              View Details       Remove Member      Invite More
+                    ↓                  ↓                  ↓
+              User name/email    school.removeMember  → Invite page
+                    ↓                  ↓
+              Joined date        Confirm → Remove
+                                       ↓
+                                Set status='REMOVED'
+                                       ↓
+                                Teacher loses school access
+                                (keeps their classrooms)
+```
+
+**Member Removal Rules:**
+- Cannot remove self (prevent principal lockout)
+- Removed members keep their roles and classrooms
+- Only SchoolMember status changes to 'REMOVED'
+- Teacher can be re-invited later
+
+### 11.8 School Settings Management
+
+```
+/principal/[schoolId]/settings → Settings Page
+                                       ↓
+              ┌────────────────────────┼────────────────────────┐
+              ↓                        ↓                        ↓
+        School Info              Danger Zone            (Future: Billing)
+              ↓                        ↓
+    • Name (editable)           Delete School
+    • Address (editable)              ↓
+    • Website (editable)        Confirm dialog
+              ↓                        ↓
+    school.update mutation      (Not implemented)
+```
+
+### 11.9 Mode Switching with Principal
+
+```
+User with school membership
+         ↓
+getSession → includes schoolMemberships
+         ↓
+mode-switcher.tsx checks:
+  hasPrincipalAccess = schoolMemberships.some(
+    m => m.role === 'PRINCIPAL' && m.status === 'ACTIVE'
+  )
+         ↓
+    ┌────────────────────────────────────────┐
+    │ [Parent Mode] [Teacher Mode] [Principal Mode] │
+    └────────────────────────────────────────┘
+         ↓
+Click "Principal Mode" → /principal
+         ↓
+Last mode saved to localStorage
+```
+
+**Mode Access Rules:**
+| User Has | Modes Available |
+|----------|----------------|
+| PARENT role only | Parent |
+| TEACHER role only | Teacher |
+| PARENT + TEACHER | Parent, Teacher |
+| PARENT + PRINCIPAL membership | Parent, Principal |
+| TEACHER + PRINCIPAL membership | Teacher, Principal |
+| All three | Parent, Teacher, Principal |
+
+### 11.10 Multi-School Support
+
+```
+User can be PRINCIPAL of multiple schools:
+              ↓
+┌─────────────────────────────────────┐
+│  Select School: [Lincoln Elementary ▼]  │
+│                 ├── Lincoln Elementary  │
+│                 ├── Washington Middle   │
+│                 └── Jefferson High      │
+└─────────────────────────────────────┘
+              ↓
+Switching school reloads:
+  • Members list
+  • Classrooms list
+  • Pending invitations
+              ↓
+Each school has independent:
+  • Teacher roster
+  • Support staff
+  • Connected classrooms
+  • Billing/subscription
+```
+
+**Teacher Multi-School:**
+```
+Teacher can be member of multiple schools:
+              ↓
+Same TEACHER role → Multiple SchoolMember records
+              ↓
+Different classrooms can connect to different schools
+              ↓
+Teacher sees "Principal Mode" if PRINCIPAL in any school
+```
+
+### 11.11 Authorization Matrix
+
+| Action | PRINCIPAL | TEACHER | SUPPORT |
+|--------|-----------|---------|---------|
+| View school dashboard | ✓ | ✗ | ✗ |
+| Invite teachers | ✓ | ✗ | ✗ |
+| Invite support staff | ✓ | ✗ | ✗ |
+| Remove members | ✓ | ✗ | ✗ |
+| Update school settings | ✓ | ✗ | ✗ |
+| View school members | ✓ | ✓ | ✓ |
+| View school classrooms | ✓ | ✓ | ✓ |
+| Connect own classroom | ✗ | ✓ | ✗ |
+| Disconnect own classroom | ✗ | ✓ | ✗ |
+| View all students | ✓ | ✗ | ✗ |
+| Link students cross-teacher | ✓ | ✗ | ✗ |
+
+### 11.12 Database Models
+
+```
+School {
+  id: cuid
+  name: string
+  address: string?
+  website: string?
+  status: 'ACTIVE' | 'ARCHIVED'
+  members: SchoolMember[]
+  classrooms: Group[] (via schoolId)
+  invitations: Invitation[]
+}
+
+SchoolMember {
+  id: cuid
+  schoolId: string → School
+  roleId: string → Role
+  role: 'PRINCIPAL' | 'TEACHER' | 'SUPPORT'
+  status: 'ACTIVE' | 'REMOVED'
+  createdAt: DateTime
+}
+
+Invitation (extended) {
+  schoolId: string? → School
+  schoolRole: 'TEACHER' | 'SUPPORT'?
+}
+
+Group (extended) {
+  schoolId: string? → School
+}
+```
+
+### 11.13 API Endpoints
+
+| Endpoint | Method | Authorization | Purpose |
+|----------|--------|---------------|---------|
+| `school.create` | mutation | verified | Create new school |
+| `school.update` | mutation | PRINCIPAL | Update school details |
+| `school.list` | query | member | List user's schools |
+| `school.getMembers` | query | member | Get school members |
+| `school.removeMember` | mutation | PRINCIPAL | Remove teacher/support |
+| `school.connectClassroom` | mutation | TEACHER+member | Link classroom to school |
+| `school.disconnectClassroom` | mutation | TEACHER+owner | Unlink classroom |
+| `school.getClassrooms` | query | member | List school classrooms |
+| `school.inviteTeacher` | mutation | PRINCIPAL | Send teacher invitation |
+| `school.inviteSupport` | mutation | PRINCIPAL | Send support invitation |
+| `school.getPendingInvitations` | query | PRINCIPAL | List pending invites |
+| `school.cancelInvitation` | mutation | PRINCIPAL | Cancel pending invite |
+| `school.getAllStudents` | query | PRINCIPAL | View all students |
+| `school.bulkLinkStudents` | mutation | PRINCIPAL | Link students across teachers |
+
+**Files:** `lib/trpc/routers/school.ts`
+
+### 11.14 Invitation Status Flow
+
+```
+                    PENDING
+                       ↓
+    ┌──────────────────┼──────────────────┐
+    ↓                  ↓                  ↓
+ACCEPTED          CANCELLED           EXPIRED
+    ↓                  ↓                  ↓
+SchoolMember      Principal cancels   7 days passed
+created                ↓                  ↓
+                  Can re-invite      Can re-invite
+```
+
+**InvitationStatus Enum:**
+- `PENDING` - Awaiting acceptance
+- `ACCEPTED` - User joined school
+- `CANCELLED` - Principal revoked
+- `EXPIRED` - Past expiration date
+- `REJECTED` - User declined (not used for school invites)
+
+### 11.15 Session Data Structure
+
+```typescript
+// getSession response includes:
+{
+  user: {
+    id, email, name, isAdmin,
+    roles: [...],
+    schoolMemberships: [
+      {
+        id: "member-id",
+        schoolId: "school-id",
+        roleId: "role-id",
+        role: "PRINCIPAL" | "TEACHER" | "SUPPORT",
+        status: "ACTIVE",
+        school: {
+          id: "school-id",
+          name: "Lincoln Elementary"
+        }
+      }
+    ]
+  }
+}
+```
+
+### 11.16 Error Handling
+
+| Error | Cause | Resolution |
+|-------|-------|------------|
+| "Role not found" | Invalid roleId | Use valid role from session |
+| "Only principals can..." | Non-principal attempting admin action | Must be PRINCIPAL |
+| "You must be a member of this school" | Accessing school without membership | Get invited first |
+| "Classroom not found or not owned by you" | Connecting non-owned classroom | Must own classroom |
+| "Cannot remove yourself from the school" | Principal self-removal | Transfer principal first |
+
+### 11.17 Future Enhancements
+
+- **Delete school:** Full school deletion with cascade
+- **Transfer principal:** Hand over principal role to another member
+- **School billing:** Centralized subscription for all classrooms
+- **School-wide routines:** Assign routines across all classrooms
+- **Support staff permissions:** Granular access control
+- **School reports:** Aggregate analytics across classrooms
+
+---
+
 ## Quick Reference: Key Files
 
 | Feature | Router | Service | UI |
@@ -813,6 +1289,7 @@ Can only edit: color, description
 | Marketplace | `marketplace.ts` | `marketplace.service.ts` | `components/marketplace/` |
 | Connections | `person-connection.ts` | `person-connection.service.ts` | `components/sharing/` |
 | Groups | `group.ts` | - | `components/classroom/` |
+| School Mode | `school.ts` | `invitation.service.ts` | `app/(dashboard)/principal/` |
 
 ---
 
@@ -830,4 +1307,4 @@ Can only edit: color, description
 
 ---
 
-*Last updated: 2025-12-01*
+*Last updated: 2025-12-01* (Added School Mode section)
