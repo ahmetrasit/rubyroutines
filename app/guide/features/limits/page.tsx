@@ -27,264 +27,255 @@ export default function LimitsGuidePage() {
 
       {/* Parent Mode Limits */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-6">Parent Mode Limits</h2>
+        <h2 className="text-2xl font-bold mb-6">Parent Mode Tiers</h2>
 
         <div className="not-prose">
-          <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Feature</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">Free</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-purple-600 dark:text-purple-400">Standard</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-amber-600 dark:text-amber-400">Premium</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Children</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">2</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Routines per child</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">3</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Tasks per routine</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">5</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">20</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Kiosk sessions</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Co-parent sharing</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Goals</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">1 per child</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">5 per child</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">History retention</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">30 days</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">1 year</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Forever</td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="overflow-x-auto">
+            <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 min-w-[700px]">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Feature</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">Free</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-blue-600 dark:text-blue-400">Tiny<br/><span className="text-xs font-normal">$1.99/mo</span></th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-green-600 dark:text-green-400">Small<br/><span className="text-xs font-normal">$3.99/mo</span></th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-purple-600 dark:text-purple-400">Medium<br/><span className="text-xs font-normal">$7.99/mo</span></th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-amber-600 dark:text-amber-400">Large<br/><span className="text-xs font-normal">$12.99/mo</span></th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Children</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">3</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">100</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Total routines</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">200</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">500</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">1,000</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Tasks per routine</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">20</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">100</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">100</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Goals</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">3</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">200</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">200</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Co-parents</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-400">—</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">1</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">3</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">5</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Kiosk codes</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">1</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">5</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">20</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">100</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Smart routines</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-400">—</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">2</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">100</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Teacher Mode Limits */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-6">Teacher Mode Limits</h2>
+        <h2 className="text-2xl font-bold mb-6">Teacher Mode Tiers</h2>
 
         <div className="not-prose">
-          <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Feature</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">Free</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-blue-600 dark:text-blue-400">Standard</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-amber-600 dark:text-amber-400">Premium</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Classrooms</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">3</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">20</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Students per classroom</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">15</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">40</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Routines per classroom</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">3</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Bulk check-in</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Parent connections</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                  <td className="px-4 py-3 text-sm text-center text-green-600 dark:text-green-400">✓</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* Principal Mode Limits */}
-      <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-6">Principal Mode (School) Limits</h2>
-
-        <div className="not-prose">
-          <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Feature</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">Free</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-amber-600 dark:text-amber-400">Standard</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-purple-600 dark:text-purple-400">Premium</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Schools</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">1</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">1</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Multiple</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Teachers</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">3</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">20</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Support staff</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">2</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Total students</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">500</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">School-wide routines</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">2</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* Plan Comparison */}
-      <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-6">Plan Overview</h2>
-
-        <div className="not-prose grid md:grid-cols-3 gap-6">
-          {/* Free */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 border-2 border-gray-200 dark:border-gray-700">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Free</h3>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-4">$0</div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              Perfect for trying out Ruby Routines with a small family or classroom.
-            </p>
-            <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>All core features</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Kiosk mode</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Co-parent sharing</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-amber-500">~</span>
-                <span>Limited capacity</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Standard */}
-          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-6 border-2 border-purple-300 dark:border-purple-700">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Standard</h3>
-              <span className="text-xs bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 px-2 py-1 rounded">Popular</span>
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-start gap-3">
+              <span className="text-lg">💡</span>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Usage-based pricing:</strong> Teacher tiers are based on active student count.
+                Your tier automatically adjusts based on how many students you have.
+              </p>
             </div>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-4">$9<span className="text-lg font-normal text-gray-500">/mo</span></div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              For growing families and active classrooms that need more space.
-            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 min-w-[700px]">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Feature</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">Free<br/><span className="text-xs font-normal">1-3 students</span></th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-blue-600 dark:text-blue-400">Tiny<br/><span className="text-xs font-normal">4-7 students<br/>$2.99/mo</span></th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-green-600 dark:text-green-400">Small<br/><span className="text-xs font-normal">8-15 students<br/>$5.99/mo</span></th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-purple-600 dark:text-purple-400">Medium<br/><span className="text-xs font-normal">16-23 students<br/>$9.99/mo</span></th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-amber-600 dark:text-amber-400">Large<br/><span className="text-xs font-normal">24+ students<br/>$9.99 + $0.10/student</span></th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Max students</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">3</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">7</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">15</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">23</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">Unlimited</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Total routines</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">200</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">500</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">1,000</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Tasks per routine</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">20</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">100</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">100</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Goals</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">3</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">100</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">200</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Co-teachers</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-400">—</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">2</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">5</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">10</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">20</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Kiosk codes</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">1</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">5</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">20</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">50</td>
+                    <td className="px-4 py-3 text-sm text-center text-gray-600 dark:text-gray-300">100</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* School Mode Pricing */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold mb-6">School Mode Pricing</h2>
+
+        <div className="not-prose">
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-6 border border-amber-200 dark:border-amber-800">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">🏫</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
+                  Annual School Subscription
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  School Mode uses simple, transparent yearly pricing based on your student count.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-5 border border-gray-200 dark:border-gray-600">
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  $299<span className="text-lg font-normal text-gray-500">/year</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Base subscription fee (paid upfront)
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-5 border border-gray-200 dark:border-gray-600">
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  +$1<span className="text-lg font-normal text-gray-500">/student</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Per active student, per year
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 bg-amber-100 dark:bg-amber-900/30 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Example pricing:</h4>
+              <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                <li>• 100 students: $299 + $100 = <strong>$399/year</strong></li>
+                <li>• 300 students: $299 + $300 = <strong>$599/year</strong></li>
+                <li>• 500 students: $299 + $500 = <strong>$799/year</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* All Plans Include */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold mb-6">All Plans Include</h2>
+
+        <div className="not-prose grid md:grid-cols-2 gap-6">
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <span className="text-green-500">✓</span> Core Features
+            </h3>
             <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Everything in Free</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>10x more capacity</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>1 year history</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Priority support</span>
-              </li>
+              <li>• Kiosk Mode for self-check-in</li>
+              <li>• All task types (check-off, counter, time)</li>
+              <li>• Customizable reset periods</li>
+              <li>• Progress tracking & history</li>
+              <li>• Dark mode support</li>
             </ul>
           </div>
 
-          {/* Premium */}
-          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-6 border-2 border-amber-300 dark:border-amber-700">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Premium</h3>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-4">$29<span className="text-lg font-normal text-gray-500">/mo</span></div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              For schools and large organizations with unlimited needs.
-            </p>
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 border border-green-200 dark:border-green-800">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <span className="text-green-500">✓</span> Community Access
+            </h3>
             <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Everything in Standard</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Unlimited everything</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Multiple schools</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Forever history</span>
-              </li>
+              <li>• Browse community routines</li>
+              <li>• Import templates for free</li>
+              <li>• Share your own routines</li>
+              <li>• No premium paywall</li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* What Happens When You Hit a Limit */}
+      {/* What Happens at Limits */}
       <section className="mb-12">
         <h2 className="text-2xl font-bold mb-6">What Happens at Limits</h2>
 
@@ -295,7 +286,7 @@ export default function LimitsGuidePage() {
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white">Soft limits</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  When you reach a limit, you&apos;ll see a friendly message explaining what&apos;s happening. Existing data is never deleted.
+                  When you reach a limit, you&apos;ll see a friendly message. Existing data is never deleted.
                 </p>
               </div>
             </div>
@@ -303,9 +294,9 @@ export default function LimitsGuidePage() {
             <div className="flex items-start gap-4">
               <span className="text-xl">🔒</span>
               <div>
-                <h4 className="font-medium text-gray-900 dark:text-white">Adding is blocked</h4>
+                <h4 className="font-medium text-gray-900 dark:text-white">Adding is paused</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  You won&apos;t be able to add more items (children, routines, etc.) until you upgrade or remove existing ones.
+                  You won&apos;t be able to add more items until you upgrade or remove existing ones.
                 </p>
               </div>
             </div>
@@ -319,6 +310,16 @@ export default function LimitsGuidePage() {
                 </p>
               </div>
             </div>
+
+            <div className="flex items-start gap-4">
+              <span className="text-xl">📉</span>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white">Downgrade gracefully</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  If you downgrade, you keep all your data. You just can&apos;t add more until you&apos;re within limits.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -328,7 +329,7 @@ export default function LimitsGuidePage() {
         <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-gray-700">
           <Link href="/guide/features/marketplace" className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400">
             <span>←</span>
-            <span>Marketplace</span>
+            <span>Routine Community</span>
           </Link>
           <Link href="/guide" className="flex items-center gap-2 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300">
             <span>Back to Guide Home</span>

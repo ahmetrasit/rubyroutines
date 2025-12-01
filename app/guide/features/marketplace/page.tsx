@@ -8,7 +8,7 @@ export default function MarketplaceGuidePage() {
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <Link href="/guide" className="hover:text-purple-600">Guide</Link>
           <span>/</span>
-          <span className="text-gray-900 dark:text-white">Marketplace</span>
+          <span className="text-gray-900 dark:text-white">Routine Community</span>
         </div>
       </div>
 
@@ -16,24 +16,33 @@ export default function MarketplaceGuidePage() {
       <div className="not-prose mb-8">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-            <span className="text-3xl">🛒</span>
+            <span className="text-3xl">🤝</span>
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Marketplace</h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">Discover and share routine templates</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Routine Community</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">Discover, share, and learn from others&apos; routines</p>
           </div>
         </div>
       </div>
 
-      {/* What is Marketplace */}
+      {/* What is Routine Community */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold mb-6">What is the Marketplace?</h2>
+        <h2 className="text-2xl font-bold mb-6">What is the Routine Community?</h2>
 
         <div className="not-prose">
           <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-6 border border-amber-200 dark:border-amber-800">
             <p className="text-gray-700 dark:text-gray-300 mb-6">
-              The Marketplace is a community-driven library of routine templates. Browse routines created by other parents, educators, and child development experts, then import them into your own account.
+              The Routine Community is a free, community-driven library of routine templates. Browse routines created by other parents, educators, caregivers, and child development experts—then import them into your own account. Share your successful routines to help others, and benefit from the collective wisdom of families worldwide.
             </p>
+
+            <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <span className="text-lg">✨</span>
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  <strong>100% Free:</strong> No premium tiers, no paywalls. Everyone can browse, import, and share routines at absolutely no cost.
+                </p>
+              </div>
+            </div>
 
             <div className="grid md:grid-cols-3 gap-4">
               <div className="bg-white dark:bg-gray-700 rounded-lg p-4 text-center">
@@ -65,7 +74,7 @@ export default function MarketplaceGuidePage() {
             {/* Mock Header */}
             <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-600">
               <div className="flex items-center gap-4">
-                <span className="font-medium text-gray-900 dark:text-white">Routine Marketplace</span>
+                <span className="font-medium text-gray-900 dark:text-white">Routine Community</span>
                 <div className="flex-1">
                   <div className="bg-gray-200 dark:bg-gray-600 rounded px-3 py-1 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
                     Search routines...

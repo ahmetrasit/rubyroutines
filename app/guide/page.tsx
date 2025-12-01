@@ -316,6 +316,72 @@ export default function GuidePage() {
         </div>
       </section>
 
+      {/* Routine Community */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold mb-6">Routine Community</h2>
+
+        <div className="not-prose">
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 rounded-xl p-6 border border-orange-200 dark:border-orange-800">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">🤝</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
+                  Free Community, Shared Wisdom
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Join a growing community of parents, teachers, and caregivers sharing what works.
+                  Browse routines created by others, learn from their experiences, and share your own—all completely free.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-4 text-center border border-gray-200 dark:border-gray-600">
+                <div className="text-2xl mb-2">📥</div>
+                <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Import & Customize</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Find a routine that works, import it, then adapt it to your family&apos;s needs
+                </p>
+              </div>
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-4 text-center border border-gray-200 dark:border-gray-600">
+                <div className="text-2xl mb-2">💡</div>
+                <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Learn from Others</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  See how other parents structure bedtime, homework, and morning routines
+                </p>
+              </div>
+              <div className="bg-white dark:bg-gray-700 rounded-lg p-4 text-center border border-gray-200 dark:border-gray-600">
+                <div className="text-2xl mb-2">📤</div>
+                <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Share Your Success</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Publish routines that work for you and help other families thrive
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-orange-100 dark:bg-orange-900/30 rounded-lg p-4">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-lg">✨</span>
+                  <p className="text-sm text-orange-800 dark:text-orange-200">
+                    <strong>100% Free:</strong> No premium tiers for community features.
+                    Everyone can browse, import, and share routines at no cost.
+                  </p>
+                </div>
+                <Link
+                  href="/guide/features/marketplace"
+                  className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Explore Community →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Quick Start */}
       <section className="mb-12">
         <h2 className="text-2xl font-bold mb-6">Quick Start Guides</h2>
