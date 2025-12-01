@@ -12,6 +12,7 @@ import { getTierLimit, type ComponentTierLimits } from '@/lib/services/tier-limi
 import { RoutineActionsModal } from '@/components/routine/RoutineActionsModal';
 import { CopyRoutineModal } from '@/components/routine/copy-routine-modal';
 import { useToast } from '@/components/ui/toast';
+import { SharedRoutinesSection } from '@/components/person/shared-routines-section';
 
 interface PersonDetailSectionsProps {
   roleId: string;
@@ -444,6 +445,9 @@ export function PersonDetailSections({ roleId, personId, effectiveLimits = null,
           </div>
         )}
       </div>
+
+      {/* Shared Routines Section - Read-only view of co-parent's routines */}
+      <SharedRoutinesSection personId={personId} />
 
       {/* Goals Section */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">

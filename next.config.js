@@ -39,6 +39,7 @@ const nextConfig = {
   // Skip static export errors for default error pages
   skipTrailingSlashRedirect: true,
   experimental: {
+    instrumentationHook: true,
     serverActions: {
       bodySizeLimit: '2mb',
     },

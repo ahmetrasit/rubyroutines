@@ -248,6 +248,7 @@ export const RATE_LIMITS = {
   KIOSK: { limit: 10, windowMs: 1 * MS_PER_HOUR },
   API: { limit: 100, windowMs: 1 * MS_PER_MINUTE },
   GLOBAL: { limit: 1000, windowMs: 1 * MS_PER_MINUTE },
+  INVITATION_TOKEN_LOOKUP: { limit: 10, windowMs: 1 * MS_PER_MINUTE }, // 10 attempts per minute per IP - prevents brute force attacks
   CLEANUP_INTERVAL: 60 * TIME.MS_PER_SECOND, // 1 minute
 } as const;
 

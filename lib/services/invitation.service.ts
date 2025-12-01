@@ -17,6 +17,20 @@ export enum CoParentPermission {
   FULL_EDIT = 'FULL_EDIT'
 }
 
+// Type for per-kid routine sharing
+export interface SharedPerson {
+  personId: string;
+  routineIds: string[];
+}
+
+// Type for person linking during accept
+export interface PersonLinking {
+  primaryPersonId: string;  // Inviter's kid
+  linkedPersonId: string | null;  // Accepting user's kid (null if creating new)
+  createNew: boolean;
+  newPersonName?: string;
+}
+
 export interface SendInvitationOptions {
   inviterUserId: string;
   inviterRoleId: string;
@@ -25,6 +39,7 @@ export interface SendInvitationOptions {
   permissions?: string;
   personIds?: string[];
   groupIds?: string[];
+  sharedPersons?: SharedPerson[]; // New: per-kid routine selection for CO_PARENT
 }
 
 /**
@@ -67,7 +82,8 @@ export async function sendInvitation(
     type,
     permissions,
     personIds,
-    groupIds
+    groupIds,
+    sharedPersons
   } = options;
 
   // Check rate limit
@@ -122,6 +138,7 @@ export async function sendInvitation(
       permissions: finalPermissions,
       personIds: personIds || [],
       groupIds: groupIds || [],
+      sharedPersons: (sharedPersons || []) as any, // Store per-kid routine selections as JSON
       expiresAt,
       status: 'PENDING'
     }
@@ -144,7 +161,8 @@ export async function sendInvitation(
  */
 export async function acceptInvitation(
   token: string,
-  acceptingUserId: string
+  acceptingUserId: string,
+  personLinkings?: PersonLinking[]
 ): Promise<void> {
   const invitation = await prisma.invitation.findUnique({
     where: { token },
@@ -185,10 +203,10 @@ export async function acceptInvitation(
     // Handle different invitation types
     switch (invitation.type) {
       case InvitationType.CO_PARENT:
-        await acceptCoParentInvitationTx(tx, invitation, acceptingUserId);
+        await acceptCoParentInvitationTx(tx, invitation, acceptingUserId, personLinkings);
         break;
       case InvitationType.CO_TEACHER:
-        await acceptCoTeacherInvitationTx(tx, invitation, acceptingUserId);
+        await acceptCoTeacherInvitationTx(tx, invitation, acceptingUserId, personLinkings);
         break;
       case InvitationType.SCHOOL_TEACHER:
       case InvitationType.SCHOOL_SUPPORT:
@@ -214,7 +232,8 @@ export async function acceptInvitation(
 async function acceptCoParentInvitationTx(
   tx: any,
   invitation: any,
-  acceptingUserId: string
+  acceptingUserId: string,
+  personLinkings?: PersonLinking[]
 ): Promise<void> {
   // Get or create accepting user's parent role
   let acceptingRole = await tx.role.findFirst({
@@ -234,16 +253,78 @@ async function acceptCoParentInvitationTx(
     });
   }
 
+  // Parse sharedPersons from invitation
+  const sharedPersons: SharedPerson[] = (invitation.sharedPersons as SharedPerson[]) || [];
+
   // Create co-parent relationship
-  await tx.coParent.create({
+  const coParent = await tx.coParent.create({
     data: {
       primaryRoleId: invitation.inviterRoleId,
       coParentRoleId: acceptingRole.id,
       permissions: invitation.permissions,
-      personIds: invitation.personIds,
+      personIds: invitation.personIds, // Keep for backward compat
       status: 'ACTIVE'
     }
   });
+
+  // Handle person linkings (new approach with sharedPersons)
+  if (sharedPersons.length > 0 && personLinkings && personLinkings.length > 0) {
+    // Create a map of primaryPersonId to linking for quick lookup
+    const linkingMap = new Map(personLinkings.map(l => [l.primaryPersonId, l]));
+
+    for (const sharedPerson of sharedPersons) {
+      const linking = linkingMap.get(sharedPerson.personId);
+
+      if (!linking) {
+        continue; // Skip if no linking provided for this shared person
+      }
+
+      let linkedPersonId = linking.linkedPersonId;
+
+      // Create new person if requested
+      if (linking.createNew && linking.newPersonName) {
+        const newPerson = await tx.person.create({
+          data: {
+            roleId: acceptingRole.id,
+            name: linking.newPersonName,
+            status: 'ACTIVE'
+          }
+        });
+        linkedPersonId = newPerson.id;
+
+        // Auto-create "Daily Routine" for new person
+        await tx.routine.create({
+          data: {
+            roleId: acceptingRole.id,
+            name: 'Daily Routine',
+            description: 'Default routine for daily tasks',
+            resetPeriod: 'DAILY',
+            color: '#3B82F6',
+            isProtected: true,
+            status: 'ACTIVE',
+            assignments: {
+              create: {
+                personId: newPerson.id,
+              },
+            },
+          },
+        });
+      }
+
+      // Create CoParentPersonLink record
+      if (linkedPersonId) {
+        await tx.coParentPersonLink.create({
+          data: {
+            coParentId: coParent.id,
+            primaryPersonId: sharedPerson.personId,
+            linkedPersonId: linkedPersonId,
+            routineIds: sharedPerson.routineIds,
+            status: 'ACTIVE'
+          }
+        });
+      }
+    }
+  }
 }
 
 /**
@@ -252,7 +333,8 @@ async function acceptCoParentInvitationTx(
 async function acceptCoTeacherInvitationTx(
   tx: any,
   invitation: any,
-  acceptingUserId: string
+  acceptingUserId: string,
+  personLinkings?: PersonLinking[]
 ): Promise<void> {
   // Get or create accepting user's teacher role
   let acceptingRole = await tx.role.findFirst({
@@ -272,9 +354,12 @@ async function acceptCoTeacherInvitationTx(
     });
   }
 
+  // Parse sharedPersons from invitation
+  const sharedPersons: SharedPerson[] = (invitation.sharedPersons as SharedPerson[]) || [];
+
   // Create co-teacher relationship for each shared group
   for (const groupId of invitation.groupIds) {
-    await tx.coTeacher.create({
+    const coTeacher = await tx.coTeacher.create({
       data: {
         groupId,
         primaryTeacherRoleId: invitation.inviterRoleId,
@@ -283,6 +368,74 @@ async function acceptCoTeacherInvitationTx(
         status: 'ACTIVE'
       }
     });
+
+    // Handle person linkings (new approach with sharedPersons)
+    if (sharedPersons.length > 0 && personLinkings && personLinkings.length > 0) {
+      // Create a map of primaryPersonId to linking for quick lookup
+      const linkingMap = new Map(personLinkings.map(l => [l.primaryPersonId, l]));
+
+      for (const sharedPerson of sharedPersons) {
+        const linking = linkingMap.get(sharedPerson.personId);
+
+        if (!linking) {
+          // If no linking provided, still create the CoTeacherStudentLink
+          // with linkedStudentId as null (pending state)
+          await tx.coTeacherStudentLink.create({
+            data: {
+              coTeacherId: coTeacher.id,
+              primaryStudentId: sharedPerson.personId,
+              linkedStudentId: null,
+              routineIds: sharedPerson.routineIds,
+              status: 'PENDING'
+            }
+          });
+          continue;
+        }
+
+        let linkedStudentId = linking.linkedPersonId;
+
+        // Create new student if requested
+        if (linking.createNew && linking.newPersonName) {
+          const newStudent = await tx.person.create({
+            data: {
+              roleId: acceptingRole.id,
+              name: linking.newPersonName,
+              status: 'ACTIVE'
+            }
+          });
+          linkedStudentId = newStudent.id;
+
+          // Auto-create "Daily Routine" for new student
+          await tx.routine.create({
+            data: {
+              roleId: acceptingRole.id,
+              name: 'Daily Routine',
+              description: 'Default routine for daily tasks',
+              resetPeriod: 'DAILY',
+              color: '#3B82F6',
+              isProtected: true,
+              status: 'ACTIVE',
+              assignments: {
+                create: {
+                  personId: newStudent.id,
+                },
+              },
+            },
+          });
+        }
+
+        // Create CoTeacherStudentLink record
+        await tx.coTeacherStudentLink.create({
+          data: {
+            coTeacherId: coTeacher.id,
+            primaryStudentId: sharedPerson.personId,
+            linkedStudentId: linkedStudentId,
+            routineIds: sharedPerson.routineIds,
+            status: linkedStudentId ? 'ACTIVE' : 'PENDING'
+          }
+        });
+      }
+    }
   }
 }
 

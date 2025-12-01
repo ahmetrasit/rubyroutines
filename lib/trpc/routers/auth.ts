@@ -351,12 +351,28 @@ export const authRouter = router({
       return { user: dbUser };
     }),
 
-  sendVerificationCode: publicProcedure
+  sendVerificationCode: protectedProcedure
     .input(z.object({
       userId: z.string(),
       email: z.string().email(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // Security: Validate ownership - user can only request codes for themselves
+      if (input.userId !== ctx.user.id) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You can only request verification codes for your own account',
+        });
+      }
+
+      // Security: Validate email matches the authenticated user's email
+      if (input.email !== ctx.user.email) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Email does not match your account',
+        });
+      }
+
       const code = await createVerificationCode(
         input.userId,
         input.email,

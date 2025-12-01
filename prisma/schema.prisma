@@ -151,6 +151,14 @@ model Person {
   targetConnections     PersonConnection[]     @relation("TargetPersonConnections")
   originConnectionCodes PersonConnectionCode[] @relation("OriginPersonConnectionCodes")
 
+  // CoParent person linking relations
+  primaryCoParentLinks CoParentPersonLink[] @relation("PrimaryCoParentPerson") // This person as primary (Dad's kid)
+  linkedCoParentLinks  CoParentPersonLink[] @relation("LinkedCoParentPerson") // This person as linked (Mom's kid)
+
+  // CoTeacher student linking relations
+  primaryCoTeacherLinks CoTeacherStudentLink[] @relation("PrimaryCoTeacherStudent")
+  linkedCoTeacherLinks  CoTeacherStudentLink[] @relation("LinkedCoTeacherStudent")
+
   @@index([roleId])
   @@index([status])
   @@index([roleId, status]) // Composite index for filtered person queries
@@ -711,8 +719,9 @@ model Invitation {
   inviteeEmail     String
   type             InvitationType
   permissions      String           @default("READ_ONLY")
-  personIds        String[]         @default([])
+  personIds        String[]         @default([]) // Deprecated for CO_PARENT: Use sharedPersons instead
   groupIds         String[]         @default([])
+  sharedPersons    Json             @default("[]") // For CO_PARENT: [{personId, routineIds}] - per-kid routine selection
   expiresAt        DateTime
   status           InvitationStatus @default(PENDING)
   acceptedAt       DateTime?
@@ -762,20 +771,46 @@ model CoParent {
   primaryRoleId  String
   coParentRoleId String
   permissions    String   @default("READ_ONLY")
-  personIds      String[] @default([])
+  personIds      String[] @default([]) // Deprecated: Use personLinks for per-kid routine selection
   status         String   @default("ACTIVE")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   // Relations
-  primaryRole  Role @relation("PrimaryRole", fields: [primaryRoleId], references: [id], onDelete: Cascade)
-  coParentRole Role @relation("CoParentRole", fields: [coParentRoleId], references: [id], onDelete: Cascade)
+  primaryRole  Role                 @relation("PrimaryRole", fields: [primaryRoleId], references: [id], onDelete: Cascade)
+  coParentRole Role                 @relation("CoParentRole", fields: [coParentRoleId], references: [id], onDelete: Cascade)
+  personLinks  CoParentPersonLink[] // Per-kid person linking with routine selection
 
   @@unique([primaryRoleId, coParentRoleId])
   @@index([primaryRoleId])
   @@index([coParentRoleId])
   @@index([status])
   @@map("co_parents")
+}
+
+// Per-kid person linking for CoParent feature
+// Stores which primary person (Dad's kid) links to which co-parent person (Mom's kid)
+// and which routines are shared for visibility
+model CoParentPersonLink {
+  id              String   @id @default(cuid())
+  coParentId      String
+  primaryPersonId String // Dad's kid (set on invite)
+  linkedPersonId  String? // Mom's kid (set on accept, nullable initially)
+  routineIds      String[] @default([]) // Shared routines for visibility
+  status          String   @default("PENDING") // PENDING, ACTIVE, REVOKED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  coParent      CoParent @relation(fields: [coParentId], references: [id], onDelete: Cascade)
+  primaryPerson Person   @relation("PrimaryCoParentPerson", fields: [primaryPersonId], references: [id], onDelete: Cascade)
+  linkedPerson  Person?  @relation("LinkedCoParentPerson", fields: [linkedPersonId], references: [id], onDelete: SetNull)
+
+  @@unique([coParentId, primaryPersonId])
+  @@index([coParentId])
+  @@index([primaryPersonId])
+  @@index([linkedPersonId])
+  @@map("co_parent_person_links")
 }
 
 model CoTeacher {
@@ -789,9 +824,10 @@ model CoTeacher {
   updatedAt            DateTime @updatedAt
 
   // Relations
-  group              Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  primaryTeacherRole Role  @relation("PrimaryTeacherRole", fields: [primaryTeacherRoleId], references: [id], onDelete: Cascade)
-  coTeacherRole      Role  @relation("CoTeacherRole", fields: [coTeacherRoleId], references: [id], onDelete: Cascade)
+  group              Group                  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  primaryTeacherRole Role                   @relation("PrimaryTeacherRole", fields: [primaryTeacherRoleId], references: [id], onDelete: Cascade)
+  coTeacherRole      Role                   @relation("CoTeacherRole", fields: [coTeacherRoleId], references: [id], onDelete: Cascade)
+  studentLinks       CoTeacherStudentLink[] // Per-student linking with routine selection
 
   @@unique([groupId, coTeacherRoleId])
   @@index([groupId])
@@ -799,6 +835,31 @@ model CoTeacher {
   @@index([coTeacherRoleId])
   @@index([status])
   @@map("co_teachers")
+}
+
+// Per-student linking for CoTeacher feature
+// Stores which primary student (lead teacher's) links to which co-teacher's student
+// and which routines are shared for visibility
+model CoTeacherStudentLink {
+  id               String   @id @default(cuid())
+  coTeacherId      String
+  primaryStudentId String // Lead teacher's student (set on invite)
+  linkedStudentId  String? // Co-teacher's student (set on accept, nullable)
+  routineIds       String[] @default([]) // Shared routines for visibility
+  status           String   @default("PENDING") // PENDING, ACTIVE, REVOKED
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  coTeacher      CoTeacher @relation(fields: [coTeacherId], references: [id], onDelete: Cascade)
+  primaryStudent Person    @relation("PrimaryCoTeacherStudent", fields: [primaryStudentId], references: [id], onDelete: Cascade)
+  linkedStudent  Person?   @relation("LinkedCoTeacherStudent", fields: [linkedStudentId], references: [id], onDelete: SetNull)
+
+  @@unique([coTeacherId, primaryStudentId])
+  @@index([coTeacherId])
+  @@index([primaryStudentId])
+  @@index([linkedStudentId])
+  @@map("co_teacher_student_links")
 }
 
 model StudentParentConnection {
