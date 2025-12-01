@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { router, authorizedProcedure, verifiedProcedure } from '../init';
 import {
   sendInvitation,
@@ -85,7 +86,7 @@ export const coParentRouter = router({
       });
 
       if (coParent?.primaryRole.userId !== ctx.user.id) {
-        throw new Error('Permission denied');
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Permission denied' });
       }
 
       await prisma.coParent.update({

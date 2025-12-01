@@ -66,9 +66,18 @@ const nextConfig = {
   async headers() {
     const isDev = process.env.NODE_ENV !== 'production';
 
+    // CSP Configuration Notes:
+    // - unsafe-eval: Required ONLY in development for Next.js hot reload/Fast Refresh
+    // - unsafe-inline for scripts: Removed (not required by Stripe.js or Next.js production)
+    // - unsafe-inline for styles: Required for CSS-in-JS libraries and inline styles
+    // - Stripe.js does NOT require unsafe-eval or unsafe-inline per official docs
+    const scriptSrc = isDev
+      ? "'self' 'unsafe-eval' https://js.stripe.com" // Development: needs unsafe-eval for hot reload
+      : "'self' https://js.stripe.com";              // Production: no unsafe-eval needed
+
     const cspDirectives = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
+      `script-src ${scriptSrc}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data:",

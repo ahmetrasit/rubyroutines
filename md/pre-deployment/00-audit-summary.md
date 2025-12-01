@@ -3,8 +3,7 @@
 **Date:** 2025-11-30
 **Updated:** 2025-12-01
 **Branch:** test-review-v.1.0
-**Commit:** b9ad5c0
-**Status:** HIGH PRIORITY FIXES COMPLETE ✅
+**Status:** ALL HIGH PRIORITY FIXES COMPLETE ✅
 
 ---
 
@@ -38,7 +37,7 @@
 ### Security (3)
 1. ~~**sendVerificationCode accepts arbitrary userId/email**~~ - ✅ FIXED: Added ownership validation (protectedProcedure)
 2. ~~**Invitation token lookup exposes data**~~ - ✅ FIXED: Added invitationTokenRateLimitedProcedure (10/min)
-3. **CSP allows unsafe-eval/unsafe-inline** - Weakens XSS protection
+3. ~~**CSP allows unsafe-eval/unsafe-inline**~~ - ✅ FIXED: Removed unsafe-eval in production, kept only for dev (Next.js hot reload)
 
 ### Build (1)
 4. ~~**ESLint config circular reference**~~ - ✅ FIXED: Downgraded eslint-config-next to v14.2.33
@@ -48,8 +47,8 @@
 6. ~~**CRON_SECRET undocumented**~~ - ✅ FIXED: Added to .env.example and env-validation.ts
 
 ### API (2)
-7. **coparent.updatePermissions throws generic Error** - Should use TRPCError
-8. **coteacher.updatePermissions throws generic Error** - Should use TRPCError
+7. ~~**coparent.updatePermissions throws generic Error**~~ - ✅ FIXED: Changed to TRPCError with FORBIDDEN code
+8. ~~**coteacher.updatePermissions throws generic Error**~~ - ✅ FIXED: Changed to TRPCError with FORBIDDEN code
 
 ---
 
@@ -166,10 +165,10 @@
 6. ~~Document CRON_SECRET in .env.example~~ ✅ DONE
 
 ### Consider (Medium Priority)
-7. Strengthen CSP by removing unsafe-eval where possible
+7. ~~Strengthen CSP by removing unsafe-eval where possible~~ ✅ DONE
 8. Increase minimum password length to 8+ characters
 9. Add missing database indexes for performance
-10. Standardize TRPCError usage across all routers
+10. ~~Standardize TRPCError usage across all routers~~ ✅ DONE (coparent/coteacher fixed)
 
 ### Cleanup (Low Priority)
 11. Remove ~1,500 lines of dead code
