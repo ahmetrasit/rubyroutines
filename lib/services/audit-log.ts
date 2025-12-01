@@ -115,6 +115,28 @@ export const AUDIT_ACTIONS = {
  */
 export async function createAuditLog(data: AuditLogData): Promise<void> {
   try {
+    // Skip audit log for special system IDs that don't exist in the database
+    if (data.userId === 'system' || data.userId === 'anonymous') {
+      logger.debug('Skipping audit log for system/anonymous user', {
+        action: data.action,
+      });
+      return;
+    }
+
+    // Check if user exists before creating audit log to avoid FK constraint errors
+    const userExists = await prisma.user.findUnique({
+      where: { id: data.userId },
+      select: { id: true },
+    });
+
+    if (!userExists) {
+      logger.warn('Skipping audit log - user not found in database', {
+        userId: data.userId,
+        action: data.action,
+      });
+      return;
+    }
+
     await prisma.auditLog.create({
       data: {
         userId: data.userId,
