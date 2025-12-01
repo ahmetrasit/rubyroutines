@@ -143,14 +143,46 @@ Add Person → PersonForm Modal
          Create, edit, track goals for children
 ```
 
-### 2.4 Co-Parent Feature
+### 2.4 Co-Parent Feature (Merged Kiosk)
 ```
-Primary Parent → Invite co-parent via email
-                      ↓
-         CoParent record with permission level
-                      ↓
-         Shared access to persons and routines
+DAD (Lead Parent)                    MOM (Co-Parent)
+================                     ===============
+
+1. INVITE FLOW:
+   Dad → InviteModal → Select kids + routines per kid
+         ├── Kid A: Morning Routine ✓, Homework ✓
+         └── Kid B: Chores Routine ✓
+         ↓
+   Creates Invitation with sharedPersons:
+   [{personId: "kidA", routineIds: ["morning", "homework"]},
+    {personId: "kidB", routineIds: ["chores"]}]
+
+2. ACCEPT FLOW:
+                                     Mom receives invitation
+                                     ↓
+                                     Links her kids to shared kids:
+                                     ├── Dad's Kid A → Mom's Emma
+                                     └── Dad's Kid B → Mom's Jake (new)
+                                     ↓
+                                     Creates CoParentPersonLink records
+
+3. MERGED KIOSK:
+   Either Dad's code OR Mom's code shows merged view:
+   ├── Morning Routine (Dad's)
+   ├── Homework Routine (Dad's)
+   ├── Evening Routine (Mom's)
+   └── Reading Time (Mom's)
+
+4. DASHBOARD VISIBILITY:
+   Mom's dashboard → Her routines + completion STATUS of Dad's shared routines (read-only)
+   Dad's dashboard → His routines + completion STATUS of Mom's shared routines (read-only)
 ```
+
+**Key Difference from PersonConnection:**
+- PersonConnection = 2 separate kiosks (home + school)
+- CoParent = 1 merged kiosk (either parent's code works)
+
+**Files:** `lib/trpc/routers/coparent.ts`, `components/coparent/InviteModal.tsx`, `lib/trpc/routers/kiosk.ts`
 
 ### 2.5 Smart Routines
 ```
@@ -414,23 +446,78 @@ Parent → CodeEntry → Select/Create Child Person
          StudentParentConnection (READ_ONLY)
 ```
 
-### 6.3 Co-Teacher / Co-Parent
+### 6.3 Co-Parent / Co-Teacher (Merged Kiosk Architecture)
+
+These features enable same-role collaboration (PARENT↔PARENT, TEACHER↔TEACHER) with merged kiosk views.
+
+#### CoParent Flow
 ```
-Primary User → Invite via Email
+DAD (Lead)                              MOM (Co-Parent)
+==========                              ===============
+1. coparent.invite
+   ├── email: mom@email.com
+   └── sharedPersons: [{personId, routineIds}]
                     ↓
-         Invitation (7-day expiry, 4-word code)
-                    ↓
-Invitee → Accept → Role auto-created if needed
-                    ↓
-         CoTeacher/CoParent record
-                    ↓
-         Permission Levels:
-         - VIEW (read only)
-         - EDIT_TASKS (complete tasks)
-         - FULL_EDIT (manage everything)
+           Invitation created (7-day expiry)
+                                        2. Accept invitation
+                                           ↓
+                                        Link kids: Dad's Kid → Mom's Kid
+                                           ↓
+                                        CoParentPersonLink created
+                                        (primaryPersonId, linkedPersonId, routineIds)
+3. KIOSK (merged):
+   Either code shows merged tasks
+   ├── Dad's tasks (own routines)
+   └── Mom's tasks (via CoParentPersonLink)
 ```
 
-**Files:** `lib/trpc/routers/person-connection.ts`, `lib/services/person-connection.service.ts`, `components/sharing/PersonConnectionModal.tsx`
+#### CoTeacher Flow
+```
+LEAD TEACHER                            CO-TEACHER
+============                            ==========
+1. coteacher.share
+   ├── email: co@school.com
+   └── sharedPersons: [{studentId, routineIds}]
+                    ↓
+           Invitation created
+                                        2. Accept invitation
+                                           ↓
+                                        Link students: Lead's Student → Co's Student
+                                           ↓
+                                        CoTeacherStudentLink created
+3. KIOSK (merged):
+   Either code shows merged tasks
+```
+
+#### Database Models
+| Model | Purpose |
+|-------|---------|
+| CoParentPersonLink | Links Dad's Kid ↔ Mom's Kid with routineIds |
+| CoTeacherStudentLink | Links Lead's Student ↔ Co's Student with routineIds |
+
+#### Kiosk Task Merging (kiosk.ts:getPersonTasks)
+```
+1. Fetch own tasks (person.assignments)
+2. Check CoParentPersonLink (both directions):
+   - linksAsLinked: This person is the linkedPerson
+   - linksAsPrimary: This person is the primaryPerson
+3. Check CoTeacherStudentLink (both directions)
+4. Merge tasks with deduplication:
+   - Own tasks take priority
+   - CoParent tasks marked with isFromCoParent flag
+   - CoTeacher tasks marked with isFromCoTeacher flag
+```
+
+#### Dashboard Visibility (SharedRoutinesSection)
+```
+Parent Dashboard:
+├── Own routines (full edit)
+└── Shared routines section (read-only completion status)
+    ├── CoParent routines (purple badge)
+    └── CoTeacher routines (blue badge)
+```
+
+**Files:** `lib/trpc/routers/coparent.ts`, `lib/trpc/routers/coteacher.ts`, `lib/trpc/routers/kiosk.ts`, `components/person/shared-routines-section.tsx`
 
 ### 6.4 Implementation Details
 - **`revokeConnectionCode` function:** Invalidates active connection codes
@@ -738,4 +825,9 @@ Can only edit: color, description
 | Code generation (connection) | 10 | 1 hour |
 | Code claim failures | 5 | 1 hour |
 | Invitations | 10 | 1 day |
+| Invitation token lookup | 10 | 1 min |
 | Verification codes | 3 attempts | per code |
+
+---
+
+*Last updated: 2025-12-01*
