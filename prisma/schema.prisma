@@ -326,6 +326,7 @@ model RoutineAssignment {
   @@index([routineId])
   @@index([personId])
   @@index([groupId])
+  @@index([personId, routineId]) // Composite for person-routine lookups
   @@map("routine_assignments")
 }
 
@@ -399,6 +400,7 @@ model TaskCompletion {
   @@index([completedAt])
   @@index([taskId, personId, completedAt]) // Composite index for period queries
   @@index([personId, completedAt]) // Composite index for completion queries by person
+  @@index([personId, completedAt, taskId]) // Optimized for goal evaluation queries (IN clause)
   @@index([idempotencyKey])
   @@index([sessionId])
   @@map("task_completions")

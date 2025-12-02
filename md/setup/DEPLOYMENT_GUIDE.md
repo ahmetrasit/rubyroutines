@@ -317,7 +317,66 @@ npx tsx scripts/create-admin-user.ts admin@example.com
 
 ---
 
-## Step 8: Set Up Cron Jobs (Optional)
+## Step 8: Set Up Redis Cache (Recommended for Scale)
+
+For optimal performance at scale (10K+ users), add Redis caching via Upstash:
+
+### 8.1 Create Upstash Account
+
+1. Go to https://upstash.com and create an account
+2. Click **"Create Database"**
+3. Enter:
+   - **Name**: `rubyroutines-cache`
+   - **Region**: Choose closest to your Vercel deployment
+   - **Type**: Regional (cheaper) or Global (better for worldwide users)
+4. Click **"Create"**
+
+### 8.2 Get Redis Credentials
+
+1. In your Upstash dashboard, click on your database
+2. Scroll to **REST API** section
+3. Copy and save:
+   - **UPSTASH_REDIS_REST_URL** (the REST URL)
+   - **UPSTASH_REDIS_REST_TOKEN** (the REST token)
+
+### 8.3 Add to Vercel Environment Variables
+
+1. Go to Vercel → Your Project → **Settings** → **Environment Variables**
+2. Add these variables:
+
+```
+UPSTASH_REDIS_REST_URL=https://your-region.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-token-here
+```
+
+3. Click **"Save"**
+4. Redeploy the application
+
+### 8.4 Verify Caching (Optional)
+
+Check the logs after deployment to see:
+```
+Redis cache connected successfully
+```
+
+If Redis is not configured, the app falls back to in-memory caching automatically.
+
+### 8.5 What Gets Cached
+
+| Data | TTL | Real-time Impact |
+|------|-----|------------------|
+| User sessions | 5 min | None - refreshed on login |
+| Tier limits | 1 hour | None - rarely changes |
+| Routine structure | 1 min | Low - invalidated on edit |
+| Person list | 2 min | Low - invalidated on changes |
+| **Task completions** | **NEVER** | **Real-time sync preserved** |
+| **Goal progress** | **NEVER** | **Real-time sync preserved** |
+
+**Important:** Task completions and goal progress are NEVER cached to ensure real-time sync between co-parents and kiosk mode.
+
+---
+
+## Step 9: Set Up Cron Jobs (Optional)
 
 For automated tasks like sending reminders and cleanup:
 
@@ -338,7 +397,7 @@ For automated tasks like sending reminders and cleanup:
 
 ---
 
-## Step 9: Production Checklist
+## Step 10: Production Checklist
 
 Before going live, verify these items:
 
@@ -374,7 +433,7 @@ Before going live, verify these items:
 
 ---
 
-## Step 10: Go Live
+## Step 11: Go Live
 
 ### 10.1 Switch Stripe to Live Mode
 
@@ -457,17 +516,34 @@ Set up monitoring for production issues:
 
 ---
 
-## Cost Estimate (Free Tier Usage)
+## Cost Estimate
 
-- **Vercel**: Free for hobby projects (100GB bandwidth)
-- **Supabase**: Free tier (500MB database, 50,000 monthly active users)
-- **Stripe**: No monthly fee (2.9% + $0.30 per transaction)
-- **Total**: $0/month until you exceed free tiers
+### Free Tier Usage (Up to 10K Users)
 
-**Estimated costs with users:**
-- 100 users: ~$0/month (within free tiers)
-- 1,000 users: ~$10-25/month (database scaling)
-- 10,000 users: ~$100-200/month (requires paid tiers)
+| Service | Free Tier | Limit |
+|---------|-----------|-------|
+| **Vercel** | Free | 100GB bandwidth, 100K function invocations |
+| **Supabase** | Free | 500MB database, 50K MAU auth |
+| **Upstash Redis** | Free | 10K commands/day |
+| **Stripe** | No monthly fee | 2.9% + $0.30 per transaction |
+
+**Total for small scale:** $0/month
+
+### Estimated Costs by User Count
+
+| Users | Vercel | Supabase | Redis | Total/Month |
+|-------|--------|----------|-------|-------------|
+| 1K | $0 | $0 | $0 | **$0** |
+| 10K | $20-50 | $25 | $10 | **$55-85** |
+| 100K | $150-300 | $50-75 | $50 | **$250-425** |
+| 1M | $1,500-3,000 | $300-600 | $200 | **$2,000-3,800** |
+
+### Cost Optimization Tips
+
+1. **Enable Redis caching** - Reduces DB queries by 60-70%
+2. **Use Cloudflare** - Free CDN for static assets
+3. **Enable compression** - Reduces bandwidth by 60%
+4. **Review function invocations** - Most expensive at scale
 
 ---
 
