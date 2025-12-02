@@ -24,6 +24,7 @@ import {
 } from '@/lib/services/task-completion';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { getEffectiveTierLimits } from '@/lib/services/admin/system-settings.service';
+import { invalidateTaskCaches } from '@/lib/services/cache.service';
 
 export const taskRouter = router({
   // List tasks for a routine
@@ -192,6 +193,14 @@ export const taskRouter = router({
         },
       });
 
+      // Invalidate task structure caches for affected persons
+      const assignments = await ctx.prisma.routineAssignment.findMany({
+        where: { routineId: input.routineId },
+        select: { personId: true },
+      });
+      const personIds = assignments.map(a => a.personId).filter((id): id is string => id !== null);
+      await invalidateTaskCaches(input.routineId, personIds);
+
       return task;
     }),
 
@@ -250,6 +259,14 @@ export const taskRouter = router({
         data: updateData,
       });
 
+      // Invalidate task structure caches for affected persons
+      const assignments = await ctx.prisma.routineAssignment.findMany({
+        where: { routineId: task.routineId },
+        select: { personId: true },
+      });
+      const personIds = assignments.map(a => a.personId).filter((id): id is string => id !== null);
+      await invalidateTaskCaches(task.routineId, personIds);
+
       return updatedTask;
     }),
 
@@ -277,6 +294,14 @@ export const taskRouter = router({
           archivedAt: new Date(),
         },
       });
+
+      // Invalidate task structure caches for affected persons
+      const assignments = await ctx.prisma.routineAssignment.findMany({
+        where: { routineId: task.routineId },
+        select: { personId: true },
+      });
+      const personIds = assignments.map(a => a.personId).filter((id): id is string => id !== null);
+      await invalidateTaskCaches(task.routineId, personIds);
 
       return { success: true };
     }),
@@ -306,6 +331,14 @@ export const taskRouter = router({
         },
       });
 
+      // Invalidate task structure caches for affected persons
+      const assignments = await ctx.prisma.routineAssignment.findMany({
+        where: { routineId: task.routineId },
+        select: { personId: true },
+      });
+      const personIds = assignments.map(a => a.personId).filter((id): id is string => id !== null);
+      await invalidateTaskCaches(task.routineId, personIds);
+
       return { success: true };
     }),
 
@@ -329,10 +362,28 @@ export const taskRouter = router({
         )
       );
 
+      // Invalidate task structure caches for affected persons
+      if (firstTaskId) {
+        const firstTask = await ctx.prisma.task.findUnique({
+          where: { id: firstTaskId },
+          select: { routineId: true },
+        });
+        if (firstTask) {
+          const assignments = await ctx.prisma.routineAssignment.findMany({
+            where: { routineId: firstTask.routineId },
+            select: { personId: true },
+          });
+          const personIds = assignments.map(a => a.personId).filter((id): id is string => id !== null);
+          await invalidateTaskCaches(firstTask.routineId, personIds);
+        }
+      }
+
       return { success: true };
     }),
 
   // Complete a task
+  // NOTE: Task completions are NEVER cached to preserve real-time sync
+  // No cache invalidation needed here - completions are always fetched fresh
   complete: authorizedProcedure
     .input(completeTaskSchema)
     .mutation(async ({ ctx, input }) => {

@@ -27,6 +27,12 @@ import {
   decryptTwoFactorData,
 } from '@/lib/services/two-factor';
 import { createAuditLog } from '@/lib/services/audit-log';
+import {
+  getCached,
+  cacheKeys,
+  CACHE_TTL,
+  invalidateUserCaches,
+} from '@/lib/services/cache.service';
 
 export const authRouter = router({
   signUp: authRateLimitedProcedure
@@ -144,6 +150,9 @@ export const authRouter = router({
       await logAuthEvent(AUDIT_ACTIONS.AUTH_SIGNUP, data.user.id, true, {
         email: input.email,
       });
+
+      // Invalidate any stale cache for this user
+      await invalidateUserCaches(data.user.id);
 
       return { success: true, userId: data.user.id };
     }),
@@ -287,11 +296,16 @@ export const authRouter = router({
         email: input.email,
       });
 
+      // Invalidate any stale cache for this user (roles may have been updated)
+      await invalidateUserCaches(data.user.id);
+
       return { success: true, userId: data.user.id };
     }),
 
   signOut: protectedProcedure
     .mutation(async ({ ctx }) => {
+      // Invalidate session cache on logout
+      await invalidateUserCaches(ctx.user.id);
       await logAuthEvent(AUDIT_ACTIONS.AUTH_LOGOUT, ctx.user.id, true);
       await ctx.supabase.auth.signOut();
       return { success: true };
@@ -299,81 +313,113 @@ export const authRouter = router({
 
   getSession: publicProcedure
     .query(async ({ ctx }) => {
+      // Auth check must be fresh - don't cache this
       const { data: { user } } = await ctx.supabase.auth.getUser();
 
       if (!user) {
         return { user: null };
       }
 
-      const dbUser = await ctx.prisma.user.findUnique({
-        where: { id: user.id },
-        include: {
-          roles: {
+      // Cache the session data (user, roles, school memberships)
+      // This significantly reduces DB queries on every page load
+      const sessionData = await getCached(
+        cacheKeys.session(user.id),
+        async () => {
+          const dbUser = await ctx.prisma.user.findUnique({
+            where: { id: user.id },
+            include: {
+              roles: {
+                where: {
+                  deletedAt: null, // Only include active roles
+                },
+              },
+            },
+          });
+
+          if (!dbUser || !dbUser.roles) {
+            return { user: dbUser, roles: [], schoolMemberships: [] };
+          }
+
+          // Fetch school memberships for all roles
+          const roleIds = dbUser.roles.map((r) => r.id);
+          const schoolMemberships = await ctx.prisma.schoolMember.findMany({
             where: {
-              deletedAt: null, // Only include active roles
+              roleId: { in: roleIds },
+              status: 'ACTIVE',
             },
-          },
-        },
-      });
-
-      // Fetch effective tier limits for each role and school memberships
-      if (dbUser && dbUser.roles) {
-        const { getEffectiveTierLimits } = await import('@/lib/services/admin/system-settings.service');
-        const { mapDatabaseLimitsToComponentFormat } = await import('@/lib/services/tier-limits');
-
-        // Fetch school memberships for all roles
-        const roleIds = dbUser.roles.map((r) => r.id);
-        const schoolMemberships = await ctx.prisma.schoolMember.findMany({
-          where: {
-            roleId: { in: roleIds },
-            status: 'ACTIVE',
-          },
-          include: {
-            school: {
-              select: { id: true, name: true },
+            include: {
+              school: {
+                select: { id: true, name: true },
+              },
             },
-          },
-        });
+          });
 
-        // Format school memberships
-        const formattedSchoolMemberships = schoolMemberships.map((m) => ({
-          id: m.id,
-          schoolId: m.schoolId,
-          schoolName: m.school?.name,
-          roleId: m.roleId,
-          role: m.role,
-          status: m.status,
-        }));
+          // Format school memberships
+          const formattedSchoolMemberships = schoolMemberships.map((m) => ({
+            id: m.id,
+            schoolId: m.schoolId,
+            schoolName: m.school?.name,
+            roleId: m.roleId,
+            role: m.role,
+            status: m.status,
+          }));
 
-        const rolesWithLimits = await Promise.all(
-          dbUser.roles.map(async (role) => {
-            try {
-              const dbLimits = await getEffectiveTierLimits(role.id);
-              const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type as any);
-              return {
-                ...role,
-                effectiveLimits,
-              };
-            } catch (error) {
-              logger.warn(`Failed to fetch tier limits for role ${role.id}:`, error as any);
-              return {
-                ...role,
-                effectiveLimits: null,
-              };
-            }
-          })
-        );
-
-        return {
-          user: {
-            ...dbUser,
-            roles: rolesWithLimits,
+          return {
+            user: dbUser,
+            roles: dbUser.roles,
             schoolMemberships: formattedSchoolMemberships,
-          },
-        };
+          };
+        },
+        { ttl: CACHE_TTL.SESSION }
+      );
+
+      if (!sessionData.user) {
+        return { user: null };
       }
 
-      return { user: dbUser };
+      // Fetch tier limits - cached separately with longer TTL since they rarely change
+      const { getEffectiveTierLimits } = await import('@/lib/services/admin/system-settings.service');
+      const { mapDatabaseLimitsToComponentFormat } = await import('@/lib/services/tier-limits');
+
+      // Get system-wide tier limits (cached for 1 hour)
+      const systemTierLimits = await getCached(
+        cacheKeys.tierLimits(),
+        async () => {
+          const { getTierLimits } = await import('@/lib/services/admin/system-settings.service');
+          return getTierLimits();
+        },
+        { ttl: CACHE_TTL.TIER_LIMITS }
+      );
+
+      // Map tier limits to each role
+      const rolesWithLimits = await Promise.all(
+        sessionData.roles.map(async (role) => {
+          try {
+            // Check for role-specific override first, then fall back to system limits
+            const roleOverride = (role as any).tierOverride;
+            const dbLimits = roleOverride || systemTierLimits[(role as any).tier];
+            const effectiveLimits = mapDatabaseLimitsToComponentFormat(dbLimits as any, role.type as any);
+            return {
+              ...role,
+              effectiveLimits,
+            };
+          } catch (error) {
+            logger.warn(`Failed to fetch tier limits for role ${role.id}:`, error as any);
+            return {
+              ...role,
+              effectiveLimits: null,
+            };
+          }
+        })
+      );
+
+      return {
+        user: {
+          ...sessionData.user,
+          roles: rolesWithLimits,
+          schoolMemberships: sessionData.schoolMemberships,
+        },
+      };
     }),
 
   sendVerificationCode: protectedProcedure
@@ -451,6 +497,9 @@ export const authRouter = router({
       });
 
       await logAuthEvent(AUDIT_ACTIONS.EMAIL_VERIFY, input.userId, true);
+
+      // Invalidate cache after email verification (user data changed)
+      await invalidateUserCaches(input.userId);
 
       return { success: true };
     }),
@@ -676,6 +725,9 @@ export const authRouter = router({
       await logAuthEvent(AUDIT_ACTIONS.AUTH_LOGIN, data.user.id, true, {
         email: input.email,
       });
+
+      // Invalidate cache after 2FA login (backup codes may have been used)
+      await invalidateUserCaches(data.user.id);
 
       return { success: true, userId: data.user.id, usedBackupCode };
     }),

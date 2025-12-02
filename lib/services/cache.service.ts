@@ -15,17 +15,41 @@
 import { logger } from '@/lib/utils/logger';
 
 // ============================================================================
-// Cache TTL Constants (in seconds)
+// Cache Configuration (configurable via environment variables)
 // ============================================================================
 
+/**
+ * Parse integer from environment variable with fallback default
+ */
+function envInt(key: string, defaultValue: number): number {
+  const value = process.env[key];
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? defaultValue : parsed;
+}
+
+/**
+ * Cache TTL Constants (in seconds)
+ * Override via environment variables: CACHE_TTL_SESSION, CACHE_TTL_TIER_LIMITS, etc.
+ */
 export const CACHE_TTL = {
-  SESSION: 300, // 5 minutes
-  TIER_LIMITS: 3600, // 1 hour
-  SYSTEM_SETTINGS: 3600, // 1 hour
-  ROUTINE_STRUCTURE: 60, // 1 minute (structure only, NOT completions)
-  PERSONS: 120, // 2 minutes
-  MARKETPLACE: 300, // 5 minutes
-  USER_ROLES: 300, // 5 minutes
+  SESSION: envInt('CACHE_TTL_SESSION', 300), // 5 minutes
+  TIER_LIMITS: envInt('CACHE_TTL_TIER_LIMITS', 3600), // 1 hour
+  SYSTEM_SETTINGS: envInt('CACHE_TTL_SYSTEM_SETTINGS', 3600), // 1 hour
+  ROUTINE_STRUCTURE: envInt('CACHE_TTL_ROUTINE_STRUCTURE', 60), // 1 minute (structure only, NOT completions)
+  PERSONS: envInt('CACHE_TTL_PERSONS', 120), // 2 minutes
+  MARKETPLACE: envInt('CACHE_TTL_MARKETPLACE', 300), // 5 minutes
+  USER_ROLES: envInt('CACHE_TTL_USER_ROLES', 300), // 5 minutes
+} as const;
+
+/**
+ * Memory cache configuration
+ * Override via environment variables
+ */
+export const CACHE_CONFIG = {
+  MAX_MEMORY_SIZE: envInt('CACHE_MAX_MEMORY_SIZE', 1000), // Max entries in memory cache
+  EVICTION_PERCENT: envInt('CACHE_EVICTION_PERCENT', 10), // Percent to evict when full
+  CLEANUP_INTERVAL_MS: envInt('CACHE_CLEANUP_INTERVAL_MS', 5 * 60 * 1000), // 5 minutes
 } as const;
 
 // ============================================================================
@@ -72,7 +96,6 @@ interface MemoryCacheEntry {
 // In-Memory Cache with LRU Eviction
 // ============================================================================
 
-const MAX_MEMORY_CACHE_SIZE = 1000;
 const memoryCache = new Map<string, MemoryCacheEntry>();
 const cacheStats: CacheStats = { hits: 0, misses: 0, errors: 0, skipped: 0 };
 
@@ -83,15 +106,18 @@ const inFlightRequests = new Map<string, Promise<unknown>>();
  * Evict oldest entries when cache exceeds max size (LRU-style)
  */
 function evictIfNeeded(): void {
-  if (memoryCache.size <= MAX_MEMORY_CACHE_SIZE) return;
+  if (memoryCache.size <= CACHE_CONFIG.MAX_MEMORY_SIZE) return;
 
-  // Sort by expiration time and remove oldest 10%
+  // Sort by expiration time and remove oldest entries based on eviction percent
   const entries = Array.from(memoryCache.entries())
     .sort((a, b) => a[1].expiresAt - b[1].expiresAt);
 
-  const toRemove = Math.ceil(memoryCache.size * 0.1);
+  const toRemove = Math.ceil(memoryCache.size * (CACHE_CONFIG.EVICTION_PERCENT / 100));
   for (let i = 0; i < toRemove && i < entries.length; i++) {
-    memoryCache.delete(entries[i][0]);
+    const entry = entries[i];
+    if (entry) {
+      memoryCache.delete(entry[0]);
+    }
   }
 
   logger.debug('Memory cache eviction', { removed: toRemove, remaining: memoryCache.size });
@@ -161,7 +187,7 @@ export async function getCached<T>(
 
     // Check cache first
     if (redis) {
-      const cached = await redis.get<T>(key);
+      const cached = await redis.get(key) as T | null;
       if (cached !== null && cached !== undefined) {
         cacheStats.hits++;
         return cached;
@@ -189,7 +215,7 @@ export async function getCached<T>(
 
         // Store in cache
         if (redis) {
-          // Use SET with NX to prevent race conditions
+          // Race conditions prevented by in-flight request tracking above
           await redis.set(key, data, { ex: ttl });
         } else {
           evictIfNeeded();
@@ -230,7 +256,7 @@ export async function getFromCache<T>(key: string): Promise<T | null> {
     const redis = await getRedisClient();
 
     if (redis) {
-      return await redis.get<T>(key);
+      return await redis.get(key) as T | null;
     } else {
       const memoryCached = memoryCache.get(key);
       if (memoryCached && memoryCached.expiresAt > Date.now()) {
@@ -442,9 +468,9 @@ export function cleanupMemoryCache(): number {
   return cleaned;
 }
 
-// Run cleanup every 5 minutes for memory cache
+// Run cleanup periodically for memory cache (configurable interval)
 if (typeof setInterval !== 'undefined') {
-  setInterval(cleanupMemoryCache, 5 * 60 * 1000);
+  setInterval(cleanupMemoryCache, CACHE_CONFIG.CLEANUP_INTERVAL_MS);
 }
 
 // ============================================================================

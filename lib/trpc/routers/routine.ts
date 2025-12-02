@@ -17,6 +17,7 @@ import {
   cancelVisibilityOverrideSchema,
 } from '@/lib/validation/routine';
 import { generateRoutineShareCode } from '@/lib/services/routine-share-code';
+import { invalidateRoutineCaches, invalidateTaskCaches } from '@/lib/services/cache.service';
 
 export const routineRouter = router({
   list: authorizedProcedure.input(listRoutinesSchema).query(async ({ ctx, input }) => {
@@ -172,6 +173,9 @@ export const routineRouter = router({
       },
     });
 
+    // Invalidate caches for affected persons
+    await invalidateRoutineCaches(routine.id, personIds, input.roleId);
+
     return routine;
   }),
 
@@ -206,6 +210,20 @@ export const routineRouter = router({
       data,
     });
 
+    // Get affected person IDs and invalidate caches
+    const assignments = await ctx.prisma.routineAssignment.findMany({
+      where: { routineId: id },
+      select: { personId: true },
+    });
+    const personIds = assignments.map(a => a.personId).filter((id): id is string => id !== null);
+    const routineWithRole = await ctx.prisma.routine.findUnique({
+      where: { id },
+      select: { roleId: true },
+    });
+    if (routineWithRole) {
+      await invalidateRoutineCaches(id, personIds, routineWithRole.roleId);
+    }
+
     return routine;
   }),
 
@@ -226,6 +244,16 @@ export const routineRouter = router({
       });
     }
 
+    // Get affected persons and roleId before deleting
+    const routineWithAssignments = await ctx.prisma.routine.findUnique({
+      where: { id: input.id },
+      include: {
+        assignments: { select: { personId: true } },
+      },
+    });
+    const affectedPersonIds = routineWithAssignments?.assignments.map(a => a.personId).filter((id): id is string => id !== null) || [];
+    const routineRoleId = routineWithAssignments?.roleId || '';
+
     const routine = await ctx.prisma.routine.update({
       where: { id: input.id },
       data: {
@@ -233,6 +261,11 @@ export const routineRouter = router({
         archivedAt: new Date(),
       },
     });
+
+    // Invalidate caches for affected persons
+    if (routineRoleId) {
+      await invalidateRoutineCaches(input.id, affectedPersonIds, routineRoleId);
+    }
 
     return routine;
   }),
@@ -242,6 +275,17 @@ export const routineRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Verify routine ownership
       await verifyRoutineOwnership(ctx.user.id, input.id, ctx.prisma);
+
+      // Get affected persons and roleId
+      const routineWithAssignments = await ctx.prisma.routine.findUnique({
+        where: { id: input.id },
+        include: {
+          assignments: { select: { personId: true } },
+        },
+      });
+      const affectedPersonIds = routineWithAssignments?.assignments.map(a => a.personId).filter((id): id is string => id !== null) || [];
+      const routineRoleId = routineWithAssignments?.roleId || '';
+
       const routine = await ctx.prisma.routine.update({
         where: { id: input.id },
         data: {
@@ -249,6 +293,11 @@ export const routineRouter = router({
           archivedAt: null,
         },
       });
+
+      // Invalidate caches for affected persons
+      if (routineRoleId) {
+        await invalidateRoutineCaches(input.id, affectedPersonIds, routineRoleId);
+      }
 
       return routine;
     }),
@@ -560,6 +609,9 @@ export const routineRouter = router({
         return { merged: false, routine, taskCount: source.tasks.length, personId, renamed: !!existingRoutine && resolution === 'rename' };
       })
     );
+
+    // Invalidate caches for all target persons
+    await invalidateRoutineCaches(input.routineId, input.targetPersonIds, source.roleId);
 
     return results;
   }),

@@ -13,6 +13,7 @@ import {
   getPersonSchema,
   getBatchPersonsSchema,
 } from '@/lib/validation/person';
+import { invalidatePersonCaches } from '@/lib/services/cache.service';
 
 export const personRouter = router({
   list: authorizedProcedure
@@ -411,6 +412,9 @@ export const personRouter = router({
         await createDefaultTeacherOnlyRoutine(input.roleId, person.id, role.type);
       }
 
+      // Invalidate persons cache for this role
+      await invalidatePersonCaches(person.id, input.roleId);
+
       return person;
     }),
 
@@ -426,6 +430,9 @@ export const personRouter = router({
         where: { id },
         data,
       });
+
+      // Invalidate person's cache
+      await invalidatePersonCaches(person.id, person.roleId);
 
       return person;
     }),
@@ -481,6 +488,9 @@ export const personRouter = router({
         }),
         ...groupUpdates
       ]);
+
+      // Invalidate person's cache
+      await invalidatePersonCaches(input.id, existingPerson.roleId);
 
       return person;
     }),
@@ -546,6 +556,9 @@ export const personRouter = router({
           await createDefaultTeacherOnlyRoutine(existingPerson.roleId, input.id, role.type);
         }
       }
+
+      // Invalidate person's cache
+      await invalidatePersonCaches(input.id, existingPerson.roleId);
 
       return person;
     }),
