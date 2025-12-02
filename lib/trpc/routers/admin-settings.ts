@@ -11,6 +11,12 @@ import {
   updateKioskRateLimits,
 } from '@/lib/services/admin/system-settings.service';
 import { RoleType } from '@/lib/types/prisma-enums';
+import {
+  getCacheStats,
+  clearAllCache,
+  CACHE_TTL,
+  CACHE_CONFIG,
+} from '@/lib/services/cache.service';
 
 // Helper function to get default colors for role types
 function getDefaultColor(roleType: string): string {
@@ -179,4 +185,25 @@ export const adminSettingsRouter = router({
 
       return { success: true };
     }),
+
+  // Get cache statistics for monitoring
+  getCacheStats: adminProcedure.query(async () => {
+    const stats = getCacheStats();
+    return {
+      ...stats,
+      hitRatePercent: (stats.hitRate * 100).toFixed(2) + '%',
+      config: {
+        ttl: CACHE_TTL,
+        maxMemorySize: CACHE_CONFIG.MAX_MEMORY_SIZE,
+        evictionPercent: CACHE_CONFIG.EVICTION_PERCENT,
+        cleanupIntervalMs: CACHE_CONFIG.CLEANUP_INTERVAL_MS,
+      },
+    };
+  }),
+
+  // Clear all cache (use with caution)
+  clearCache: adminProcedure.mutation(async () => {
+    await clearAllCache();
+    return { success: true, message: 'All cache cleared successfully' };
+  }),
 });

@@ -47,6 +47,9 @@ const REQUIRED_ENV_VARS: EnvVar[] = [
   // Rate Limiting (optional - falls back to in-memory)
   { name: 'UPSTASH_REDIS_REST_URL', required: false, description: 'Upstash Redis URL for rate limiting' },
   { name: 'UPSTASH_REDIS_REST_TOKEN', required: false, description: 'Upstash Redis token' },
+
+  // Cron Jobs (optional - needed if using scheduled tasks)
+  { name: 'CRON_SECRET', required: false, description: 'Secret for authenticating cron job API endpoints' },
 ];
 
 export class EnvValidationError extends Error {

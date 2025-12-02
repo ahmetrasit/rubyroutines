@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
-import { Select } from '@/components/ui/select';
+import { HomeButton } from '@/components/home-button';
 import { CompletionChart } from '@/components/analytics/CompletionChart';
 import { GoalProgressChart } from '@/components/analytics/GoalProgressChart';
 import { TaskHeatmap } from '@/components/analytics/TaskHeatmap';
@@ -40,8 +40,9 @@ export default function AnalyticsPage() {
   }
 
   // Find the user's primary role (parent or teacher)
-  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
-  const teacherRole = session.user.roles?.find((role: any) => role.type === 'TEACHER');
+  const user = session.user as any;
+  const parentRole = user.roles?.find((role: any) => role.type === 'PARENT');
+  const teacherRole = user.roles?.find((role: any) => role.type === 'TEACHER');
   const activeRole = parentRole || teacherRole;
 
   if (!activeRole) {
@@ -116,8 +117,11 @@ function AnalyticsPageContent({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <p className="text-gray-600 mt-2">
+          <div className="flex items-center gap-3 mb-2">
+            <HomeButton />
+            <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+          </div>
+          <p className="text-gray-600">
             Track completion rates, goal progress, and task patterns
           </p>
         </div>
@@ -174,8 +178,8 @@ function AnalyticsPageContent({
               goalData?.map((g: any) => ({
                 goalId: g.goalId,
                 goalName: g.goalName,
-                progress: g.progress,
-                status: g.status,
+                progress: g.percentage || g.progress || 0,
+                status: (g.status?.toUpperCase() || 'NOT_STARTED') as 'NOT_STARTED' | 'IN_PROGRESS' | 'ACHIEVED',
               })) || []
             }
             isLoading={goalLoading}
@@ -184,11 +188,13 @@ function AnalyticsPageContent({
           {/* Task Heatmap */}
           <TaskHeatmap
             data={
-              heatmapData?.map((h: any) => ({
-                date: new Date(h.date),
-                taskName: h.taskName,
-                count: h.count,
-              })) || []
+              heatmapData?.flatMap((task: any) =>
+                task.completions?.map((c: any) => ({
+                  date: new Date(c.date),
+                  taskName: task.taskName,
+                  count: c.count,
+                })) || []
+              ) || []
             }
             isLoading={heatmapLoading}
           />

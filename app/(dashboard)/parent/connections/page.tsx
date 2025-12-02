@@ -35,7 +35,8 @@ export default function ParentConnectionsPage() {
   }
 
   // Find parent role
-  const parentRole = session.user.roles?.find((role: any) => role.type === 'PARENT');
+  const user = session.user as any;
+  const parentRole = user.roles?.find((role: any) => role.type === 'PARENT');
 
   if (!parentRole) {
     return (

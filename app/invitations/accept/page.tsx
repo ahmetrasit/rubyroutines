@@ -1,13 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Mail, UserPlus, Users, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Check, X, Mail, UserPlus, Users, Loader2, Plus, User } from 'lucide-react';
+
+// Type for person linking state
+type PersonLinking = {
+  primaryPersonId: string;  // Inviter's kid/student (from invitation)
+  linkedPersonId: string | null;  // Accepting user's kid/student (selected)
+  createNew: boolean;  // Whether to create a new person
+  newPersonName: string;  // Name for new person if createNew is true
+};
 
 export default function AcceptInvitationPage() {
   const router = useRouter();
@@ -17,12 +27,67 @@ export default function AcceptInvitationPage() {
 
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [personLinkings, setPersonLinkings] = useState<PersonLinking[]>([]);
 
   const { data: session, isLoading: sessionLoading } = trpc.auth.getSession.useQuery();
   const { data: invitation, isLoading: invitationLoading, error } = trpc.invitation.getByToken.useQuery(
     { token: token || '' },
     { enabled: !!token }
   );
+
+  // Get the accepting user's parent role (for CO_PARENT)
+  const parentRole = useMemo(() => {
+    if (!session?.user?.roles) return null;
+    return session.user.roles.find((r: { type: string }) => r.type === 'PARENT');
+  }, [session]);
+
+  // Get the accepting user's teacher role (for CO_TEACHER)
+  const teacherRole = useMemo(() => {
+    if (!session?.user?.roles) return null;
+    return session.user.roles.find((r: { type: string }) => r.type === 'TEACHER');
+  }, [session]);
+
+  // Determine which role to use based on invitation type
+  const activeRole = useMemo(() => {
+    if (invitation?.type === 'CO_PARENT') return parentRole;
+    if (invitation?.type === 'CO_TEACHER') return teacherRole;
+    return null;
+  }, [invitation?.type, parentRole, teacherRole]);
+
+  // Check if this invitation needs linking
+  const needsLinking = useMemo(() => {
+    return (invitation?.type === 'CO_PARENT' || invitation?.type === 'CO_TEACHER')
+      && invitation?.sharedPersons
+      && invitation.sharedPersons.length > 0;
+  }, [invitation]);
+
+  // Fetch accepting user's existing persons (kids for parent, students for teacher)
+  const { data: myPersons, isLoading: personsLoading } = trpc.person.list.useQuery(
+    { roleId: activeRole?.id || '' },
+    { enabled: !!activeRole?.id && needsLinking }
+  );
+
+  // Filter to only non-account-owner, non-teacher persons (actual kids/students)
+  const availablePersons = useMemo(() => {
+    if (!myPersons) return [];
+    return myPersons.filter((p: { isAccountOwner?: boolean; isTeacher?: boolean }) =>
+      !p.isAccountOwner && !p.isTeacher
+    );
+  }, [myPersons]);
+
+  // Initialize personLinkings when invitation loads
+  useEffect(() => {
+    if (needsLinking && invitation?.sharedPersons && invitation.sharedPersons.length > 0) {
+      setPersonLinkings(
+        invitation.sharedPersons.map((sp) => ({
+          primaryPersonId: sp.personId,
+          linkedPersonId: null,
+          createNew: false,
+          newPersonName: sp.personName, // Pre-fill with inviter's person name
+        }))
+      );
+    }
+  }, [invitation, needsLinking]);
 
   const acceptMutation = trpc.invitation.accept.useMutation({
     onSuccess: () => {
@@ -76,10 +141,60 @@ export default function AcceptInvitationPage() {
     }
   }, [sessionLoading, session, router, token]);
 
+  // Update a specific person linking
+  const updateLinking = (index: number, updates: Partial<PersonLinking>) => {
+    setPersonLinkings(prev => {
+      const newLinkings = [...prev];
+      const existing = newLinkings[index];
+      if (existing) {
+        newLinkings[index] = {
+          primaryPersonId: updates.primaryPersonId ?? existing.primaryPersonId,
+          linkedPersonId: updates.linkedPersonId !== undefined ? updates.linkedPersonId : existing.linkedPersonId,
+          createNew: updates.createNew ?? existing.createNew,
+          newPersonName: updates.newPersonName ?? existing.newPersonName,
+        };
+      }
+      return newLinkings;
+    });
+  };
+
+  // Check if all shared persons are properly linked
+  const allPersonsLinked = useMemo(() => {
+    if (!invitation?.sharedPersons || invitation.sharedPersons.length === 0) {
+      return true; // No linking required
+    }
+    return personLinkings.every(l =>
+      (l.createNew && l.newPersonName.trim()) || (!l.createNew && l.linkedPersonId)
+    );
+  }, [invitation?.sharedPersons, personLinkings]);
+
   const handleAccept = () => {
     if (!token) return;
+
+    // Validate linkings for invitations with sharedPersons
+    if (needsLinking && !allPersonsLinked) {
+      const personLabel = invitation?.type === 'CO_TEACHER' ? 'students' : 'children';
+      toast({
+        title: 'Incomplete Linking',
+        description: `Please link all shared ${personLabel} before accepting`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsAccepting(true);
-    acceptMutation.mutate({ token });
+
+    // Prepare personLinkings for the mutation
+    const linkingsForMutation = needsLinking
+      ? personLinkings.map(l => ({
+          primaryPersonId: l.primaryPersonId,
+          linkedPersonId: l.createNew ? null : l.linkedPersonId,
+          createNew: l.createNew,
+          newPersonName: l.createNew ? l.newPersonName : undefined,
+        }))
+      : undefined;
+
+    acceptMutation.mutate({ token, personLinkings: linkingsForMutation });
   };
 
   const handleReject = () => {
@@ -129,6 +244,10 @@ export default function AcceptInvitationPage() {
   // Check if logged-in user's email matches invitation
   const emailMatches = session.user.email === invitation.inviteeEmail;
 
+  // Get labels based on invitation type
+  const personLabel = invitation.type === 'CO_TEACHER' ? 'Students' : 'Children';
+  const personLabelSingular = invitation.type === 'CO_TEACHER' ? 'student' : 'child';
+
   const getInvitationIcon = (type: string) => {
     switch (type) {
       case 'CO_PARENT':
@@ -156,7 +275,7 @@ export default function AcceptInvitationPage() {
       case 'CO_PARENT':
         return 'You have been invited to share access to children and their routines';
       case 'CO_TEACHER':
-        return 'You have been invited to collaborate on a classroom';
+        return 'You have been invited to collaborate on students and their routines';
       default:
         return 'You have been invited to collaborate';
     }
@@ -238,6 +357,132 @@ export default function AcceptInvitationPage() {
             </div>
           </div>
 
+          {/* Person Linking UI for CO_PARENT and CO_TEACHER invitations */}
+          {needsLinking && (
+            <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                Link {personLabel}
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                {invitation.inviterName} wants to share the following {personLabel.toLowerCase()} with you.
+                Link each one to your existing {personLabelSingular} or create a new one.
+              </p>
+
+              {personsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                  <span className="ml-2 text-sm text-gray-600">Loading your {personLabel.toLowerCase()}...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {invitation.sharedPersons?.map((sharedPerson, index) => {
+                    const linking = personLinkings[index];
+                    if (!linking) return null;
+
+                    return (
+                      <div key={sharedPerson.personId} className="bg-white rounded-lg p-4 border border-gray-200">
+                        {/* Shared person info */}
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{sharedPerson.personName}</p>
+                            <p className="text-xs text-gray-500">
+                              Routines: {sharedPerson.routineNames.join(', ')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Linking options */}
+                        <div className="ml-13 space-y-2">
+                          <label className="text-sm font-medium text-gray-700">Link to:</label>
+
+                          {/* Toggle between select existing and create new */}
+                          <div className="flex gap-2 mb-2">
+                            <button
+                              type="button"
+                              onClick={() => updateLinking(index, { createNew: false, linkedPersonId: null })}
+                              className={`flex-1 px-3 py-2 text-sm rounded-md border ${
+                                !linking.createNew
+                                  ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              Select Existing
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateLinking(index, { createNew: true, linkedPersonId: null })}
+                              className={`flex-1 px-3 py-2 text-sm rounded-md border ${
+                                linking.createNew
+                                  ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              <Plus className="h-4 w-4 inline mr-1" />
+                              Create New
+                            </button>
+                          </div>
+
+                          {linking.createNew ? (
+                            // Create new person input
+                            <Input
+                              placeholder={`Enter ${personLabelSingular}'s name`}
+                              value={linking.newPersonName}
+                              onChange={(e) => updateLinking(index, { newPersonName: e.target.value })}
+                              className="w-full"
+                            />
+                          ) : (
+                            // Select existing person
+                            <Select
+                              value={linking.linkedPersonId || ''}
+                              onValueChange={(value) => updateLinking(index, { linkedPersonId: value })}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder={`Select your ${personLabelSingular}`} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availablePersons.length === 0 ? (
+                                  <div className="px-2 py-3 text-sm text-gray-500 text-center">
+                                    No {personLabel.toLowerCase()} found. Click &quot;Create New&quot; to add one.
+                                  </div>
+                                ) : (
+                                  availablePersons.map((person: { id: string; name: string }) => (
+                                    <SelectItem key={person.id} value={person.id}>
+                                      {person.name}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+
+                          {/* Validation indicator */}
+                          {((linking.createNew && linking.newPersonName.trim()) ||
+                            (!linking.createNew && linking.linkedPersonId)) && (
+                            <div className="flex items-center gap-1 text-green-600 text-xs">
+                              <Check className="h-3 w-3" />
+                              <span>Ready</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Validation message */}
+              {!allPersonsLinked && personLinkings.length > 0 && (
+                <p className="text-sm text-amber-600 mt-3">
+                  Please link all {personLabel.toLowerCase()} before accepting the invitation.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Expiry Info */}
           <div className="text-center text-sm text-gray-500">
             Invitation expires on {new Date(invitation.expiresAt).toLocaleDateString()} at{' '}
@@ -267,7 +512,7 @@ export default function AcceptInvitationPage() {
             <Button
               className="flex-1"
               onClick={handleAccept}
-              disabled={isAccepting || isRejecting || !emailMatches}
+              disabled={isAccepting || isRejecting || !emailMatches || (needsLinking && !allPersonsLinked)}
             >
               {isAccepting ? (
                 <>

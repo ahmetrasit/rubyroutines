@@ -102,9 +102,12 @@ export function ConnectedPersonsSection({
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
-      <button
+      <div
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && setExpanded(!expanded)}
       >
         <div className="flex items-center gap-3">
           {expanded ? (
@@ -127,7 +130,7 @@ export function ConnectedPersonsSection({
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
         </Button>
-      </button>
+      </div>
 
       {expanded && (
         <div className="px-6 pb-6">

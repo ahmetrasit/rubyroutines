@@ -23,13 +23,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Search, Shield, ShieldCheck, Trash2, Edit2, Users } from 'lucide-react';
+import { Search, Shield, ShieldCheck, Trash2, Edit2, Users, Ban, UserX, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { useToast } from '@/components/ui/toast';
 import Link from 'next/link';
 import { TierBadgeSelect } from '@/components/admin/TierBadgeSelect';
 import { Tier } from '@/lib/types/prisma-enums';
+import { HomeButton } from '@/components/home-button';
 
 export default function AdminUsersPage() {
   return (
@@ -52,6 +53,9 @@ function UsersContent() {
   const [permanentDeleteReason, setPermanentDeleteReason] = useState('');
   const [permanentDeleteConfirmText, setPermanentDeleteConfirmText] = useState('');
   const [showVerifyDialog, setShowVerifyDialog] = useState(false);
+  const [showBanDialog, setShowBanDialog] = useState(false);
+  const [banReason, setBanReason] = useState('');
+  const [showImpersonateDialog, setShowImpersonateDialog] = useState(false);
 
   const { data: usersData, isLoading } = trpc.adminUsers.search.useQuery({
     email: searchEmail || undefined,
@@ -174,6 +178,63 @@ function UsersContent() {
     },
   });
 
+  const banUserMutation = trpc.adminUsers.banUser.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'User has been banned',
+      });
+      utils.adminUsers.search.invalidate();
+      setShowBanDialog(false);
+      setBanReason('');
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const unbanUserMutation = trpc.adminUsers.unbanUser.useMutation({
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'User has been unbanned',
+      });
+      utils.adminUsers.search.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const impersonateMutation = trpc.adminUsers.startImpersonation.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: 'Impersonation Started',
+        description: `Token created. Expires at ${new Date(data.expiresAt).toLocaleTimeString()}`,
+      });
+      // Store the token for later use
+      localStorage.setItem('impersonation_token', data.impersonationToken);
+      setShowImpersonateDialog(false);
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleViewDetails = (user: any) => {
     setSelectedUser(user);
     setShowDetailsDialog(true);
@@ -227,13 +288,55 @@ function UsersContent() {
     setShowVerifyDialog(true);
   };
 
+  const handleBanUser = (user: any) => {
+    if (!user?.id || typeof user.id !== 'string') {
+      toast({
+        title: 'Error',
+        description: 'Invalid user data',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSelectedUser(user);
+    setBanReason('');
+    setShowBanDialog(true);
+  };
+
+  const handleUnbanUser = (user: any) => {
+    if (!user?.id || typeof user.id !== 'string') {
+      toast({
+        title: 'Error',
+        description: 'Invalid user data',
+        variant: 'destructive',
+      });
+      return;
+    }
+    unbanUserMutation.mutate({ userId: user.id });
+  };
+
+  const handleImpersonate = (user: any) => {
+    if (!user?.id || typeof user.id !== 'string') {
+      toast({
+        title: 'Error',
+        description: 'Invalid user data',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setSelectedUser(user);
+    setShowImpersonateDialog(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">User Management</h1>
-            <p className="text-muted-foreground">Manage users, tiers, and permissions</p>
+          <div className="flex items-center gap-3">
+            <HomeButton />
+            <div>
+              <h1 className="text-3xl font-bold mb-1">User Management</h1>
+              <p className="text-muted-foreground">Manage users, tiers, and permissions</p>
+            </div>
           </div>
           <Link href="/admin">
             <Button variant="outline">Back to Dashboard</Button>
@@ -263,9 +366,10 @@ function UsersContent() {
                 <SelectContent>
                   <SelectItem value="">All tiers</SelectItem>
                   <SelectItem value="FREE">Free</SelectItem>
-                  <SelectItem value="BRONZE">Bronze</SelectItem>
-                  <SelectItem value="GOLD">Gold</SelectItem>
-                  <SelectItem value="PRO">Pro</SelectItem>
+                  <SelectItem value="TINY">Tiny</SelectItem>
+                  <SelectItem value="SMALL">Small</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="LARGE">Large</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -324,6 +428,12 @@ function UsersContent() {
                             Unverified (click to verify)
                           </Badge>
                         )}
+                        {(user as any).bannedAt && (
+                          <Badge variant="destructive" className="gap-1">
+                            <Ban className="h-3 w-3" />
+                            Banned
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>{user._count.roles} roles</span>
@@ -355,6 +465,35 @@ function UsersContent() {
                       </Button>
                       {!user.isAdmin && (
                         <>
+                          {(user as any).bannedAt ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUnbanUser(user)}
+                              disabled={unbanUserMutation.isPending}
+                              title="Unban user"
+                            >
+                              <UserX className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleBanUser(user)}
+                              className="text-orange-600 hover:text-orange-700"
+                              title="Ban user"
+                            >
+                              <Ban className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleImpersonate(user)}
+                            title="Impersonate user"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -623,6 +762,99 @@ function UsersContent() {
                 disabled={verifyEmailMutation.isPending}
               >
                 Verify Email
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Ban User Dialog */}
+        <Dialog open={showBanDialog} onOpenChange={setShowBanDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Ban User</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to ban {selectedUser?.email}?
+                This will prevent them from logging in until they are unbanned.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <label className="text-sm font-medium mb-2 block">
+                Ban Reason (optional):
+              </label>
+              <Input
+                placeholder="e.g., Violation of terms of service"
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowBanDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (!selectedUser?.id) {
+                    toast({
+                      title: 'Error',
+                      description: 'Invalid user ID',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  banUserMutation.mutate({
+                    userId: selectedUser.id,
+                    reason: banReason || undefined,
+                  });
+                }}
+                disabled={banUserMutation.isPending}
+              >
+                {banUserMutation.isPending ? 'Banning...' : 'Ban User'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Impersonate User Dialog */}
+        <Dialog open={showImpersonateDialog} onOpenChange={setShowImpersonateDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Impersonate User</DialogTitle>
+              <DialogDescription>
+                You are about to impersonate {selectedUser?.email}.
+                This will create a temporary session token (valid for 1 hour) that allows you to view the app as this user.
+                All actions during impersonation are logged for security purposes.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 text-sm text-muted-foreground">
+              <p>During impersonation:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>You can view the user&apos;s data and settings</li>
+                <li>Changes made will affect the user&apos;s account</li>
+                <li>All actions are logged with your admin ID</li>
+                <li>The session expires automatically after 1 hour</li>
+              </ul>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowImpersonateDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedUser?.id) {
+                    toast({
+                      title: 'Error',
+                      description: 'Invalid user ID',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  impersonateMutation.mutate({ userId: selectedUser.id });
+                }}
+                disabled={impersonateMutation.isPending}
+              >
+                {impersonateMutation.isPending ? 'Starting...' : 'Start Impersonation'}
               </Button>
             </DialogFooter>
           </DialogContent>

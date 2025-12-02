@@ -67,7 +67,7 @@ export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
       } else {
         toast({
           title: 'Success',
-          description: 'Published to marketplace successfully',
+          description: 'Published to Community Routines successfully',
           variant: 'success',
         });
         utils.marketplace.search.invalidate();
@@ -88,7 +88,7 @@ export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
       setGeneratedCode(data.code);
       toast({
         title: 'Success',
-        description: 'Published to marketplace and share code generated',
+        description: 'Published to Community Routines and share code generated',
         variant: 'success',
       });
       utils.marketplace.search.invalidate();
@@ -173,7 +173,7 @@ export function PublishModal({ isOpen, onClose, roleId }: PublishModalProps) {
           <div className="p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Publish to Marketplace</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Publish to Community Routines</h2>
               <button
                 onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600 transition"

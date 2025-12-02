@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Check, Plus, Undo2 } from 'lucide-react';
+import { Check, Undo2 } from 'lucide-react';
 import { TaskType } from '@/lib/types/prisma-enums';
 import { canUndoCompletion, getRemainingUndoTime } from '@/lib/services/task-completion';
 import { useState, useEffect } from 'react';
@@ -21,6 +21,7 @@ interface Task {
   totalValue?: number;
   entryNumber?: number;
   summedValue?: number;
+  emoji?: string | null;
   completions?: Array<{
     id: string;
     completedAt: Date;
@@ -119,6 +120,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-gray-300 bg-white mr-4 flex-shrink-0 transition-all">
                 <Undo2 className="h-6 w-6 text-gray-700" />
               </div>
+              {task.emoji && <span className="text-2xl mr-2 flex-shrink-0">{task.emoji}</span>}
               <div className="flex-1">
                 <div className="text-xl font-semibold text-gray-900">{task.name}</div>
                 {task.description && (
@@ -137,6 +139,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-green-500 bg-green-500 mr-4 flex-shrink-0 transition-all">
                 <Check className="h-6 w-6 text-white" />
               </div>
+              {task.emoji && <span className="text-2xl mr-2 flex-shrink-0">{task.emoji}</span>}
               <div className="flex-1">
                 <div className="text-xl font-semibold text-gray-900">{task.name}</div>
                 {task.description && (
@@ -153,6 +156,7 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
           >
             <div className="flex items-center">
               <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-gray-300 bg-white mr-4 flex-shrink-0 transition-all"></div>
+              {task.emoji && <span className="text-2xl mr-2 flex-shrink-0">{task.emoji}</span>}
               <div className="flex-1">
                 <div className="text-xl font-semibold text-gray-900">{task.name}</div>
                 {task.description && (
@@ -164,18 +168,33 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
         );
 
       case TaskType.MULTIPLE_CHECKIN:
+        const hasCheckins = (task.completionCount || 0) > 0;
         return (
           <button
             onClick={() => handleComplete(task)}
             disabled={isTaskPending}
-            className="w-full text-left p-6 rounded-full border-2 transition-all bg-white border-gray-200 hover:border-gray-300 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
+            className={`w-full text-left p-6 rounded-full border-2 transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-wait ${
+              hasCheckins
+                ? 'bg-green-50 border-green-500'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            }`}
           >
             <div className="flex items-center">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full border-4 border-blue-300 bg-blue-50 mr-4 flex-shrink-0 transition-all">
-                <Plus className="h-6 w-6 text-blue-600" />
+              {/* Square checkbox - empty or filled based on checkin count */}
+              <div
+                className={`flex items-center justify-center w-10 h-10 rounded-md border-4 mr-4 flex-shrink-0 transition-all ${
+                  hasCheckins
+                    ? 'border-green-500 bg-green-500 rotate-[5deg]'
+                    : 'border-gray-300 bg-white'
+                }`}
+              >
+                {hasCheckins && <Check className="h-5 w-5 text-white" />}
               </div>
+              {task.emoji && <span className="text-2xl mr-2 flex-shrink-0">{task.emoji}</span>}
               <div className="flex-1">
-                <div className="text-xl font-semibold text-gray-900">{task.name}</div>
+                <div className="text-xl font-semibold text-gray-900">
+                  {task.name} <span className="text-xl">({task.completionCount || 0})</span>
+                </div>
                 {task.description && (
                   <div className="text-sm text-gray-500 mt-1">{task.description}</div>
                 )}
@@ -186,35 +205,31 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
 
       case TaskType.PROGRESS:
         return (
-          <div className="space-y-3">
-            <div className="flex gap-3">
-              <Input
-                type="number"
-                min="1"
-                max="999"
-                value={progressValues[task.id] || ''}
-                onChange={(e) =>
-                  setProgressValues({ ...progressValues, [task.id]: e.target.value })
-                }
-                placeholder="0"
-                className="flex-1 text-lg h-16 rounded-xl border-2 px-4"
-              />
-              <button
-                onClick={() => handleComplete(task)}
-                disabled={isTaskPending}
-                className="px-6 h-16 text-base font-semibold whitespace-nowrap rounded-xl border-2 transition-all bg-purple-500 text-white border-purple-500 hover:bg-purple-600 hover:border-purple-600 hover:shadow-md disabled:opacity-50 disabled:cursor-wait"
-              >
-                <div className="flex items-center">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Add {task.unit}
-                </div>
-              </button>
+          <div className="flex items-center gap-3">
+            {task.emoji && <span className="text-2xl flex-shrink-0">{task.emoji}</span>}
+            <div className="flex-1 min-w-0">
+              <span className="text-xl font-semibold text-gray-900">
+                {task.name} ({task.summedValue || task.totalValue || 0} {task.unit})
+              </span>
             </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-gray-900">
-                Total: {task.summedValue || task.totalValue || 0} {task.unit}
-              </div>
-            </div>
+            <Input
+              type="number"
+              min="1"
+              max="99"
+              value={progressValues[task.id] || ''}
+              onChange={(e) =>
+                setProgressValues({ ...progressValues, [task.id]: e.target.value })
+              }
+              placeholder="0"
+              className="w-16 text-center text-lg h-10 rounded-lg border-2 px-2 flex-shrink-0"
+            />
+            <button
+              onClick={() => handleComplete(task)}
+              disabled={isTaskPending}
+              className="px-4 h-10 text-sm font-semibold whitespace-nowrap rounded-lg border-2 transition-all bg-purple-500 text-white border-purple-500 hover:bg-purple-600 hover:border-purple-600 hover:shadow-md disabled:opacity-50 disabled:cursor-wait flex-shrink-0"
+            >
+              Add
+            </button>
           </div>
         );
 
@@ -234,14 +249,6 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
             className="bg-white rounded-xl shadow-md p-3 hover:shadow-lg transition-shadow"
           >
             <TaskWithGoals taskId={task.id}>
-              {task.type === TaskType.PROGRESS && (
-                <div className="mb-2">
-                  <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
-                  {task.description && (
-                    <p className="text-xs text-gray-600 mt-1">{task.description}</p>
-                  )}
-                </div>
-              )}
               {renderTaskButton(task)}
             </TaskWithGoals>
           </div>
@@ -259,14 +266,6 @@ export function TaskColumn({ title, tasks, personId, onComplete, onUndo, isPendi
                 className="bg-white rounded-xl shadow-md p-3 transition-shadow"
               >
                 <TaskWithGoals taskId={task.id}>
-                  {task.type === TaskType.PROGRESS && (
-                    <div className="mb-2">
-                      <h4 className="text-base font-bold text-gray-900">{task.name}</h4>
-                      {task.description && (
-                        <p className="text-xs text-gray-600 mt-1">{task.description}</p>
-                      )}
-                    </div>
-                  )}
                   {renderTaskButton(task)}
                 </TaskWithGoals>
               </div>

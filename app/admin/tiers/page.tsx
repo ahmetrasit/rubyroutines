@@ -10,8 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BarChart3, DollarSign } from 'lucide-react';
+import { BarChart3, DollarSign, School, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
+import { HomeButton } from '@/components/home-button';
+
+// Teacher tier names based on max student cards
+const TEACHER_TIERS = ['FREE', 'TINY', 'SMALL', 'MEDIUM', 'LARGE'] as const;
+const PAID_TIERS = ['TINY', 'SMALL', 'MEDIUM', 'LARGE'] as const;
 
 export default function AdminTiersPage() {
   return (
@@ -84,9 +89,12 @@ function TiersContent() {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Tier Configuration</h1>
-            <p className="text-muted-foreground">Manage system-wide tier limits and pricing</p>
+          <div className="flex items-center gap-3">
+            <HomeButton />
+            <div>
+              <h1 className="text-3xl font-bold mb-1">Tier Configuration</h1>
+              <p className="text-muted-foreground">Manage system-wide tier limits and pricing</p>
+            </div>
           </div>
           <Link href="/admin">
             <Button variant="outline">Back to Dashboard</Button>
@@ -114,7 +122,7 @@ function TiersContent() {
                     Parent Mode Limits
                   </h3>
                   <div className="space-y-6">
-                    {['FREE', 'BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                    {TEACHER_TIERS.map((tier) => {
                       const tierLimits = limits[tier];
                       if (!tierLimits) return null;
                       return (
@@ -164,15 +172,23 @@ function TiersContent() {
                 <div className="border-2 border-blue-300 bg-blue-50 rounded-lg p-6">
                   <h3 className="font-bold mb-6 text-xl text-blue-800 flex items-center gap-2">
                     <span className="w-3 h-3 bg-blue-700 rounded-full"></span>
-                    Teacher Mode Limits
+                    Teacher Mode Limits (by max students)
                   </h3>
                   <div className="space-y-6">
-                    {['FREE', 'BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                    {TEACHER_TIERS.map((tier) => {
                       const tierLimits = limits[tier];
                       if (!tierLimits) return null;
+                      const tierDescriptions: Record<string, string> = {
+                        FREE: 'Up to 3 students',
+                        TINY: 'Up to 7 students',
+                        SMALL: 'Up to 15 students',
+                        MEDIUM: 'Up to 23 students',
+                        LARGE: '24+ students (per-student pricing)',
+                      };
                       return (
                       <div key={`teacher-${tier}`} className="bg-white border border-blue-200 rounded-lg p-5">
-                        <h4 className="font-semibold mb-4 text-lg text-blue-900 capitalize">{tier.toLowerCase()}</h4>
+                        <h4 className="font-semibold mb-1 text-lg text-blue-900 capitalize">{tier.toLowerCase()}</h4>
+                        <p className="text-sm text-blue-600 mb-4">{tierDescriptions[tier]}</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {tierLimits.teacher && Object.entries(tierLimits.teacher).map(([limitKey, limitValue]: [string, any]) => (
                             <div key={limitKey}>
@@ -260,14 +276,23 @@ function TiersContent() {
                 </div>
 
                 {/* Pricing rows */}
-                {['BRONZE', 'GOLD', 'PRO'].map((tier) => {
+                {PAID_TIERS.map((tier) => {
                   const tierPrices = prices[tier];
                   if (!tierPrices) return null;
+                  const tierDescriptions: Record<string, string> = {
+                    TINY: '≤7 students',
+                    SMALL: '≤15 students',
+                    MEDIUM: '≤23 students',
+                    LARGE: '24+ (base)',
+                  };
                   return (
                     <div key={tier} className="grid grid-cols-12 gap-4 items-center">
-                      <Label className="col-span-2 font-semibold capitalize text-base">
-                        {tier.toLowerCase()}
-                      </Label>
+                      <div className="col-span-2">
+                        <Label className="font-semibold capitalize text-base">
+                          {tier.toLowerCase()}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">{tierDescriptions[tier]}</p>
+                      </div>
 
                       {/* Parent Mode Price */}
                       <div className="col-span-5 flex items-center gap-2">
@@ -326,6 +351,7 @@ function TiersContent() {
                         />
                         <span className="text-sm text-muted-foreground whitespace-nowrap">
                           = ${((editedPrices?.[tier]?.teacher ?? tierPrices.teacher) / 100).toFixed(2)}/mo
+                          {tier === 'LARGE' && ' + per-student'}
                         </span>
                       </div>
                     </div>

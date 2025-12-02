@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { HomeButton } from '@/components/home-button';
 
 export default function AdminMarketplacePage() {
   return (
@@ -234,9 +235,17 @@ function MarketplaceModeration() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Marketplace Moderation</h1>
-          <p className="text-muted-foreground">Manage marketplace content and review flagged comments</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <HomeButton />
+            <div>
+              <h1 className="text-3xl font-bold mb-1">Marketplace Moderation</h1>
+              <p className="text-muted-foreground">Manage marketplace content and review flagged comments</p>
+            </div>
+          </div>
+          <Link href="/admin">
+            <Button variant="outline">Back to Dashboard</Button>
+          </Link>
         </div>
 
         {/* Statistics */}

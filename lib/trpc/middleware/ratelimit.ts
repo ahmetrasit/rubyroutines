@@ -137,3 +137,30 @@ export const apiRateLimitedProcedure = rateLimitedProcedure(
   RATE_LIMITS.API,
   'api'
 );
+
+/**
+ * Invitation token lookup rate limiting (IP-based)
+ * 10 attempts per minute per IP - prevents brute force token enumeration attacks
+ * Uses IP address since this is a public endpoint where tokens are looked up
+ */
+export const invitationTokenRateLimitedProcedure = publicProcedure.use(async (opts) => {
+  const { ctx } = opts;
+
+  // Use IP address for rate limiting since this is a public endpoint
+  const identifier = `invitation:token:${ctx.ipAddress || 'unknown'}`;
+
+  const result = await rateLimit(identifier, RATE_LIMITS.INVITATION_TOKEN_LOOKUP);
+
+  if (!result.allowed) {
+    const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
+
+    throw new TRPCError({
+      code: 'TOO_MANY_REQUESTS',
+      message: `Too many token lookup attempts. Please try again in ${retryAfter} seconds.`,
+    });
+  }
+
+  return opts.next({
+    ctx,
+  });
+});

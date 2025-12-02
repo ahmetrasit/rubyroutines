@@ -20,7 +20,7 @@ export const analyticsRouter = router({
     .input(
       z.object({
         roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
-        personId: z.string().cuid().nullable().optional(),
+        personId: z.string().nullable().optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
         days: z.number().min(1).max(365).default(30),
@@ -47,7 +47,7 @@ export const analyticsRouter = router({
     .input(
       z.object({
         roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
-        personId: z.string().cuid().nullable().optional(),
+        personId: z.string().nullable().optional(),
       })
     )
     .query(async ({ input }) => {
@@ -63,7 +63,7 @@ export const analyticsRouter = router({
     .input(
       z.object({
         roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
-        personId: z.string().cuid().nullable().optional(),
+        personId: z.string().nullable().optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
         days: z.number().min(1).max(365).default(30),
@@ -90,7 +90,7 @@ export const analyticsRouter = router({
     .input(
       z.object({
         roleId: z.string().uuid(), // Role IDs are UUIDs, not CUIDs
-        personId: z.string().cuid().nullable().optional(),
+        personId: z.string().nullable().optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
         days: z.number().min(1).max(365).default(30),
@@ -117,8 +117,8 @@ export const analyticsRouter = router({
     .input(
       z.object({
         roleId: z.string().uuid(),
-        personId: z.string().cuid().nullable().optional(),
-        groupId: z.string().cuid().nullable().optional(),
+        personId: z.string().nullable().optional(),
+        groupId: z.string().nullable().optional(),
         period: z.enum(['WEEK', 'MONTH', 'QUARTER', 'YEAR']).default('MONTH'),
       })
     )
@@ -139,8 +139,8 @@ export const analyticsRouter = router({
     .input(
       z.object({
         roleId: z.string().uuid(),
-        personId: z.string().cuid().nullable().optional(),
-        groupId: z.string().cuid().nullable().optional(),
+        personId: z.string().nullable().optional(),
+        groupId: z.string().nullable().optional(),
       })
     )
     .query(async ({ input }) => {
@@ -174,8 +174,8 @@ export const analyticsRouter = router({
     .input(
       z.object({
         roleId: z.string().uuid(),
-        personId: z.string().cuid().nullable().optional(),
-        groupId: z.string().cuid().nullable().optional(),
+        personId: z.string().nullable().optional(),
+        groupId: z.string().nullable().optional(),
         period: z.enum(['WEEK', 'MONTH', 'QUARTER', 'YEAR']).default('MONTH'),
       })
     )

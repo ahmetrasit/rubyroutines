@@ -81,6 +81,8 @@ export function PersonKioskCodeManager({ roleId, personId, personName }: PersonK
       roleId.length > 0 &&
       personId &&
       personId.length > 0 &&
+      personName &&
+      personName.trim().length > 0 &&
       codes &&
       !codes.some(c => c.personId === personId) &&
       !hasAttemptedGeneration.current &&

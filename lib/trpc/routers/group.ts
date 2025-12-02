@@ -14,6 +14,15 @@ import {
 
 export const groupRouter = router({
   list: protectedProcedure.input(listGroupsSchema).query(async ({ ctx, input }) => {
+    // Verify role ownership
+    const role = await ctx.prisma.role.findUnique({
+      where: { id: input.roleId }
+    });
+
+    if (!role || role.userId !== ctx.user.id) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this role' });
+    }
+
     const groups = await ctx.prisma.group.findMany({
       where: {
         roleId: input.roleId,
@@ -63,10 +72,24 @@ export const groupRouter = router({
       });
     }
 
+    // Verify role ownership
+    if (group.role.userId !== ctx.user.id) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this group' });
+    }
+
     return group;
   }),
 
   create: protectedProcedure.input(createGroupSchema).mutation(async ({ ctx, input }) => {
+    // Verify role ownership
+    const role = await ctx.prisma.role.findUnique({
+      where: { id: input.roleId }
+    });
+
+    if (!role || role.userId !== ctx.user.id) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this role' });
+    }
+
     // Check for duplicate classroom name within the same role
     const existingGroup = await ctx.prisma.group.findFirst({
       where: {
@@ -83,34 +106,35 @@ export const groupRouter = router({
       });
     }
 
-    // For classrooms, ensure a "Me" person exists
+    // For classrooms, ALWAYS create a new "Me" person specific to this classroom
+    // Each classroom should have its own separate teacher/account owner person
     let mePerson = null;
     if (input.type === 'CLASSROOM') {
-      // Find or create "Me" person for this role
-      mePerson = await ctx.prisma.person.findFirst({
-        where: {
-          roleId: input.roleId,
-          name: 'Me',
-        },
+      // Get user's name for the person
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { name: true },
       });
 
-      if (!mePerson) {
-        // Create "Me" person with default avatar
-        const defaultAvatar = JSON.stringify({
-          color: '#FFB3BA',
-          emoji: '👤',
-        });
+      const defaultAvatar = JSON.stringify({
+        color: '#3b82f6',
+        emoji: '👤',
+      });
 
-        mePerson = await ctx.prisma.person.create({
-          data: {
-            roleId: input.roleId,
-            name: 'Me',
-            avatar: defaultAvatar,
-            status: EntityStatus.ACTIVE,
-            isAccountOwner: true,
-          },
-        });
-      }
+      // Always create a new person for each classroom
+      // isAccountOwner is false because each classroom has its own "Me"
+      // (only the original "Me" in the default Teacher-Only classroom is the true account owner)
+      // isTeacher is true to identify this person as a teacher (not a student)
+      mePerson = await ctx.prisma.person.create({
+        data: {
+          roleId: input.roleId,
+          name: user?.name || 'Me',
+          avatar: defaultAvatar,
+          status: EntityStatus.ACTIVE,
+          isAccountOwner: false,
+          isTeacher: true,
+        },
+      });
     }
 
     // Create group and update role timestamp for kiosk polling
@@ -158,7 +182,16 @@ export const groupRouter = router({
       include: { role: true }
     });
 
-    if (existingGroup && existingGroup.name === 'Teacher-Only') {
+    if (!existingGroup) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Group not found' });
+    }
+
+    // Verify role ownership
+    if (existingGroup.role.userId !== ctx.user.id) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this group' });
+    }
+
+    if (existingGroup.name === 'Teacher-Only') {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'The default Teacher-Only classroom cannot be modified',
@@ -183,7 +216,7 @@ export const groupRouter = router({
         },
       }),
       ctx.prisma.role.update({
-        where: { id: existingGroup!.roleId },
+        where: { id: existingGroup.roleId },
         data: { kioskLastUpdatedAt: now }
       })
     ]);
@@ -195,9 +228,19 @@ export const groupRouter = router({
     // Check if this is the protected default classroom
     const existingGroup = await ctx.prisma.group.findUnique({
       where: { id: input.id },
+      include: { role: true }
     });
 
-    if (existingGroup && existingGroup.name === 'Teacher-Only') {
+    if (!existingGroup) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Group not found' });
+    }
+
+    // Verify role ownership
+    if (existingGroup.role.userId !== ctx.user.id) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this group' });
+    }
+
+    if (existingGroup.name === 'Teacher-Only') {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'The default Teacher-Only classroom cannot be removed',
@@ -233,10 +276,10 @@ export const groupRouter = router({
       });
     }
 
-    // Get group to access roleId
+    // Get group to access roleId and verify ownership
     const group = await ctx.prisma.group.findUnique({
       where: { id: input.groupId },
-      select: { roleId: true }
+      include: { role: true }
     });
 
     if (!group) {
@@ -244,6 +287,11 @@ export const groupRouter = router({
         code: 'NOT_FOUND',
         message: 'Group not found',
       });
+    }
+
+    // Verify role ownership
+    if (group.role.userId !== ctx.user.id) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this group' });
     }
 
     // Add member and update role + group timestamps for kiosk polling
@@ -269,30 +317,26 @@ export const groupRouter = router({
       })
     ]);
 
-    // Get role and person details to determine if teacher-only routine should be created
-    const role = await ctx.prisma.role.findUnique({
-      where: { id: group.roleId },
-      select: { type: true }
-    });
-
+    // Get person details to determine if teacher-only routine should be created
     const addedPerson = await ctx.prisma.person.findUnique({
       where: { id: input.personId },
-      select: { isAccountOwner: true }
+      select: { isAccountOwner: true, isTeacher: true }
     });
 
     // Create teacher-only routine if adding student to classroom
-    if (role?.type === 'TEACHER' && !addedPerson?.isAccountOwner) {
-      await createDefaultTeacherOnlyRoutine(group.roleId, input.personId, role.type);
+    // Only create for students (not teachers or account owners)
+    if (group.role.type === 'TEACHER' && !addedPerson?.isAccountOwner && !addedPerson?.isTeacher) {
+      await createDefaultTeacherOnlyRoutine(group.roleId, input.personId, group.role.type);
     }
 
     return member;
   }),
 
   removeMember: protectedProcedure.input(removeMemberSchema).mutation(async ({ ctx, input }) => {
-    // Get group to access roleId
+    // Get group to access roleId and verify ownership
     const group = await ctx.prisma.group.findUnique({
       where: { id: input.groupId },
-      select: { roleId: true }
+      include: { role: true }
     });
 
     if (!group) {
@@ -300,6 +344,11 @@ export const groupRouter = router({
         code: 'NOT_FOUND',
         message: 'Group not found',
       });
+    }
+
+    // Verify role ownership
+    if (group.role.userId !== ctx.user.id) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this group' });
     }
 
     // Remove member and update role + group timestamps for kiosk polling
@@ -327,6 +376,21 @@ export const groupRouter = router({
   }),
 
   restore: protectedProcedure.input(getGroupByIdSchema).mutation(async ({ ctx, input }) => {
+    // Verify ownership before restoring
+    const existingGroup = await ctx.prisma.group.findUnique({
+      where: { id: input.id },
+      include: { role: true }
+    });
+
+    if (!existingGroup) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Group not found' });
+    }
+
+    // Verify role ownership
+    if (existingGroup.role.userId !== ctx.user.id) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have access to this group' });
+    }
+
     const group = await ctx.prisma.group.update({
       where: { id: input.id },
       data: {

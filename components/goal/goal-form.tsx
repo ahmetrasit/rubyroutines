@@ -461,7 +461,6 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                       <SelectContent>
                         <SelectItem value={ResetPeriod.DAILY}>Daily</SelectItem>
                         <SelectItem value={ResetPeriod.WEEKLY}>Weekly</SelectItem>
-                        <SelectItem value={ResetPeriod.MONTHLY}>Monthly</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -490,22 +489,6 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                     </div>
                   )}
 
-                  {/* Reset Day for Monthly Period */}
-                  {period === ResetPeriod.MONTHLY && (
-                    <div className="space-y-2">
-                      <Label htmlFor="resetDay">Reset Day of Month</Label>
-                      <Input
-                        id="resetDay"
-                        type="number"
-                        min="1"
-                        max="31"
-                        placeholder="1-31"
-                        value={resetDay?.toString() || '1'}
-                        onChange={(e) => setResetDay(parseInt(e.target.value))}
-                        disabled={isPending}
-                      />
-                    </div>
-                  )}
                 </div>
 
                 {/* Task Selection and Condition/Operator/Value - All on same row */}
@@ -906,7 +889,6 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                       <SelectContent>
                         <SelectItem value={ResetPeriod.DAILY}>Daily</SelectItem>
                         <SelectItem value={ResetPeriod.WEEKLY}>Weekly</SelectItem>
-                        <SelectItem value={ResetPeriod.MONTHLY}>Monthly</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -935,21 +917,6 @@ export function GoalForm({ roleId, goal, personId, onClose }: GoalFormProps) {
                   </div>
                 )}
 
-                {period === ResetPeriod.MONTHLY && (
-                  <div className="space-y-2">
-                    <Label htmlFor="resetDay">Reset Day of Month</Label>
-                    <Input
-                      id="resetDay"
-                      type="number"
-                      min="1"
-                      max="31"
-                      placeholder="1-31"
-                      value={resetDay?.toString() || '1'}
-                      onChange={(e) => setResetDay(parseInt(e.target.value))}
-                      disabled={isPending}
-                    />
-                  </div>
-                )}
 
                 {/* Linked Tasks */}
                 {availableTasks.length > 0 && (

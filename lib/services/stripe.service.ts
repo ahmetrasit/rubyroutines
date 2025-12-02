@@ -27,18 +27,23 @@ function requireStripe(): Stripe {
 }
 
 // Tier pricing (in cents) - different for parent and teacher modes
+// Teacher tiers: FREE (3 students), TINY (7), SMALL (15), MEDIUM (23), LARGE (24+)
 export const TIER_PRICES = {
-  [Tier.BRONZE]: {
+  [Tier.TINY]: {
     PARENT: 199, // $1.99
-    TEACHER: 499, // $4.99
+    TEACHER: 299, // $2.99
   },
-  [Tier.GOLD]: {
+  [Tier.SMALL]: {
     PARENT: 399, // $3.99
+    TEACHER: 599, // $5.99
+  },
+  [Tier.MEDIUM]: {
+    PARENT: 799, // $7.99
     TEACHER: 999, // $9.99
   },
-  [Tier.PRO]: {
+  [Tier.LARGE]: {
     PARENT: 1299, // $12.99
-    TEACHER: 2999, // $29.99
+    TEACHER: 999, // $9.99 base (+ per-student pricing for teachers)
   },
 };
 

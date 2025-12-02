@@ -24,6 +24,7 @@ export interface UserWithStats {
   name: string | null;
   isAdmin: boolean;
   emailVerified: Date | null;
+  bannedAt: Date | null;
   createdAt: Date;
   roles: Array<{
     id: string;
@@ -935,4 +936,305 @@ export async function permanentlyDeleteUserAccount(
   }
 
   logger.info(`User ${userId} (${user.email}) permanently deleted by admin ${deletedByAdminId}. Reason: ${reason}`);
+}
+
+/**
+ * Ban a user (prevents login)
+ */
+export async function banUser(
+  userId: string,
+  bannedByAdminId: string,
+  reason?: string,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, isAdmin: true, bannedAt: true },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Cannot ban admin users
+  if (user.isAdmin) {
+    throw new Error('Cannot ban admin users. Revoke admin access first.');
+  }
+
+  // Cannot ban yourself
+  if (userId === bannedByAdminId) {
+    throw new Error('Cannot ban yourself');
+  }
+
+  // Already banned
+  if (user.bannedAt) {
+    throw new Error('User is already banned');
+  }
+
+  const now = new Date();
+  await prisma.user.update({
+    where: { id: userId },
+    data: { bannedAt: now },
+  });
+
+  await createAuditLog({
+    userId: bannedByAdminId,
+    action: AdminAction.USER_BANNED,
+    entityType: 'User',
+    entityId: userId,
+    changes: {
+      email: user.email,
+      bannedAt: now.toISOString(),
+      reason,
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  await logModerationAction({
+    adminUserId: bannedByAdminId,
+    entityType: EntityType.USER,
+    entityId: userId,
+    action: ModerationAction.BAN_USER,
+    reason,
+    metadata: {
+      email: user.email,
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  logger.info(`User ${userId} banned by admin ${bannedByAdminId}. Reason: ${reason || 'No reason provided'}`);
+}
+
+/**
+ * Unban a user
+ */
+export async function unbanUser(
+  userId: string,
+  unbannedByAdminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, bannedAt: true },
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Not banned
+  if (!user.bannedAt) {
+    throw new Error('User is not banned');
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { bannedAt: null },
+  });
+
+  await createAuditLog({
+    userId: unbannedByAdminId,
+    action: AdminAction.USER_UNBANNED,
+    entityType: 'User',
+    entityId: userId,
+    changes: {
+      email: user.email,
+      unbannedAt: new Date().toISOString(),
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  await logModerationAction({
+    adminUserId: unbannedByAdminId,
+    entityType: EntityType.USER,
+    entityId: userId,
+    action: ModerationAction.UNBAN_USER,
+    metadata: {
+      email: user.email,
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  logger.info(`User ${userId} unbanned by admin ${unbannedByAdminId}`);
+}
+
+/**
+ * Start impersonating a user
+ * Returns a token/session that can be used to impersonate
+ */
+export async function startImpersonation(
+  targetUserId: string,
+  adminUserId: string,
+  ipAddress?: string,
+  userAgent?: string
+): Promise<{ impersonationToken: string; expiresAt: Date }> {
+  const targetUser = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { email: true, isAdmin: true },
+  });
+
+  if (!targetUser) {
+    throw new Error('Target user not found');
+  }
+
+  // Cannot impersonate admin users
+  if (targetUser.isAdmin) {
+    throw new Error('Cannot impersonate admin users');
+  }
+
+  // Cannot impersonate yourself
+  if (targetUserId === adminUserId) {
+    throw new Error('Cannot impersonate yourself');
+  }
+
+  // Generate impersonation token (expires in 1 hour)
+  const crypto = await import('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  // Store impersonation session
+  await prisma.systemSettings.upsert({
+    where: { key: `impersonation_${token}` },
+    create: {
+      key: `impersonation_${token}`,
+      value: JSON.stringify({
+        adminUserId,
+        targetUserId,
+        expiresAt: expiresAt.toISOString(),
+      }),
+    },
+    update: {
+      value: JSON.stringify({
+        adminUserId,
+        targetUserId,
+        expiresAt: expiresAt.toISOString(),
+      }),
+    },
+  });
+
+  await createAuditLog({
+    userId: adminUserId,
+    action: AdminAction.USER_IMPERSONATION_STARTED,
+    entityType: 'User',
+    entityId: targetUserId,
+    changes: {
+      targetEmail: targetUser.email,
+      expiresAt: expiresAt.toISOString(),
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  await logModerationAction({
+    adminUserId,
+    entityType: EntityType.USER,
+    entityId: targetUserId,
+    action: ModerationAction.IMPERSONATE_USER,
+    metadata: {
+      targetEmail: targetUser.email,
+      expiresAt: expiresAt.toISOString(),
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  logger.info(`Admin ${adminUserId} started impersonating user ${targetUserId} (${targetUser.email})`);
+
+  return { impersonationToken: token, expiresAt };
+}
+
+/**
+ * End impersonation session
+ */
+export async function endImpersonation(
+  impersonationToken: string,
+  adminUserId: string,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  const setting = await prisma.systemSettings.findUnique({
+    where: { key: `impersonation_${impersonationToken}` },
+  });
+
+  if (!setting) {
+    throw new Error('Impersonation session not found');
+  }
+
+  const sessionData = JSON.parse(setting.value as string);
+
+  // Verify admin matches
+  if (sessionData.adminUserId !== adminUserId) {
+    throw new Error('Unauthorized to end this impersonation session');
+  }
+
+  // Delete the session
+  await prisma.systemSettings.delete({
+    where: { key: `impersonation_${impersonationToken}` },
+  });
+
+  await createAuditLog({
+    userId: adminUserId,
+    action: AdminAction.USER_IMPERSONATION_ENDED,
+    entityType: 'User',
+    entityId: sessionData.targetUserId,
+    changes: {
+      endedAt: new Date().toISOString(),
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  await logModerationAction({
+    adminUserId,
+    entityType: EntityType.USER,
+    entityId: sessionData.targetUserId,
+    action: ModerationAction.STOP_IMPERSONATION,
+    metadata: {
+      endedAt: new Date().toISOString(),
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  logger.info(`Admin ${adminUserId} ended impersonation of user ${sessionData.targetUserId}`);
+}
+
+/**
+ * Validate impersonation token
+ */
+export async function validateImpersonationToken(token: string): Promise<{
+  valid: boolean;
+  adminUserId?: string;
+  targetUserId?: string;
+}> {
+  const setting = await prisma.systemSettings.findUnique({
+    where: { key: `impersonation_${token}` },
+  });
+
+  if (!setting) {
+    return { valid: false };
+  }
+
+  const sessionData = JSON.parse(setting.value as string);
+  const expiresAt = new Date(sessionData.expiresAt);
+
+  if (expiresAt < new Date()) {
+    // Expired - clean up
+    await prisma.systemSettings.delete({
+      where: { key: `impersonation_${token}` },
+    });
+    return { valid: false };
+  }
+
+  return {
+    valid: true,
+    adminUserId: sessionData.adminUserId,
+    targetUserId: sessionData.targetUserId,
+  };
 }

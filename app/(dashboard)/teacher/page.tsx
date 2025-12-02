@@ -5,19 +5,28 @@ import { useRouter } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import { GroupList } from '@/components/group/group-list';
 import { ModeSwitcher } from '@/components/mode-switcher';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Store, BarChart3, CreditCard, Settings, Download, Share2, Copy, Clock } from 'lucide-react';
-import { ImportFromCodeModal } from '@/components/marketplace/ImportFromCodeModal';
-import { CopyRoutineModal } from '@/components/routine/copy-routine-modal';
-import { BulkVisibilityControl } from '@/components/routine/bulk-visibility-control';
+import { Button } from '@/components/ui/button';
+import { Download, BarChart3, Settings } from 'lucide-react';
+import { GetRoutinesModal } from '@/components/routine/GetRoutinesModal';
 import Link from 'next/link';
+
+const LAST_MODE_KEY = 'rubyroutines_last_mode';
 
 export default function TeacherDashboard() {
   const router = useRouter();
   const { data: session, isLoading } = trpc.auth.getSession.useQuery();
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [showCopyModal, setShowCopyModal] = useState(false);
-  const [showBulkVisibility, setShowBulkVisibility] = useState(false);
+  const [showGetRoutines, setShowGetRoutines] = useState(false);
+
+  // Store 'teacher' as last visited mode on mount (both localStorage and cookie for OAuth)
+  useEffect(() => {
+    try {
+      localStorage.setItem(LAST_MODE_KEY, 'teacher');
+      // Also set cookie for OAuth callback (server-side redirect)
+      document.cookie = `${LAST_MODE_KEY}=teacher; path=/; max-age=31536000`; // 1 year
+    } catch {
+      // localStorage/cookie may be unavailable
+    }
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !session?.user) {
@@ -57,160 +66,55 @@ export default function TeacherDashboard() {
     router.push(`/teacher/${group.id}`);
   };
 
-  // Get role color (default to blue if not set)
-  const roleColor = teacherRole.color || '#3b82f6';
-
-  // Convert hex to RGB for opacity
-  const hexToRgb = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result && result[1] && result[2] && result[3]
-      ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-      : '59, 130, 246'; // Default blue RGB
-  };
-
-  const rgbColor = hexToRgb(roleColor);
-
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <ModeSwitcher currentMode="teacher" />
 
-      {/* Top section with colored background */}
-      <div className="bg-white dark:bg-gray-900">
-        <div
-          className="max-w-7xl mx-auto border-t-2 border-x-2 rounded-t-md"
-          style={{
-            borderColor: roleColor,
-            backgroundColor: `rgba(${rgbColor}, 0.05)`
-          }}
-        >
-          <div className="px-4 sm:px-6 lg:px-8 py-8">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Teacher Dashboard</h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your classrooms and students</p>
-            </div>
+      {/* Main content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header with title and action buttons */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Teacher Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your classrooms and students</p>
+          </div>
 
-            {/* Quick Navigation */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              <Link href="/marketplace" className="block">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Marketplace</CardTitle>
-                    <Store className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-muted-foreground">Discover routines</div>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Card
-                className="hover:shadow-lg transition-shadow cursor-pointer h-full"
-                onClick={() => setShowImportModal(true)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Import Code</CardTitle>
-                  <Download className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xs text-muted-foreground">Import shared item</div>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="hover:shadow-lg transition-shadow cursor-pointer h-full"
-                onClick={() => setShowCopyModal(true)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Copy Routines</CardTitle>
-                  <Copy className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xs text-muted-foreground">Copy to students</div>
-                </CardContent>
-              </Card>
-
-              <Card
-                className="hover:shadow-lg transition-shadow cursor-pointer h-full"
-                onClick={() => setShowBulkVisibility(true)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Show Hidden</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-xs text-muted-foreground">Temp visibility</div>
-                </CardContent>
-              </Card>
-
-              <Link href="/analytics" className="block">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Analytics</CardTitle>
-                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-muted-foreground">View insights</div>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link href="/billing" className="block">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Billing</CardTitle>
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-muted-foreground">Manage plan</div>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link href="/settings" className="block">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Settings</CardTitle>
-                    <Settings className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xs text-muted-foreground">Configure app</div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowGetRoutines(true)}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Get Routines</span>
+            </Button>
+            <Link href="/analytics">
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Analytics</span>
+              </Button>
+            </Link>
+            <Link href="/settings">
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </Button>
+            </Link>
           </div>
         </div>
+
+        {/* Classroom list */}
+        <GroupList roleId={teacherRole.id} roleType="TEACHER" onSelectGroup={handleSelectGroup} />
       </div>
 
-      {/* Classroom cards section with white background */}
-      <div className="bg-white dark:bg-gray-900">
-        <div
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-x-2 border-b-2 rounded-b-md"
-          style={{ borderColor: roleColor }}
-        >
-          <GroupList roleId={teacherRole.id} roleType="TEACHER" onSelectGroup={handleSelectGroup} />
-        </div>
-      </div>
-
-      {/* Import from Code Modal */}
-      <ImportFromCodeModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
+      {/* Get Routines Modal */}
+      <GetRoutinesModal
+        isOpen={showGetRoutines}
+        onClose={() => setShowGetRoutines(false)}
         roleId={teacherRole.id}
-      />
-
-      {/* Copy Routine Modal */}
-      <CopyRoutineModal
-        isOpen={showCopyModal}
-        onClose={() => setShowCopyModal(false)}
-        roleId={teacherRole.id}
-      />
-
-      {/* Bulk Visibility Control */}
-      <BulkVisibilityControl
-        isOpen={showBulkVisibility}
-        onClose={() => setShowBulkVisibility(false)}
-        roleId={teacherRole.id}
+        roleType="TEACHER"
       />
     </div>
   );

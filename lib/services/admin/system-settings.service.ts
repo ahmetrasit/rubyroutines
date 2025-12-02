@@ -160,6 +160,7 @@ export async function deleteSetting(
 
 /**
  * Get tier limits (system-level)
+ * Teacher tiers: FREE (3 students), TINY (7), SMALL (15), MEDIUM (23), LARGE (24+)
  */
 export async function getTierLimits() {
   const defaultLimits = {
@@ -175,8 +176,7 @@ export async function getTierLimits() {
         kioskCodes: 1,
       },
       teacher: {
-        classrooms: 1,
-        studentsPerClassroom: 5,
+        maxStudents: 3,
         maxCoTeachers: 0,
         routines: 10,
         smartRoutines: 0,
@@ -186,7 +186,7 @@ export async function getTierLimits() {
         kioskCodes: 1,
       },
     },
-    [Tier.BRONZE]: {
+    [Tier.TINY]: {
       parent: {
         persons: 10,
         maxCoParents: 1,
@@ -198,8 +198,7 @@ export async function getTierLimits() {
         kioskCodes: 5,
       },
       teacher: {
-        classrooms: 3,
-        studentsPerClassroom: 20,
+        maxStudents: 7,
         maxCoTeachers: 2,
         routines: 50,
         smartRoutines: 2,
@@ -209,7 +208,7 @@ export async function getTierLimits() {
         kioskCodes: 5,
       },
     },
-    [Tier.GOLD]: {
+    [Tier.SMALL]: {
       parent: {
         persons: 50,
         maxCoParents: 3,
@@ -221,8 +220,7 @@ export async function getTierLimits() {
         kioskCodes: 20,
       },
       teacher: {
-        classrooms: 10,
-        studentsPerClassroom: 50,
+        maxStudents: 15,
         maxCoTeachers: 5,
         routines: 200,
         smartRoutines: 10,
@@ -232,7 +230,7 @@ export async function getTierLimits() {
         kioskCodes: 20,
       },
     },
-    [Tier.PRO]: {
+    [Tier.MEDIUM]: {
       parent: {
         persons: 100,
         maxCoParents: 5,
@@ -244,9 +242,30 @@ export async function getTierLimits() {
         kioskCodes: 50,
       },
       teacher: {
-        classrooms: 50,
-        studentsPerClassroom: 100,
+        maxStudents: 23,
         maxCoTeachers: 10,
+        routines: 500,
+        smartRoutines: 50,
+        tasksPerRoutine: 100,
+        smartTasksPerRoutine: 25,
+        goals: 100,
+        kioskCodes: 50,
+      },
+    },
+    [Tier.LARGE]: {
+      parent: {
+        persons: null, // unlimited
+        maxCoParents: 10,
+        routines: 1000,
+        smartRoutines: 100,
+        tasksPerRoutine: 100,
+        smartTasksPerRoutine: 25,
+        goals: 200,
+        kioskCodes: 100,
+      },
+      teacher: {
+        maxStudents: null, // unlimited (base + per-student pricing)
+        maxCoTeachers: 20,
         routines: 1000,
         smartRoutines: 100,
         tasksPerRoutine: 100,
@@ -276,9 +295,12 @@ export async function getTierLimits() {
 
     // Migrate old tier names to new ones if present (mapping only, no database write)
     const tierNameMap: Record<string, Tier> = {
-      'BASIC': Tier.BRONZE,
-      'PREMIUM': Tier.GOLD,
-      'SCHOOL': Tier.PRO,
+      'BASIC': Tier.TINY,
+      'BRONZE': Tier.TINY,
+      'PREMIUM': Tier.SMALL,
+      'GOLD': Tier.SMALL,
+      'SCHOOL': Tier.LARGE,
+      'PRO': Tier.LARGE,
     };
 
     const migratedSetting: any = {};
@@ -341,20 +363,25 @@ export async function updateTierLimits(
 
 /**
  * Get tier prices (system-level)
+ * Teacher tiers: FREE ($0), TINY, SMALL, MEDIUM (flat fees), LARGE ($9.99 base + per-student)
  */
 export async function getTierPrices() {
   const defaultPrices = {
-    [Tier.BRONZE]: {
+    [Tier.TINY]: {
       parent: 199, // $1.99
-      teacher: 499, // $4.99
+      teacher: 299, // $2.99
     },
-    [Tier.GOLD]: {
+    [Tier.SMALL]: {
       parent: 399, // $3.99
+      teacher: 599, // $5.99
+    },
+    [Tier.MEDIUM]: {
+      parent: 799, // $7.99
       teacher: 999, // $9.99
     },
-    [Tier.PRO]: {
+    [Tier.LARGE]: {
       parent: 1299, // $12.99
-      teacher: 2999, // $29.99
+      teacher: 999, // $9.99 base (+ per-student pricing)
     },
   };
 
@@ -368,9 +395,12 @@ export async function getTierPrices() {
 
     // Migrate old tier names to new ones if present (mapping only, no database write)
     const tierNameMap: Record<string, Tier> = {
-      'BASIC': Tier.BRONZE,
-      'PREMIUM': Tier.GOLD,
-      'SCHOOL': Tier.PRO,
+      'BASIC': Tier.TINY,
+      'BRONZE': Tier.TINY,
+      'PREMIUM': Tier.SMALL,
+      'GOLD': Tier.SMALL,
+      'SCHOOL': Tier.LARGE,
+      'PRO': Tier.LARGE,
     };
 
     const migratedSetting: any = {};
@@ -402,6 +432,164 @@ export async function getTierPrices() {
     logger.error('Error fetching tier prices from database:', error);
     return defaultPrices;
   }
+}
+
+/**
+ * Get teacher billing configuration (system-level)
+ * Includes tier thresholds and LARGE tier per-student pricing
+ */
+export async function getTeacherBillingConfig() {
+  const defaultConfig = {
+    tiers: {
+      FREE: { maxStudents: 3, price: 0 },
+      TINY: { maxStudents: 7, price: 299 },     // $2.99
+      SMALL: { maxStudents: 15, price: 599 },   // $5.99
+      MEDIUM: { maxStudents: 23, price: 999 },  // $9.99
+      LARGE: { maxStudents: null, basePrice: 999 }, // $9.99 base
+    },
+    largePerStudent: 10,        // $0.10 per additional student
+    activeHoursThreshold: 4,    // hours/day to count as active
+  };
+
+  try {
+    const setting = await getSetting('teacher_billing');
+
+    if (!setting) {
+      // Initialize with defaults
+      logger.info('Initializing teacher_billing in database with default values');
+      await prisma.systemSettings.create({
+        data: {
+          key: 'teacher_billing',
+          value: defaultConfig,
+          category: SettingCategory.BILLING,
+          description: 'Teacher mode billing configuration',
+        },
+      });
+      return defaultConfig;
+    }
+
+    return setting;
+  } catch (error) {
+    logger.error('Error fetching teacher billing config from database:', error);
+    return defaultConfig;
+  }
+}
+
+/**
+ * Update teacher billing configuration (system-level)
+ */
+export async function updateTeacherBillingConfig(
+  config: {
+    tiers: Record<string, { maxStudents: number | null; price?: number; basePrice?: number }>;
+    largePerStudent: number;
+    activeHoursThreshold: number;
+  },
+  updatedByAdminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  const oldConfig = await getTeacherBillingConfig();
+
+  await setSetting(
+    {
+      key: 'teacher_billing',
+      value: config,
+      category: SettingCategory.BILLING,
+      description: 'Teacher mode billing configuration',
+    },
+    updatedByAdminId,
+    ipAddress,
+    userAgent
+  );
+
+  await createAuditLog({
+    userId: updatedByAdminId,
+    action: AdminAction.SETTINGS_CHANGED,
+    entityType: 'SystemSettings',
+    entityId: 'teacher_billing',
+    changes: {
+      config: { before: oldConfig, after: config },
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  logger.info(`Teacher billing config updated by admin ${updatedByAdminId}`);
+}
+
+/**
+ * Get school billing configuration (system-level)
+ * Yearly upfront fee + per-student pricing
+ */
+export async function getSchoolBillingConfig() {
+  const defaultConfig = {
+    yearlyUpfrontFee: 29900,  // $299/year
+    perStudentFee: 100,       // $1.00/student
+  };
+
+  try {
+    const setting = await getSetting('school_billing');
+
+    if (!setting) {
+      // Initialize with defaults
+      logger.info('Initializing school_billing in database with default values');
+      await prisma.systemSettings.create({
+        data: {
+          key: 'school_billing',
+          value: defaultConfig,
+          category: SettingCategory.BILLING,
+          description: 'School mode billing configuration',
+        },
+      });
+      return defaultConfig;
+    }
+
+    return setting;
+  } catch (error) {
+    logger.error('Error fetching school billing config from database:', error);
+    return defaultConfig;
+  }
+}
+
+/**
+ * Update school billing configuration (system-level)
+ */
+export async function updateSchoolBillingConfig(
+  config: {
+    yearlyUpfrontFee: number;
+    perStudentFee: number;
+  },
+  updatedByAdminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) {
+  const oldConfig = await getSchoolBillingConfig();
+
+  await setSetting(
+    {
+      key: 'school_billing',
+      value: config,
+      category: SettingCategory.BILLING,
+      description: 'School mode billing configuration',
+    },
+    updatedByAdminId,
+    ipAddress,
+    userAgent
+  );
+
+  await createAuditLog({
+    userId: updatedByAdminId,
+    action: AdminAction.SETTINGS_CHANGED,
+    entityType: 'SystemSettings',
+    entityId: 'school_billing',
+    changes: {
+      config: { before: oldConfig, after: config },
+    },
+    ipAddress,
+    userAgent,
+  });
+
+  logger.info(`School billing config updated by admin ${updatedByAdminId}`);
 }
 
 /**

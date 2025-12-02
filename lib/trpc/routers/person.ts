@@ -13,18 +13,20 @@ import {
   getPersonSchema,
   getBatchPersonsSchema,
 } from '@/lib/validation/person';
+import { invalidatePersonCaches } from '@/lib/services/cache.service';
 
 export const personRouter = router({
   list: authorizedProcedure
     .input(listPersonsSchema)
     .query(async ({ ctx, input }) => {
       // Get owned persons (directly created by this role)
+      // Order by createdAt ascending so new members appear at the end
       const ownedPersons = await ctx.prisma.person.findMany({
         where: {
           roleId: input.roleId,
           status: input.includeInactive ? undefined : EntityStatus.ACTIVE,
         },
-        orderBy: { name: 'asc' },
+        orderBy: { createdAt: 'asc' },
       });
 
       // Get shared persons from co-parent relationships
@@ -52,7 +54,7 @@ export const personRouter = router({
             },
           },
         },
-        orderBy: { name: 'asc' },
+        orderBy: { createdAt: 'asc' },
       });
 
       // Get connected students from teacher connections (for parent roles)
@@ -85,7 +87,7 @@ export const personRouter = router({
               },
             },
           },
-          orderBy: { name: 'asc' },
+          orderBy: { createdAt: 'asc' },
         });
       }
 
@@ -96,8 +98,8 @@ export const personRouter = router({
         ...connectedStudents.map(p => ({ ...p, accessType: 'connected' as const })),
       ];
 
-      // Sort combined list by name
-      allPersons.sort((a, b) => a.name.localeCompare(b.name));
+      // Sort combined list by createdAt (oldest first, newest last)
+      allPersons.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
       return allPersons;
     }),
@@ -410,6 +412,9 @@ export const personRouter = router({
         await createDefaultTeacherOnlyRoutine(input.roleId, person.id, role.type);
       }
 
+      // Invalidate persons cache for this role
+      await invalidatePersonCaches(person.id, input.roleId);
+
       return person;
     }),
 
@@ -425,6 +430,9 @@ export const personRouter = router({
         where: { id },
         data,
       });
+
+      // Invalidate person's cache
+      await invalidatePersonCaches(person.id, person.roleId);
 
       return person;
     }),
@@ -480,6 +488,9 @@ export const personRouter = router({
         }),
         ...groupUpdates
       ]);
+
+      // Invalidate person's cache
+      await invalidatePersonCaches(input.id, existingPerson.roleId);
 
       return person;
     }),
@@ -545,6 +556,9 @@ export const personRouter = router({
           await createDefaultTeacherOnlyRoutine(existingPerson.roleId, input.id, role.type);
         }
       }
+
+      // Invalidate person's cache
+      await invalidatePersonCaches(input.id, existingPerson.roleId);
 
       return person;
     }),

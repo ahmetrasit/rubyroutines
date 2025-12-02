@@ -350,7 +350,7 @@ export const goalRouter = router({
   linkTasks: protectedProcedure
     .input(z.object({
       goalId: z.string().uuid(),
-      taskIds: z.array(z.string().cuid())
+      taskIds: z.array(z.string())
     }))
     .mutation(async ({ ctx, input }) => {
       const goal = await ctx.prisma.goal.findUnique({
@@ -396,7 +396,7 @@ export const goalRouter = router({
   linkRoutines: protectedProcedure
     .input(z.object({
       goalId: z.string().uuid(),
-      routineIds: z.array(z.string().cuid())
+      routineIds: z.array(z.string())
     }))
     .mutation(async ({ ctx, input }) => {
       const goal = await ctx.prisma.goal.findUnique({
@@ -442,7 +442,7 @@ export const goalRouter = router({
   unlinkTask: protectedProcedure
     .input(z.object({
       goalId: z.string().uuid(),
-      taskId: z.string().cuid()
+      taskId: z.string()
     }))
     .mutation(async ({ ctx, input }) => {
       const goal = await ctx.prisma.goal.findUnique({
@@ -487,7 +487,7 @@ export const goalRouter = router({
   unlinkRoutine: protectedProcedure
     .input(z.object({
       goalId: z.string().uuid(),
-      routineId: z.string().cuid()
+      routineId: z.string()
     }))
     .mutation(async ({ ctx, input }) => {
       const goal = await ctx.prisma.goal.findUnique({
@@ -531,7 +531,7 @@ export const goalRouter = router({
    */
   getGoalsForTask: protectedProcedure
     .input(z.object({
-      taskId: z.string().cuid()
+      taskId: z.string()
     }))
     .query(async ({ ctx, input }) => {
       const goalLinks = await ctx.prisma.goalTaskLink.findMany({
@@ -603,7 +603,7 @@ export const goalRouter = router({
    */
   getGoalsForRoutine: protectedProcedure
     .input(z.object({
-      routineId: z.string().cuid()
+      routineId: z.string()
     }))
     .query(async ({ ctx, input }) => {
       const goalLinks = await ctx.prisma.goalRoutineLink.findMany({

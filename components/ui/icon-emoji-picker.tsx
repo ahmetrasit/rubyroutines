@@ -1,12 +1,23 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import dynamic from 'next/dynamic';
+import type { EmojiClickData } from 'emoji-picker-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from './button';
 import { Label } from './label';
 import { Input } from './input';
 import { Search } from 'lucide-react';
+
+// OPTIMIZATION: Lazy load emoji picker (180KB) - only loaded when component mounts
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-[350px] w-full">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+  ),
+});
 
 // Categorized Lucide icons for selection (~100 curated icons)
 const ICON_CATEGORIES = {

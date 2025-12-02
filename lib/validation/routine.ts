@@ -79,11 +79,18 @@ export const getRoutineSchema = z.object({
 export const copyRoutineSchema = z.object({
   routineId: idValidator,
   targetPersonIds: z.array(idValidator).min(1, 'At least one person required'),
+  conflictResolutions: z.record(z.string(), z.enum(['merge', 'rename'])).optional(), // personId -> resolution
+  renamedNames: z.record(z.string(), z.string().min(1).max(100)).optional(), // personId -> new name
+});
+
+export const checkCopyConflictsSchema = z.object({
+  routineId: idValidator,
+  targetPersonIds: z.array(idValidator).min(1),
 });
 
 export const createVisibilityOverrideSchema = z.object({
   routineId: idValidator,
-  duration: z.number().int().min(10).max(60), // 10-60 minutes
+  duration: z.number().int().min(10).max(90), // 10-90 minutes
 });
 
 export const cancelVisibilityOverrideSchema = z.object({
@@ -97,5 +104,6 @@ export type RestoreRoutineInput = z.infer<typeof restoreRoutineSchema>;
 export type ListRoutinesInput = z.infer<typeof listRoutinesSchema>;
 export type GetRoutineInput = z.infer<typeof getRoutineSchema>;
 export type CopyRoutineInput = z.infer<typeof copyRoutineSchema>;
+export type CheckCopyConflictsInput = z.infer<typeof checkCopyConflictsSchema>;
 export type CreateVisibilityOverrideInput = z.infer<typeof createVisibilityOverrideSchema>;
 export type CancelVisibilityOverrideInput = z.infer<typeof cancelVisibilityOverrideSchema>;

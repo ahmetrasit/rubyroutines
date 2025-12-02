@@ -1,4 +1,5 @@
 import { router, authorizedProcedure, verifiedProcedure } from '../init';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { Tier } from '@/lib/types/prisma-enums';
 import {
@@ -63,17 +64,21 @@ export const billingRouter = router({
           parent: 0,
           teacher: 0,
         },
-        [Tier.BRONZE]: {
-          parent: TIER_PRICES[Tier.BRONZE].PARENT / 100, // Convert cents to dollars
-          teacher: TIER_PRICES[Tier.BRONZE].TEACHER / 100,
+        [Tier.TINY]: {
+          parent: TIER_PRICES[Tier.TINY].PARENT / 100, // Convert cents to dollars
+          teacher: TIER_PRICES[Tier.TINY].TEACHER / 100,
         },
-        [Tier.GOLD]: {
-          parent: TIER_PRICES[Tier.GOLD].PARENT / 100,
-          teacher: TIER_PRICES[Tier.GOLD].TEACHER / 100,
+        [Tier.SMALL]: {
+          parent: TIER_PRICES[Tier.SMALL].PARENT / 100,
+          teacher: TIER_PRICES[Tier.SMALL].TEACHER / 100,
         },
-        [Tier.PRO]: {
-          parent: TIER_PRICES[Tier.PRO].PARENT / 100,
-          teacher: TIER_PRICES[Tier.PRO].TEACHER / 100,
+        [Tier.MEDIUM]: {
+          parent: TIER_PRICES[Tier.MEDIUM].PARENT / 100,
+          teacher: TIER_PRICES[Tier.MEDIUM].TEACHER / 100,
+        },
+        [Tier.LARGE]: {
+          parent: TIER_PRICES[Tier.LARGE].PARENT / 100,
+          teacher: TIER_PRICES[Tier.LARGE].TEACHER / 100, // Base price (+ per-student for teachers)
         },
       },
     };
@@ -96,7 +101,7 @@ export const billingRouter = router({
       });
 
       if (!role) {
-        throw new Error('Role not found');
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Role not found' });
       }
 
       return {

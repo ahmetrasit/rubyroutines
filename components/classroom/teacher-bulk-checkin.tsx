@@ -10,6 +10,7 @@ import { TaskType } from '@/lib/types/prisma-enums';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { GRAY_SCALE } from '@/lib/constants/theme';
 import { useDashboardRealtime } from '@/lib/hooks/useDashboardRealtime';
+import { parseAvatar } from '@/lib/utils/avatar';
 
 interface TeacherBulkCheckinProps {
   classroomId: string;
@@ -184,17 +185,23 @@ export function TeacherBulkCheckin({
 
   // Fetch teacher-only tasks for all students on initial load
   useEffect(() => {
+    let isMounted = true;
+
     if (!isOpen || students.length === 0) {
       setTasksLoading(false);
-      return;
+      return () => { isMounted = false; };
     }
 
     const fetchInitialData = async () => {
       const tasks = await buildStudentTasksArray(true);
-      setStudentTasks(tasks);
+      if (isMounted) {
+        setStudentTasks(tasks);
+      }
     };
 
     fetchInitialData();
+
+    return () => { isMounted = false; };
   }, [students, isOpen]);
 
   // Get unique tasks across all students (for column headers)
@@ -457,16 +464,19 @@ export function TeacherBulkCheckin({
                     <tr key={student.studentId} className="hover:bg-purple-50">
                       <td className="border border-gray-300 px-4 py-3">
                         <div className="flex items-center gap-3">
-                          {student.studentAvatar && (
-                            <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-2xl"
-                              style={{
-                                backgroundColor: JSON.parse(student.studentAvatar).color || GRAY_SCALE[200],
-                              }}
-                            >
-                              {JSON.parse(student.studentAvatar).emoji || '👤'}
-                            </div>
-                          )}
+                          {(() => {
+                            const avatar = parseAvatar(student.studentAvatar, student.studentName);
+                            return (
+                              <div
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-2xl"
+                                style={{
+                                  backgroundColor: avatar.color || GRAY_SCALE[200],
+                                }}
+                              >
+                                {avatar.emoji || '👤'}
+                              </div>
+                            );
+                          })()}
                           <span className="font-medium text-gray-900">{student.studentName}</span>
                         </div>
                       </td>

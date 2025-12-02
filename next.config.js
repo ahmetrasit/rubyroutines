@@ -39,6 +39,7 @@ const nextConfig = {
   // Skip static export errors for default error pages
   skipTrailingSlashRedirect: true,
   experimental: {
+    instrumentationHook: true,
     serverActions: {
       bodySizeLimit: '2mb',
     },
@@ -65,9 +66,18 @@ const nextConfig = {
   async headers() {
     const isDev = process.env.NODE_ENV !== 'production';
 
+    // CSP Configuration Notes:
+    // - unsafe-eval: Required ONLY in development for Next.js hot reload/Fast Refresh
+    // - unsafe-inline for scripts: Required for Next.js hydration scripts
+    // - unsafe-inline for styles: Required for CSS-in-JS libraries and inline styles
+    // - Stripe.js does NOT require unsafe-eval per official docs
+    const scriptSrc = isDev
+      ? "'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com" // Dev: needs unsafe-eval for hot reload
+      : "'self' 'unsafe-inline' https://js.stripe.com";              // Prod: unsafe-inline for Next.js hydration
+
     const cspDirectives = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
+      `script-src ${scriptSrc}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data:",

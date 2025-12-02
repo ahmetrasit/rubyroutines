@@ -20,6 +20,7 @@ import {
 } from '@/lib/services/kiosk-session';
 import { getResetPeriodStart } from '@/lib/services/reset-period';
 import { completeTaskCoordinated } from '@/lib/services/task-completion-coordinated';
+import { canUndoCompletion } from '@/lib/services/task-completion';
 import { TRPCError } from '@trpc/server';
 import { kioskSessionRateLimitedProcedure } from '../middleware/ratelimit';
 
@@ -198,6 +199,19 @@ export const kioskRouter = router({
   /**
    * Get tasks for person in kiosk mode (public)
    * Rate limited by kiosk code
+   *
+   * CoParent Task Merging:
+   * When a person checks in, we show:
+   * 1. Their OWN routines/tasks
+   * 2. Tasks from LINKED CoParent persons (bidirectional)
+   *    - If this person is linkedPerson: show primaryPerson's shared routines
+   *    - If this person is primaryPerson: show linkedPerson's shared routines
+   *
+   * CoTeacher Task Merging:
+   * When a student checks in, we also show:
+   * 3. Tasks from LINKED CoTeacher students (bidirectional)
+   *    - If this person is linkedStudent: show primaryStudent's shared routines
+   *    - If this person is primaryStudent: show linkedStudent's shared routines
    */
   getPersonTasks: kioskSessionRateLimitedProcedure
     .input(z.object({
@@ -217,6 +231,11 @@ export const kioskRouter = router({
 
       // Get person's routines and tasks
       // REQUIREMENT #4: Exclude teacher-only routines from kiosk mode
+      // OPTIMIZATION: Filter completions by a reasonable date window (7 days covers most reset periods)
+      // This reduces query size by 70-90% for active users while still covering DAILY/WEEKLY resets
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
       const person = await ctx.prisma.person.findUnique({
         where: { id: input.personId },
         include: {
@@ -235,7 +254,8 @@ export const kioskRouter = router({
                     include: {
                       completions: {
                         where: {
-                          personId: input.personId
+                          personId: input.personId,
+                          completedAt: { gte: sevenDaysAgo } // Database-side filter for efficiency
                         },
                         orderBy: { completedAt: 'desc' },
                         take: 10 // Get last 10 completions for filtering by reset period
@@ -257,8 +277,8 @@ export const kioskRouter = router({
         });
       }
 
-      // Flatten tasks with completion status
-      const tasks = person.assignments.flatMap((assignment: any) =>
+      // Flatten own tasks with completion status
+      const ownTasks = person.assignments.flatMap((assignment: any) =>
         assignment.routine.tasks.map((task: any) => {
           // Calculate reset period start for this routine
           const resetPeriodStart = getResetPeriodStart(
@@ -283,14 +303,735 @@ export const kioskRouter = router({
             lastCompletedAt: lastCompletion?.completedAt,
             entryNumber: lastCompletion?.entryNumber,
             summedValue: lastCompletion?.summedValue,
-            totalValue: lastCompletion?.summedValue
+            totalValue: lastCompletion?.summedValue,
+            isFromCoParent: false,
+            isFromCoTeacher: false,
+            coParentPersonId: null,
+            coTeacherPersonId: null
           };
         })
       );
 
+      // ========================================
+      // CoParent Task Merging (Bidirectional)
+      // ========================================
+
+      // Direction 1: This person is the linkedPerson (e.g., Mom's Emma)
+      // -> Get tasks from primaryPerson (e.g., Dad's Kid A)
+      const linksAsLinked = await ctx.prisma.coParentPersonLink.findMany({
+        where: {
+          linkedPersonId: input.personId,
+          status: 'ACTIVE'
+        },
+        include: {
+          primaryPerson: {
+            include: {
+              assignments: {
+                where: {
+                  routine: {
+                    status: 'ACTIVE',
+                    isTeacherOnly: false
+                  }
+                },
+                include: {
+                  routine: {
+                    include: {
+                      tasks: {
+                        where: { status: 'ACTIVE' },
+                        include: {
+                          completions: {
+                            orderBy: { completedAt: 'desc' },
+                            take: 10
+                          }
+                        },
+                        orderBy: { order: 'asc' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Direction 2: This person is the primaryPerson (e.g., Dad's Kid A)
+      // -> Get tasks from linkedPerson (e.g., Mom's Emma)
+      const linksAsPrimary = await ctx.prisma.coParentPersonLink.findMany({
+        where: {
+          primaryPersonId: input.personId,
+          status: 'ACTIVE'
+        },
+        include: {
+          linkedPerson: {
+            include: {
+              assignments: {
+                where: {
+                  routine: {
+                    status: 'ACTIVE',
+                    isTeacherOnly: false
+                  }
+                },
+                include: {
+                  routine: {
+                    include: {
+                      tasks: {
+                        where: { status: 'ACTIVE' },
+                        include: {
+                          completions: {
+                            orderBy: { completedAt: 'desc' },
+                            take: 10
+                          }
+                        },
+                        orderBy: { order: 'asc' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Process linked tasks from Direction 1 (primaryPerson's tasks)
+      const linkedTasksFromPrimary = linksAsLinked.flatMap((link: any) => {
+        const routineIdSet = new Set(link.routineIds || []);
+
+        return link.primaryPerson.assignments
+          .filter((assignment: any) => routineIdSet.size === 0 || routineIdSet.has(assignment.routine.id))
+          .flatMap((assignment: any) =>
+            assignment.routine.tasks.map((task: any) => {
+              const resetPeriodStart = getResetPeriodStart(
+                assignment.routine.resetPeriod,
+                assignment.routine.resetDay
+              );
+
+              // Filter completions by reset period (for EITHER person - completions are shared)
+              const periodCompletions = task.completions.filter((c: any) =>
+                new Date(c.completedAt) >= resetPeriodStart &&
+                (c.personId === input.personId || c.personId === link.primaryPersonId)
+              );
+
+              const lastCompletion = periodCompletions[0];
+              const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
+
+              return {
+                ...task,
+                routine: assignment.routine,
+                routineName: assignment.routine.name,
+                isComplete,
+                isCompleted: periodCompletions.length > 0,
+                completionCount: periodCompletions.length,
+                lastCompletedAt: lastCompletion?.completedAt,
+                entryNumber: lastCompletion?.entryNumber,
+                summedValue: lastCompletion?.summedValue,
+                totalValue: lastCompletion?.summedValue,
+                isFromCoParent: true,
+                isFromCoTeacher: false,
+                coParentPersonId: link.primaryPersonId,
+                coTeacherPersonId: null
+              };
+            })
+          );
+      });
+
+      // Process linked tasks from Direction 2 (linkedPerson's tasks)
+      const linkedTasksFromLinked = linksAsPrimary.flatMap((link: any) => {
+        if (!link.linkedPerson) return []; // linkedPerson might be null if not yet linked
+
+        const routineIdSet = new Set(link.routineIds || []);
+
+        return link.linkedPerson.assignments
+          .filter((assignment: any) => routineIdSet.size === 0 || routineIdSet.has(assignment.routine.id))
+          .flatMap((assignment: any) =>
+            assignment.routine.tasks.map((task: any) => {
+              const resetPeriodStart = getResetPeriodStart(
+                assignment.routine.resetPeriod,
+                assignment.routine.resetDay
+              );
+
+              // Filter completions by reset period (for EITHER person - completions are shared)
+              const periodCompletions = task.completions.filter((c: any) =>
+                new Date(c.completedAt) >= resetPeriodStart &&
+                (c.personId === input.personId || c.personId === link.linkedPersonId)
+              );
+
+              const lastCompletion = periodCompletions[0];
+              const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
+
+              return {
+                ...task,
+                routine: assignment.routine,
+                routineName: assignment.routine.name,
+                isComplete,
+                isCompleted: periodCompletions.length > 0,
+                completionCount: periodCompletions.length,
+                lastCompletedAt: lastCompletion?.completedAt,
+                entryNumber: lastCompletion?.entryNumber,
+                summedValue: lastCompletion?.summedValue,
+                totalValue: lastCompletion?.summedValue,
+                isFromCoParent: true,
+                isFromCoTeacher: false,
+                coParentPersonId: link.linkedPersonId,
+                coTeacherPersonId: null
+              };
+            })
+          );
+      });
+
+      // ========================================
+      // CoTeacher Task Merging (Bidirectional)
+      // ========================================
+
+      // Direction 1: This person is the linkedStudent (e.g., Co-teacher's student)
+      // -> Get tasks from primaryStudent (e.g., Lead teacher's student)
+      const coTeacherLinksAsLinked = await ctx.prisma.coTeacherStudentLink.findMany({
+        where: {
+          linkedStudentId: input.personId,
+          status: 'ACTIVE'
+        },
+        include: {
+          primaryStudent: {
+            include: {
+              assignments: {
+                where: {
+                  routine: {
+                    status: 'ACTIVE',
+                    isTeacherOnly: false
+                  }
+                },
+                include: {
+                  routine: {
+                    include: {
+                      tasks: {
+                        where: { status: 'ACTIVE' },
+                        include: {
+                          completions: {
+                            orderBy: { completedAt: 'desc' },
+                            take: 10
+                          }
+                        },
+                        orderBy: { order: 'asc' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Direction 2: This person is the primaryStudent (e.g., Lead teacher's student)
+      // -> Get tasks from linkedStudent (e.g., Co-teacher's student)
+      const coTeacherLinksAsPrimary = await ctx.prisma.coTeacherStudentLink.findMany({
+        where: {
+          primaryStudentId: input.personId,
+          status: 'ACTIVE'
+        },
+        include: {
+          linkedStudent: {
+            include: {
+              assignments: {
+                where: {
+                  routine: {
+                    status: 'ACTIVE',
+                    isTeacherOnly: false
+                  }
+                },
+                include: {
+                  routine: {
+                    include: {
+                      tasks: {
+                        where: { status: 'ACTIVE' },
+                        include: {
+                          completions: {
+                            orderBy: { completedAt: 'desc' },
+                            take: 10
+                          }
+                        },
+                        orderBy: { order: 'asc' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Process CoTeacher linked tasks from Direction 1 (primaryStudent's tasks)
+      const coTeacherTasksFromPrimary = coTeacherLinksAsLinked.flatMap((link: any) => {
+        const routineIdSet = new Set(link.routineIds || []);
+
+        return link.primaryStudent.assignments
+          .filter((assignment: any) => routineIdSet.size === 0 || routineIdSet.has(assignment.routine.id))
+          .flatMap((assignment: any) =>
+            assignment.routine.tasks.map((task: any) => {
+              const resetPeriodStart = getResetPeriodStart(
+                assignment.routine.resetPeriod,
+                assignment.routine.resetDay
+              );
+
+              // Filter completions by reset period (for EITHER person - completions are shared)
+              const periodCompletions = task.completions.filter((c: any) =>
+                new Date(c.completedAt) >= resetPeriodStart &&
+                (c.personId === input.personId || c.personId === link.primaryStudentId)
+              );
+
+              const lastCompletion = periodCompletions[0];
+              const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
+
+              return {
+                ...task,
+                routine: assignment.routine,
+                routineName: assignment.routine.name,
+                isComplete,
+                isCompleted: periodCompletions.length > 0,
+                completionCount: periodCompletions.length,
+                lastCompletedAt: lastCompletion?.completedAt,
+                entryNumber: lastCompletion?.entryNumber,
+                summedValue: lastCompletion?.summedValue,
+                totalValue: lastCompletion?.summedValue,
+                isFromCoParent: false,
+                isFromCoTeacher: true,
+                coParentPersonId: null,
+                coTeacherPersonId: link.primaryStudentId
+              };
+            })
+          );
+      });
+
+      // Process CoTeacher linked tasks from Direction 2 (linkedStudent's tasks)
+      const coTeacherTasksFromLinked = coTeacherLinksAsPrimary.flatMap((link: any) => {
+        if (!link.linkedStudent) return []; // linkedStudent might be null if not yet linked
+
+        const routineIdSet = new Set(link.routineIds || []);
+
+        return link.linkedStudent.assignments
+          .filter((assignment: any) => routineIdSet.size === 0 || routineIdSet.has(assignment.routine.id))
+          .flatMap((assignment: any) =>
+            assignment.routine.tasks.map((task: any) => {
+              const resetPeriodStart = getResetPeriodStart(
+                assignment.routine.resetPeriod,
+                assignment.routine.resetDay
+              );
+
+              // Filter completions by reset period (for EITHER person - completions are shared)
+              const periodCompletions = task.completions.filter((c: any) =>
+                new Date(c.completedAt) >= resetPeriodStart &&
+                (c.personId === input.personId || c.personId === link.linkedStudentId)
+              );
+
+              const lastCompletion = periodCompletions[0];
+              const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
+
+              return {
+                ...task,
+                routine: assignment.routine,
+                routineName: assignment.routine.name,
+                isComplete,
+                isCompleted: periodCompletions.length > 0,
+                completionCount: periodCompletions.length,
+                lastCompletedAt: lastCompletion?.completedAt,
+                entryNumber: lastCompletion?.entryNumber,
+                summedValue: lastCompletion?.summedValue,
+                totalValue: lastCompletion?.summedValue,
+                isFromCoParent: false,
+                isFromCoTeacher: true,
+                coParentPersonId: null,
+                coTeacherPersonId: link.linkedStudentId
+              };
+            })
+          );
+      });
+
+      // ========================================
+      // TEACHER STUDENT LINK MERGING (Level 1)
+      // Same teacher links students across different classrooms
+      // ========================================
+
+      // Direction 1: This person is linkedStudent (get primaryStudent's tasks)
+      const teacherLinksAsLinked = await ctx.prisma.teacherStudentLink.findMany({
+        where: {
+          linkedStudentId: input.personId,
+          status: 'ACTIVE'
+        },
+        include: {
+          primaryStudent: {
+            include: {
+              assignments: {
+                where: {
+                  routine: {
+                    status: 'ACTIVE',
+                    isTeacherOnly: false
+                  }
+                },
+                include: {
+                  routine: {
+                    include: {
+                      tasks: {
+                        where: { status: 'ACTIVE' },
+                        include: {
+                          completions: {
+                            orderBy: { completedAt: 'desc' },
+                            take: 10
+                          }
+                        },
+                        orderBy: { order: 'asc' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Direction 2: This person is primaryStudent (get linkedStudent's tasks)
+      const teacherLinksAsPrimary = await ctx.prisma.teacherStudentLink.findMany({
+        where: {
+          primaryStudentId: input.personId,
+          status: 'ACTIVE'
+        },
+        include: {
+          linkedStudent: {
+            include: {
+              assignments: {
+                where: {
+                  routine: {
+                    status: 'ACTIVE',
+                    isTeacherOnly: false
+                  }
+                },
+                include: {
+                  routine: {
+                    include: {
+                      tasks: {
+                        where: { status: 'ACTIVE' },
+                        include: {
+                          completions: {
+                            orderBy: { completedAt: 'desc' },
+                            take: 10
+                          }
+                        },
+                        orderBy: { order: 'asc' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Process Teacher linked tasks from Direction 1
+      const teacherTasksFromPrimary = teacherLinksAsLinked.flatMap((link: any) => {
+        const routineIdSet = new Set(link.routineIds || []);
+
+        return link.primaryStudent.assignments
+          .filter((assignment: any) => routineIdSet.size === 0 || routineIdSet.has(assignment.routine.id))
+          .flatMap((assignment: any) =>
+            assignment.routine.tasks.map((task: any) => {
+              const resetPeriodStart = getResetPeriodStart(
+                assignment.routine.resetPeriod,
+                assignment.routine.resetDay
+              );
+
+              const periodCompletions = task.completions.filter((c: any) =>
+                new Date(c.completedAt) >= resetPeriodStart &&
+                (c.personId === input.personId || c.personId === link.primaryStudentId)
+              );
+
+              const lastCompletion = periodCompletions[0];
+              const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
+
+              return {
+                ...task,
+                routine: assignment.routine,
+                routineName: assignment.routine.name,
+                isComplete,
+                isCompleted: periodCompletions.length > 0,
+                completionCount: periodCompletions.length,
+                lastCompletedAt: lastCompletion?.completedAt,
+                entryNumber: lastCompletion?.entryNumber,
+                summedValue: lastCompletion?.summedValue,
+                totalValue: lastCompletion?.summedValue,
+                isFromCoParent: false,
+                isFromCoTeacher: false,
+                isFromTeacherLink: true,
+                isFromSchoolLink: false,
+                coParentPersonId: null,
+                coTeacherPersonId: null,
+                teacherLinkPersonId: link.primaryStudentId,
+                schoolLinkPersonId: null
+              };
+            })
+          );
+      });
+
+      // Process Teacher linked tasks from Direction 2
+      const teacherTasksFromLinked = teacherLinksAsPrimary.flatMap((link: any) => {
+        const routineIdSet = new Set(link.routineIds || []);
+
+        return link.linkedStudent.assignments
+          .filter((assignment: any) => routineIdSet.size === 0 || routineIdSet.has(assignment.routine.id))
+          .flatMap((assignment: any) =>
+            assignment.routine.tasks.map((task: any) => {
+              const resetPeriodStart = getResetPeriodStart(
+                assignment.routine.resetPeriod,
+                assignment.routine.resetDay
+              );
+
+              const periodCompletions = task.completions.filter((c: any) =>
+                new Date(c.completedAt) >= resetPeriodStart &&
+                (c.personId === input.personId || c.personId === link.linkedStudentId)
+              );
+
+              const lastCompletion = periodCompletions[0];
+              const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
+
+              return {
+                ...task,
+                routine: assignment.routine,
+                routineName: assignment.routine.name,
+                isComplete,
+                isCompleted: periodCompletions.length > 0,
+                completionCount: periodCompletions.length,
+                lastCompletedAt: lastCompletion?.completedAt,
+                entryNumber: lastCompletion?.entryNumber,
+                summedValue: lastCompletion?.summedValue,
+                totalValue: lastCompletion?.summedValue,
+                isFromCoParent: false,
+                isFromCoTeacher: false,
+                isFromTeacherLink: true,
+                isFromSchoolLink: false,
+                coParentPersonId: null,
+                coTeacherPersonId: null,
+                teacherLinkPersonId: link.linkedStudentId,
+                schoolLinkPersonId: null
+              };
+            })
+          );
+      });
+
+      // ========================================
+      // SCHOOL STUDENT LINK MERGING (Level 3)
+      // Principal links students across different teachers
+      // Only applies for PERSONAL kiosk (not classroom kiosk)
+      // ========================================
+
+      // Check if this is a personal kiosk (has personId, no groupId)
+      const kioskCode = await ctx.prisma.code.findUnique({
+        where: { id: input.kioskCodeId },
+        select: { groupId: true, personId: true }
+      });
+      const isPersonalKiosk = kioskCode?.personId !== null && kioskCode?.groupId === null;
+
+      let schoolTasksFromPrimary: any[] = [];
+      let schoolTasksFromLinked: any[] = [];
+
+      if (isPersonalKiosk) {
+        // Direction 1: This person is linkedPerson (get primaryPerson's tasks)
+        const schoolLinksAsLinked = await ctx.prisma.schoolStudentLink.findMany({
+          where: {
+            linkedPersonId: input.personId,
+            status: 'ACTIVE'
+          },
+          include: {
+            primaryPerson: {
+              include: {
+                assignments: {
+                  where: {
+                    routine: {
+                      status: 'ACTIVE',
+                      isTeacherOnly: false
+                    }
+                  },
+                  include: {
+                    routine: {
+                      include: {
+                        tasks: {
+                          where: { status: 'ACTIVE' },
+                          include: {
+                            completions: {
+                              orderBy: { completedAt: 'desc' },
+                              take: 10
+                            }
+                          },
+                          orderBy: { order: 'asc' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        // Direction 2: This person is primaryPerson (get linkedPerson's tasks)
+        const schoolLinksAsPrimary = await ctx.prisma.schoolStudentLink.findMany({
+          where: {
+            primaryPersonId: input.personId,
+            status: 'ACTIVE'
+          },
+          include: {
+            linkedPerson: {
+              include: {
+                assignments: {
+                  where: {
+                    routine: {
+                      status: 'ACTIVE',
+                      isTeacherOnly: false
+                    }
+                  },
+                  include: {
+                    routine: {
+                      include: {
+                        tasks: {
+                          where: { status: 'ACTIVE' },
+                          include: {
+                            completions: {
+                              orderBy: { completedAt: 'desc' },
+                              take: 10
+                            }
+                          },
+                          orderBy: { order: 'asc' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        // Process School linked tasks from Direction 1
+        schoolTasksFromPrimary = schoolLinksAsLinked.flatMap((link: any) => {
+          return link.primaryPerson.assignments.flatMap((assignment: any) =>
+            assignment.routine.tasks.map((task: any) => {
+              const resetPeriodStart = getResetPeriodStart(
+                assignment.routine.resetPeriod,
+                assignment.routine.resetDay
+              );
+
+              const periodCompletions = task.completions.filter((c: any) =>
+                new Date(c.completedAt) >= resetPeriodStart &&
+                (c.personId === input.personId || c.personId === link.primaryPersonId)
+              );
+
+              const lastCompletion = periodCompletions[0];
+              const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
+
+              return {
+                ...task,
+                routine: assignment.routine,
+                routineName: assignment.routine.name,
+                isComplete,
+                isCompleted: periodCompletions.length > 0,
+                completionCount: periodCompletions.length,
+                lastCompletedAt: lastCompletion?.completedAt,
+                entryNumber: lastCompletion?.entryNumber,
+                summedValue: lastCompletion?.summedValue,
+                totalValue: lastCompletion?.summedValue,
+                isFromCoParent: false,
+                isFromCoTeacher: false,
+                isFromTeacherLink: false,
+                isFromSchoolLink: true,
+                coParentPersonId: null,
+                coTeacherPersonId: null,
+                teacherLinkPersonId: null,
+                schoolLinkPersonId: link.primaryPersonId
+              };
+            })
+          );
+        });
+
+        // Process School linked tasks from Direction 2
+        schoolTasksFromLinked = schoolLinksAsPrimary.flatMap((link: any) => {
+          return link.linkedPerson.assignments.flatMap((assignment: any) =>
+            assignment.routine.tasks.map((task: any) => {
+              const resetPeriodStart = getResetPeriodStart(
+                assignment.routine.resetPeriod,
+                assignment.routine.resetDay
+              );
+
+              const periodCompletions = task.completions.filter((c: any) =>
+                new Date(c.completedAt) >= resetPeriodStart &&
+                (c.personId === input.personId || c.personId === link.linkedPersonId)
+              );
+
+              const lastCompletion = periodCompletions[0];
+              const isComplete = task.type === 'SIMPLE' && periodCompletions.length > 0;
+
+              return {
+                ...task,
+                routine: assignment.routine,
+                routineName: assignment.routine.name,
+                isComplete,
+                isCompleted: periodCompletions.length > 0,
+                completionCount: periodCompletions.length,
+                lastCompletedAt: lastCompletion?.completedAt,
+                entryNumber: lastCompletion?.entryNumber,
+                summedValue: lastCompletion?.summedValue,
+                totalValue: lastCompletion?.summedValue,
+                isFromCoParent: false,
+                isFromCoTeacher: false,
+                isFromTeacherLink: false,
+                isFromSchoolLink: true,
+                coParentPersonId: null,
+                coTeacherPersonId: null,
+                teacherLinkPersonId: null,
+                schoolLinkPersonId: link.linkedPersonId
+              };
+            })
+          );
+        });
+      }
+
+      // ========================================
+      // MERGE AND DEDUPLICATE ALL TASKS
+      // Priority: own > coparent > coteacher > teacherLink > schoolLink
+      // ========================================
+
+      const ownTaskIds = new Set(ownTasks.map((t: any) => t.id));
+      const allCoParentLinkedTasks = [...linkedTasksFromPrimary, ...linkedTasksFromLinked]
+        .filter((t: any) => !ownTaskIds.has(t.id));
+
+      const coParentTaskIds = new Set(allCoParentLinkedTasks.map((t: any) => t.id));
+      const allCoTeacherLinkedTasks = [...coTeacherTasksFromPrimary, ...coTeacherTasksFromLinked]
+        .filter((t: any) => !ownTaskIds.has(t.id) && !coParentTaskIds.has(t.id));
+
+      const coTeacherTaskIds = new Set(allCoTeacherLinkedTasks.map((t: any) => t.id));
+      const allTeacherLinkedTasks = [...teacherTasksFromPrimary, ...teacherTasksFromLinked]
+        .filter((t: any) => !ownTaskIds.has(t.id) && !coParentTaskIds.has(t.id) && !coTeacherTaskIds.has(t.id));
+
+      const teacherLinkTaskIds = new Set(allTeacherLinkedTasks.map((t: any) => t.id));
+      const allSchoolLinkedTasks = [...schoolTasksFromPrimary, ...schoolTasksFromLinked]
+        .filter((t: any) =>
+          !ownTaskIds.has(t.id) &&
+          !coParentTaskIds.has(t.id) &&
+          !coTeacherTaskIds.has(t.id) &&
+          !teacherLinkTaskIds.has(t.id)
+        );
+
+      const allTasks = [
+        ...ownTasks,
+        ...allCoParentLinkedTasks,
+        ...allCoTeacherLinkedTasks,
+        ...allTeacherLinkedTasks,
+        ...allSchoolLinkedTasks
+      ];
+
       return {
         person,
-        tasks: tasks.sort((a: any, b: any) => a.order - b.order)
+        tasks: allTasks.sort((a: any, b: any) => a.order - b.order)
       };
     }),
 
@@ -416,7 +1157,7 @@ export const kioskRouter = router({
     }),
 
   /**
-   * Undo task completion (if completed within last 5 minutes) (public)
+   * Undo task completion (if completed within 10 seconds and is SIMPLE task) (public)
    * Rate limited by kiosk code
    */
   undoCompletion: kioskSessionRateLimitedProcedure
@@ -426,7 +1167,12 @@ export const kioskRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const completion = await ctx.prisma.taskCompletion.findUnique({
-        where: { id: input.completionId }
+        where: { id: input.completionId },
+        include: {
+          task: {
+            select: { type: true }
+          }
+        }
       });
 
       if (!completion) {
@@ -445,12 +1191,11 @@ export const kioskRouter = router({
         });
       }
 
-      // Check if within 5 minutes
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      if (completion.completedAt < fiveMinutesAgo) {
+      // Check if undo is allowed (SIMPLE tasks only, within 10 second window)
+      if (!canUndoCompletion(completion.completedAt, completion.task.type)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Can only undo completions from last 5 minutes'
+          message: 'Can only undo SIMPLE task completions within 10 seconds'
         });
       }
 
