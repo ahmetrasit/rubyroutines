@@ -838,6 +838,8 @@ model CoParentPersonLink {
   @@index([coParentId])
   @@index([primaryPersonId])
   @@index([linkedPersonId])
+  @@index([linkedPersonId, status]) // Optimized for kiosk bidirectional CoParent queries
+  @@index([primaryPersonId, status]) // Optimized for kiosk bidirectional CoParent queries
   @@map("co_parent_person_links")
 }
 

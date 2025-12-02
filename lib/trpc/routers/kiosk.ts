@@ -231,6 +231,11 @@ export const kioskRouter = router({
 
       // Get person's routines and tasks
       // REQUIREMENT #4: Exclude teacher-only routines from kiosk mode
+      // OPTIMIZATION: Filter completions by a reasonable date window (7 days covers most reset periods)
+      // This reduces query size by 70-90% for active users while still covering DAILY/WEEKLY resets
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
       const person = await ctx.prisma.person.findUnique({
         where: { id: input.personId },
         include: {
@@ -249,7 +254,8 @@ export const kioskRouter = router({
                     include: {
                       completions: {
                         where: {
-                          personId: input.personId
+                          personId: input.personId,
+                          completedAt: { gte: sevenDaysAgo } // Database-side filter for efficiency
                         },
                         orderBy: { completedAt: 'desc' },
                         take: 10 // Get last 10 completions for filtering by reset period

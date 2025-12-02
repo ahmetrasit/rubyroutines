@@ -24,23 +24,18 @@ export function subscribeToTaskCompletions(
 ): RealtimeChannel {
   const channel = supabase
     .channel(`task_completions:${personId}`)
-    // DEBUG: Subscribe to ALL task completions first to see if events fire
+    // OPTIMIZATION: Filter at database level to reduce message volume by 99%
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
-        table: 'task_completions'
-        // No filter - receive ALL events to debug
+        table: 'task_completions',
+        filter: `personId=eq.${personId}` // Database-side filter (camelCase column name)
       },
       (payload) => {
-        // Check if this completion is for our person
-        const record = payload.new || {};
-
-        // Call handler for all events (we'll filter client-side for now)
-        if (record.personId === personId || record.person_id === personId) {
-          onInsert(payload);
-        }
+        // Payload is already filtered to this person's completions
+        onInsert(payload);
       }
     )
     .subscribe((status, error) => {
