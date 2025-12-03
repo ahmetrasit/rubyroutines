@@ -906,7 +906,7 @@ export async function permanentlyDeleteUserAccount(
       }
     });
 
-    // Anonymize moderation logs (keep records but remove PII from metadata)
+    // Anonymize moderation logs metadata (adminUserId will be auto-set to null via onDelete: SetNull)
     await tx.moderationLog.updateMany({
       where: { adminUserId: userId },
       data: {
@@ -915,6 +915,7 @@ export async function permanentlyDeleteUserAccount(
     });
 
     // Finally, delete the user account from database
+    // Note: moderation_logs.adminUserId will be set to null automatically (onDelete: SetNull)
     await tx.user.delete({ where: { id: userId } });
   });
 

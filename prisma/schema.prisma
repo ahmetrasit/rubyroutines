@@ -1392,8 +1392,8 @@ model AuditLog {
 }
 
 model ModerationLog {
-  id          String @id @default(cuid())
-  adminUserId String // Who performed the action
+  id          String  @id @default(cuid())
+  adminUserId String? // Who performed the action (nullable for GDPR deletion)
 
   // What was affected
   entityType String // 'MARKETPLACE_ITEM', 'COMMENT', 'USER', 'ROLE', etc.
@@ -1409,8 +1409,8 @@ model ModerationLog {
   ipAddress String? // IP address of admin
   userAgent String? // Browser/client info
 
-  // Relations
-  adminUser User @relation("ModerationLogs", fields: [adminUserId], references: [id])
+  // Relations - SetNull on delete to preserve audit trail when admin is deleted
+  adminUser User? @relation("ModerationLogs", fields: [adminUserId], references: [id], onDelete: SetNull)
 
   @@index([adminUserId])
   @@index([entityType, entityId])

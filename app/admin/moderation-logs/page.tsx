@@ -246,7 +246,7 @@ function ModerationLogsContent() {
 
                           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                             <User className="h-3 w-3" />
-                            <span className="font-medium">{log.adminUser.name || log.adminUser.email}</span>
+                            <span className="font-medium">{log.adminUser?.name || log.adminUser?.email || 'Deleted Admin'}</span>
                             <span>•</span>
                             <Calendar className="h-3 w-3" />
                             <span>{format(new Date(log.timestamp), 'PPpp')}</span>

@@ -1,0 +1,43 @@
+{
+  "cookies": [
+    {
+      "name": "sb-gpfvnmpyuypvjtdlxrel-auth-token",
+      "value": "base64-eyJhY2Nlc3NfdG9rZW4iOiJleUpoYkdjaU9pSklVekkxTmlJc0ltdHBaQ0k2SW1kUVRsTlNPRzF1YjFweWQzQm5NMjRpTENKMGVYQWlPaUpLVjFRaWZRLmV5SnBjM01pT2lKb2RIUndjem92TDJkd1puWnViWEI1ZFhsd2RtcDBaR3g0Y21Wc0xuTjFjR0ZpWVhObExtTnZMMkYxZEdndmRqRWlMQ0p6ZFdJaU9pSTBZVFF6WmpVelppMW1NV0V3TFRReFpqa3RZVGRsWmkwNU5XTXdOelk1T1RGaE1UQWlMQ0poZFdRaU9pSmhkWFJvWlc1MGFXTmhkR1ZrSWl3aVpYaHdJam94TnpZME56STNPRFkyTENKcFlYUWlPakUzTmpRM01qUXlOallzSW1WdFlXbHNJam9pY0dGeVpXNTBRSEoxWW5seWIzVjBhVzVsY3k1amIyMGlMQ0p3YUc5dVpTSTZJaUlzSW1Gd2NGOXRaWFJoWkdGMFlTSTZleUp3Y205MmFXUmxjaUk2SW1WdFlXbHNJaXdpY0hKdmRtbGtaWEp6SWpwYkltVnRZV2xzSWwxOUxDSjFjMlZ5WDIxbGRHRmtZWFJoSWpwN0ltVnRZV2xzSWpvaWNHRnlaVzUwUUhKMVlubHliM1YwYVc1bGN5NWpiMjBpTENKbGJXRnBiRjkyWlhKcFptbGxaQ0k2ZEhKMVpTd2libUZ0WlNJNkluQmhjbVZ1ZENCMFpYTjBjeUlzSW5Cb2IyNWxYM1psY21sbWFXVmtJanBtWVd4elpTd2ljM1ZpSWpvaU5HRTBNMlkxTTJZdFpqRmhNQzAwTVdZNUxXRTNaV1l0T1RWak1EYzJPVGt4WVRFd0luMHNJbkp2YkdVaU9pSmhkWFJvWlc1MGFXTmhkR1ZrSWl3aVlXRnNJam9pWVdGc01TSXNJbUZ0Y2lJNlczc2liV1YwYUc5a0lqb2ljR0Z6YzNkdmNtUWlMQ0owYVcxbGMzUmhiWEFpT2pFM05qUTNNalF5TmpaOVhTd2ljMlZ6YzJsdmJsOXBaQ0k2SWpGbU5qRmhZemxsTFdNMVlqY3ROREZsT1MwNU5UaGpMV1l4TW1NeVpXTmhOek5tTmlJc0ltbHpYMkZ1YjI1NWJXOTFjeUk2Wm1Gc2MyVjkuXzM0R3pLcWdBYTJlMWpoaTdoUzlqWHdOQ3lSb2sxalRRVzAzX3l1dXoyOCIsInRva2VuX3R5cGUiOiJiZWFyZXIiLCJleHBpcmVzX2luIjozNjAwLCJleHBpcmVzX2F0IjoxNzY0NzI3ODY2LCJyZWZyZXNoX3Rva2VuIjoiNTR2aWZudXUzeDc1IiwidXNlciI6eyJpZCI6IjRhNDNmNTNmLWYxYTAtNDFmOS1hN2VmLTk1YzA3Njk5MWExMCIsImF1ZCI6ImF1dGhlbnRpY2F0ZWQiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImVtYWlsIjoicGFyZW50QHJ1Ynlyb3V0aW5lcy5jb20iLCJlbWFpbF9jb25maXJtZWRfYXQiOiIyMDI1LTEyLTAyVDIyOjA4OjE1LjA5OTE4NFoiLCJwaG9uZSI6IiIsImNvbmZpcm1lZF9hdCI6IjIwMjUtMTItMDJUMjI6MDg6MTUuMDk5MTg0WiIsImxhc3Rfc2lnbl9pbl9hdCI6IjIwMjUtMTItMDNUMDE6MTE6MDYuMTIxNjA2ODUyWiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoicGFyZW50QHJ1Ynlyb3V0aW5lcy5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6InBhcmVudCB0ZXN0cyIsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiNGE0M2Y1M2YtZjFhMC00MWY5LWE3ZWYtOTVjMDc2OTkxYTEwIn0sImlkZW50aXRpZXMiOlt7ImlkZW50aXR5X2lkIjoiYjIyNmI0ODMtNjg0YS00MzI0LTg4MzEtZjk0MWRjYTA2NGFlIiwiaWQiOiI0YTQzZjUzZi1mMWEwLTQxZjktYTdlZi05NWMwNzY5OTFhMTAiLCJ1c2VyX2lkIjoiNGE0M2Y1M2YtZjFhMC00MWY5LWE3ZWYtOTVjMDc2OTkxYTEwIiwiaWRlbnRpdHlfZGF0YSI6eyJlbWFpbCI6InBhcmVudEBydWJ5cm91dGluZXMuY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJuYW1lIjoicGFyZW50IHRlc3RzIiwicGhvbmVfdmVyaWZpZWQiOmZhbHNlLCJzdWIiOiI0YTQzZjUzZi1mMWEwLTQxZjktYTdlZi05NWMwNzY5OTFhMTAifSwicHJvdmlkZXIiOiJlbWFpbCIsImxhc3Rfc2lnbl9pbl9hdCI6IjIwMjUtMTItMDJUMjI6MDg6MTUuMDkwNjNaIiwiY3JlYXRlZF9hdCI6IjIwMjUtMTItMDJUMjI6MDg6MTUuMDkwNjk0WiIsInVwZGF0ZWRfYXQiOiIyMDI1LTEyLTAyVDIyOjA4OjE1LjA5MDY5NFoiLCJlbWFpbCI6InBhcmVudEBydWJ5cm91dGluZXMuY29tIn1dLCJjcmVhdGVkX2F0IjoiMjAyNS0xMi0wMlQyMjowODoxNS4wNjQ3NDJaIiwidXBkYXRlZF9hdCI6IjIwMjUtMTItMDNUMDE6MTE6MDYuMTI4NDQ5WiIsImlzX2Fub255bW91cyI6ZmFsc2V9LCJ3ZWFrX3Bhc3N3b3JkIjpudWxsfQ",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1799284267.378181,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "rubyroutines_last_mode",
+      "value": "parent",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1796260269.13493,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:3001",
+      "localStorage": [
+        {
+          "name": "cookie-consent",
+          "value": "{\"necessary\":true,\"functional\":true,\"analytics\":true,\"timestamp\":\"2025-12-03T01:11:03.888Z\"}"
+        },
+        {
+          "name": "sb-gpfvnmpyuypvjtdlxrel-auth-token",
+          "value": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsImtpZCI6ImdQTlNSOG1ub1pyd3BnM24iLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2dwZnZubXB5dXlwdmp0ZGx4cmVsLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiI0YTQzZjUzZi1mMWEwLTQxZjktYTdlZi05NWMwNzY5OTFhMTAiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzY0NzI3ODY2LCJpYXQiOjE3NjQ3MjQyNjYsImVtYWlsIjoicGFyZW50QHJ1Ynlyb3V0aW5lcy5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsIjoicGFyZW50QHJ1Ynlyb3V0aW5lcy5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6InBhcmVudCB0ZXN0cyIsInBob25lX3ZlcmlmaWVkIjpmYWxzZSwic3ViIjoiNGE0M2Y1M2YtZjFhMC00MWY5LWE3ZWYtOTVjMDc2OTkxYTEwIn0sInJvbGUiOiJhdXRoZW50aWNhdGVkIiwiYWFsIjoiYWFsMSIsImFtciI6W3sibWV0aG9kIjoicGFzc3dvcmQiLCJ0aW1lc3RhbXAiOjE3NjQ3MjQyNjZ9XSwic2Vzc2lvbl9pZCI6IjFmNjFhYzllLWM1YjctNDFlOS05NThjLWYxMmMyZWNhNzNmNiIsImlzX2Fub255bW91cyI6ZmFsc2V9._34GzKqgAa2e1jhi7hS9jXwNCyRok1jTQW03_yuuz28\",\"token_type\":\"bearer\",\"expires_in\":3600,\"expires_at\":1764727866,\"refresh_token\":\"54vifnuu3x75\",\"user\":{\"id\":\"4a43f53f-f1a0-41f9-a7ef-95c076991a10\",\"aud\":\"authenticated\",\"role\":\"authenticated\",\"email\":\"parent@rubyroutines.com\",\"email_confirmed_at\":\"2025-12-02T22:08:15.099184Z\",\"phone\":\"\",\"confirmed_at\":\"2025-12-02T22:08:15.099184Z\",\"last_sign_in_at\":\"2025-12-03T01:11:06.121606852Z\",\"app_metadata\":{\"provider\":\"email\",\"providers\":[\"email\"]},\"user_metadata\":{\"email\":\"parent@rubyroutines.com\",\"email_verified\":true,\"name\":\"parent tests\",\"phone_verified\":false,\"sub\":\"4a43f53f-f1a0-41f9-a7ef-95c076991a10\"},\"identities\":[{\"identity_id\":\"b226b483-684a-4324-8831-f941dca064ae\",\"id\":\"4a43f53f-f1a0-41f9-a7ef-95c076991a10\",\"user_id\":\"4a43f53f-f1a0-41f9-a7ef-95c076991a10\",\"identity_data\":{\"email\":\"parent@rubyroutines.com\",\"email_verified\":false,\"name\":\"parent tests\",\"phone_verified\":false,\"sub\":\"4a43f53f-f1a0-41f9-a7ef-95c076991a10\"},\"provider\":\"email\",\"last_sign_in_at\":\"2025-12-02T22:08:15.09063Z\",\"created_at\":\"2025-12-02T22:08:15.090694Z\",\"updated_at\":\"2025-12-02T22:08:15.090694Z\",\"email\":\"parent@rubyroutines.com\"}],\"created_at\":\"2025-12-02T22:08:15.064742Z\",\"updated_at\":\"2025-12-03T01:11:06.128449Z\",\"is_anonymous\":false},\"weak_password\":null}"
+        },
+        {
+          "name": "rubyroutines_last_mode",
+          "value": "parent"
+        }
+      ]
+    }
+  ]
+}

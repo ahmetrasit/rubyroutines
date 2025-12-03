@@ -299,13 +299,15 @@ export async function getModerationStatistics(startDate: Date, endDate: Date) {
     entityTypeCounts[log.entityType] = (entityTypeCounts[log.entityType] || 0) + 1;
   });
 
-  // Count unique moderators
-  const uniqueModerators = new Set(logs.map((log) => log.adminUserId)).size;
+  // Count unique moderators (filter out null adminUserIds)
+  const uniqueModerators = new Set(logs.map((log) => log.adminUserId).filter(Boolean)).size;
 
   // Get top moderators
   const moderatorActions: Record<string, number> = {};
   logs.forEach((log) => {
-    moderatorActions[log.adminUserId] = (moderatorActions[log.adminUserId] || 0) + 1;
+    if (log.adminUserId) {
+      moderatorActions[log.adminUserId] = (moderatorActions[log.adminUserId] || 0) + 1;
+    }
   });
 
   const topModerators = await Promise.all(
@@ -402,8 +404,8 @@ export async function exportModerationLogs(filters: {
 
   const rows = logs.map(log => [
     log.timestamp.toISOString(),
-    log.adminUser.email,
-    log.adminUser.name || '',
+    log.adminUser?.email || 'Deleted Admin',
+    log.adminUser?.name || '',
     log.action,
     log.entityType,
     log.entityId,
